@@ -821,10 +821,16 @@ Five systems read at depth: openclaw, PAI (cycle 14); AutoGen
 Voyager (cycle 17); LangGraph (cycles 18-20, PR
 [#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)).
 Observations below cross-validate where 3+ systems converge on the
-same pattern shape. Per cycle-18 anchoring-caveats-symmetric
-discipline, convergence across systems with diverse substrates is a
-positive transferability argument; patterns present in only 1-2
-systems are recorded as candidate, not load-bearing.
+same pattern shape. The 3+ threshold creates a 60% bar at 5 systems
+read; if a 6th system supports a 2-system pattern, this rule
+elevates it to 3+ mechanically. Per cycle-18 anchoring-caveats-
+symmetric discipline, convergence across systems with diverse
+substrates is a positive transferability argument; 2-system patterns
+are recorded within this section with diversity-limit hedges,
+single-system observations are held in
+`_notes/cycle-22-cross-system-synthesis.md` pending deeper
+second-pass reads or adversarial-on-adversarial review (which can
+elevate them to 2-system on cross-system match).
 
 ### Patterns converging across 3+ systems
 
@@ -918,6 +924,53 @@ task. LangGraph pending-writes preserves successful sibling writes
 when a node fails mid-super-step; `WRITES_IDX_MAP = {ERROR: -1,
 SCHEDULED: -2, INTERRUPT: -3, RESUME: -4}` constants in checkpoint
 base treat failure states as persisted records.
+
+**Memory as a first-class architectural concept, not derivative of
+state.** PAI Principle 13 names "Memory System — Everything worth
+knowing gets captured. History feeds future context" as one of 16
+numbered architectural principles. LangGraph documents short-term
+(thread-scoped checkpoints) and long-term (cross-thread `Store`) as
+distinct primitives, with explicit motivation: "With checkpointers
+alone, we cannot share information across threads. This motivates
+the need for the `Store` interface." The other three systems treat
+memory as derivative of state or component-local persistence (AutoGen
+model-context abstraction over conversation history; Voyager
+`ckpt/`-per-agent; openclaw memory-as-singleton-plugin-slot — already
+named in Persistent divergences below). PAI's framing is
+principle-shape (numbered architectural rule); LangGraph's is
+mechanism-shape (Store as an Extensions-level primitive with
+documented motivation). Convergence on architectural-elevation;
+asymmetry on framing-vocabulary.
+
+**Small fixed team with explicit role-separation.** Voyager's
+`voyager/agents/` defines four agents with named roles (ActionAgent:
+code generation; CurriculumAgent: task selection; CriticAgent:
+verification; SkillManager: storage) — the four agents are the
+system architecture. AutoGen documents the Magentic-One pattern
+(`MagenticOneGroupChat`) as a lead-orchestrator + specialized workers
+team with Task Ledger / Progress Ledger vocabulary for planning and
+tracking. Both have small fixed teams with named roles. Structural
+asymmetry: Voyager runs peer-flow (curriculum → action → critic →
+skill); Magentic-One runs lead-worker hierarchy (orchestrator
+dispatches to workers). Voyager's role-separation is the system
+architecture; Magentic-One is one of many AutoGen orchestration
+patterns (the multiple-orchestration-patterns 2-system convergence
+above). Convergence on small-fixed-team-with-named-roles; divergence
+on orchestration topology (peer-flow vs lead-worker-hierarchy).
+
+**Per-agent model selection as architectural primitive.** AutoGen's
+Extensions API documents "model clients" as a layer abstraction;
+each AssistantAgent takes its own `model_client`, so per-agent model
+choice is architecturally first-class. Voyager assigns `gpt-4` to
+ActionAgent, CurriculumAgent (main), and CriticAgent (novel
+reasoning) and `gpt-3.5-turbo` to CurriculumAgent QA-cache lookups
+and SkillManager skill-description generation (cached/derivative
+work) — explicit cost-vs-novelty framing in the research artifact.
+Convergence on per-agent-model-selection as architectural-primitive;
+asymmetry on rationale (Voyager foregrounds cost-tiering motivation;
+AutoGen documents the architectural flexibility without prescribing
+cost-tiering or any other usage rationale, leaving the choice to
+application operators).
 
 ### Persistent divergences
 

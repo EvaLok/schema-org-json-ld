@@ -98,15 +98,17 @@ Vectordb embeddings are over LLM-generated skill descriptions, not raw skill cod
 
 Recorded as Voyager-specific until additional evidence emerges; the broader "embedding-over-derived-content" framing is candidate, not load-bearing.
 
-### Voyager: cost-tiering across same-runtime agents
+### Voyager: cost-tiering across same-runtime agents — **ELEVATED to 2-system convergence cycle 25**
 
 Different agent roles use different model tiers (gpt-4 for novel reasoning across ActionAgent / CurriculumAgent main / CriticAgent; gpt-3.5-turbo for cached/derivative work in CurriculumAgent QA-cache lookups and SkillManager skill-description generation). No other system studied explicitly documents per-agent cost-tiering as an architectural pattern. Recorded for future cycles.
 
-### PAI: memory as top-level architectural primitive (Principle 13)
+**Cycle-25 update:** Adversarial-on-adversarial re-read found AutoGen's Extensions API documents "model clients" as a layer abstraction with each AssistantAgent taking its own `model_client`. Per-agent model selection is architecturally first-class in AutoGen. The cost-tiering rationale is Voyager-specific (research artifact foregrounds cost-vs-novelty); AutoGen documents the architectural flexibility without prescribing usage rationale. Convergence on per-agent-model-selection-as-architectural-primitive (with cost-tiering rationale asymmetry) elevated to 2-system in `1-research.md` Cross-system observations.
+
+### PAI: memory as top-level architectural primitive (Principle 13) — **ELEVATED to 2-system convergence cycle 25**
 
 PAI's Principle 13 ("Memory System — Everything worth knowing gets captured. History feeds future context") frames memory as a first-class architectural concern. Other systems handle memory as derivative of state/checkpointing (LangGraph short-term/long-term Store split; AutoGen model-context abstraction; Voyager component-local persistence). The principle-list framing in PAI is itself an architectural-deliverable pattern (also seen in the small-core convergence) but the elevation-of-memory-to-primitive is PAI-distinctive.
 
-Recorded as PAI-specific. Cross-validation would require studying systems where memory is named as a top-level architectural concept; candidates: Anthropic engineering posts (Claude memory), MemGPT, future PAI deeper read.
+**Cycle-25 update:** Adversarial-on-adversarial re-read found LangGraph's `add-memory.mdx` documents short-term (thread-scoped checkpoints) and long-term (cross-thread `Store`) as DISTINCT primitives, with explicit motivation: "With checkpointers alone, we cannot share information across threads. This motivates the need for the `Store` interface." This is mechanism-shape elevation of memory to first-class architectural concept, paralleling PAI's principle-shape elevation. AutoGen and Voyager treat memory as derivative of state (model-context abstraction; component-local persistence). Convergence on memory-as-first-class-architectural-concept (PAI principle-shape, LangGraph mechanism-shape) elevated to 2-system in `1-research.md` Cross-system observations.
 
 ### Voyager: sync invariants asserted at init
 
@@ -114,11 +116,11 @@ SkillManager asserts `vectordb._collection.count() == len(self.skills)` at const
 
 This is a Voyager-specific architectural discipline. The general pattern (assert dual-storage invariants at init) might cross-validate with other systems on deeper reads. Recorded for future tracking.
 
-### Voyager: 4-agent fixed-roles architecture
+### Voyager: 4-agent fixed-roles architecture — **ELEVATED to 2-system convergence cycle 25**
 
 ActionAgent (code generation), CurriculumAgent (task selection), CriticAgent (verification), SkillManager (storage). Fixed roles, not coexisting orchestration patterns. Distinct from AutoGen/LangGraph multi-pattern orchestration (named in 2-system convergence). Voyager's fixed-roles design parallels the redesign's main-orchestrator + audit-orchestrator + Copilot-dispatchee setup but the role-cardinality is different.
 
-Recorded as Voyager-distinctive shape; no cross-system convergence yet.
+**Cycle-25 update:** Adversarial-on-adversarial re-read found AutoGen's Magentic-One pattern (`MagenticOneGroupChat`) instantiates a lead-orchestrator + specialized workers team with Task Ledger / Progress Ledger vocabulary for planning and tracking. Both Voyager and Magentic-One have small fixed teams with named roles. Structural asymmetry: Voyager runs peer-flow (curriculum → action → critic → skill); Magentic-One runs lead-worker hierarchy (orchestrator dispatches to workers). Voyager's role-separation IS the architecture; Magentic-One is one of many AutoGen orchestration patterns. Convergence on small-fixed-team-with-named-roles (with orchestration-topology asymmetry) elevated to 2-system in `1-research.md` Cross-system observations.
 
 ## What surprised me this cycle
 
