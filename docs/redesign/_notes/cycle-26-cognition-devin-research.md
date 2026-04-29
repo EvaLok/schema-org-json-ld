@@ -22,7 +22,7 @@ directly inspected.
 - `https://cognition.ai/blog/dont-build-multi-agents` — blocked (Walden Yan, June 2025; the architecturally-load-bearing single post per the dispatch)
 - `https://cognition.ai/blog/introducing-devin` — blocked (Scott Wu, March 2024)
 - `https://cognition.ai/blog/swe-bench-technical-report` — blocked
-- `https://cognition.ai/blog/devin-sonnet-4-5-lessons-and-challenges` — blocked (date unclear; likely late 2025)
+- `https://cognition.ai/blog/devin-sonnet-4-5-lessons-and-challenges` — blocked (date unclear; likely H2 2025, predates the April 2026 follow-up post)
 - `https://cognition.ai/blog/devin-2` — blocked (April 2025, Devin 2.0 announcement)
 - `https://cognition.ai/blog/dec-24-product-update-2` — blocked
 - `https://devin.ai/` — blocked
@@ -286,9 +286,14 @@ work.
 > the when the user is talking with the system back and forth many
 > times when these sub agents are getting more and more nuanced tasks,
 > and you forget to pass some details through."
-*(Documented-claim; the transcript quality of this quote suggests it
-may originate from a spoken presentation or video, not the written
-post directly. Flag for verification.)*
+*(Documented-claim; the transcript quality of this quote — notably the
+run-on phrase "as you as the when", which is a clear transcription
+artifact — suggests it originates from a spoken presentation or video
+that was auto-transcribed or manually transcribed imperfectly, not
+from the written blog post directly. The core content (nuanced tasks
+accumulating context loss over multi-turn interactions) is consistent
+with the rest of the post's argument. Flag for verification against the
+original source when unblocked.)*
 
 ### Single-threaded linear agent as the alternative
 
