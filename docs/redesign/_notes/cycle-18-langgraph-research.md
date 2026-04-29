@@ -733,7 +733,6 @@ Transfers:
 - The warning that high-level convenience does not expose every low-level state option is broadly relevant.
 
 ## Patterns observed in LangGraph
-## Patterns observed in LangGraph
 
 This section intentionally lists patterns without evaluating redesign relevance.
 
