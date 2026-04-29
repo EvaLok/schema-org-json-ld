@@ -812,27 +812,133 @@ cross-system synthesis, gated on multi-system reading):
 - Honest implementation-vs-marketing-claims subsection in research
   evaluation discipline
 
-## Cross-system observations (preliminary)
+## Cross-system observations
 
-Both required reads (openclaw, PAI) explicitly value:
-- **Small core**, extension via plugins/skills/tools
-- **Deterministic infrastructure** around probabilistic AI
-- **Security posture** with strong defaults
-- **Modular capability** that can be added without core changes
+Five systems read at depth: openclaw, PAI (cycle 14); AutoGen
+(cycles 15-16, PR [#2763](https://github.com/EvaLok/schema-org-json-ld/pull/2763));
+Voyager (cycle 17); LangGraph (cycles 18-20, PR
+[#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)).
+Observations below cross-validate where 3+ systems converge on the
+same pattern shape. Per cycle-18 anchoring-caveats-symmetric
+discipline, convergence across systems with diverse substrates is a
+positive transferability argument; patterns present in only 1-2
+systems are recorded as candidate, not load-bearing.
 
-Differences:
-- openclaw explicitly rejects agent-hierarchy frameworks; PAI lists
-  Principle 14 ("Agent Personalities — specialized agents with
-  unique voices") which gestures toward multi-agent.
-- openclaw's "memory as a singleton plugin slot" suggests architectural
-  conservatism on persistence; PAI elevates memory to a top-level
-  principle.
-- openclaw is operator-driven (user's commands run on user's host);
-  PAI is goal-driven (system pursues user's goals).
+### Patterns converging across 3+ systems
 
-These shouldn't yet inform Phase 2 candidates — multi-system reading
-should establish what's idiosyncratic to each project vs what
-cross-validates as a generalizable pattern.
+**Multi-agent decomposition is not a default.** openclaw VISION.md
+"Agent-hierarchy frameworks ... as a default architecture" appears
+in "What We Will Not Merge"; AutoGen v0.4 removed built-in sequential
+chat as "too opinionated and not flexible enough"; LangGraph
+multi-agent docs state "not every complex task requires this
+approach—a single agent ... can often achieve similar results."
+Three independent maintainers; none assert the opposite. PAI's
+Principle 14 ("Agent Personalities") gestures toward multi-agent
+without prescribing decomposition.
+
+**Deterministic code executes; LLM proposes (code-vs-prompts split).**
+PAI states this explicitly as Principles 5/6/11 ("Deterministic
+Infrastructure" / "Code Before Prompts" / "Goal → Code → CLI →
+Prompts → Agents"). Voyager separates `voyager/control_primitives/`
+(deterministic JS) from `voyager/prompts/` (LLM-driven). LangGraph's
+`ToolNode` executes tools deterministically while the LLM emits
+structured calls. AutoGen follows the same shape: model emits a
+schema-validated call (name + JSON arguments); host executes
+registered code. openclaw's plugin system separates extension code
+from the agent layer that invokes it. Five-system convergence across
+substrate variations (research code, agent and graph-state
+frameworks, personal-assistant, local-first gateway, spanning Python
+and TypeScript).
+
+**Small core, capability extends via plugins/skills/tools/layers.**
+openclaw "Core stays lean; optional capability should usually ship as
+plugins"; PAI 16 named principles plus plugin/skill architecture;
+AutoGen Core / AgentChat / Extensions / Studio / Bench layering;
+Voyager control primitives + skill library + prompts as three named
+layers; LangGraph low-level Pregel + higher-level prebuilt agents.
+Five-system convergence with shape variations (plugins, skills,
+layers, extensions) on the same architectural principle.
+
+**Strong-defaults security with operator-controlled knobs.** openclaw:
+default DM policy `pairing` (unknown senders blocked); sandbox modes
+with allow/deny lists; "Treat inbound DMs as untrusted." AutoGen:
+Docker code executor as the safer default vs local; "Only connect to
+trusted MCP servers" warning; Magentic-One docs name
+prompt-injection-from-web-content as a concrete risk. PAI: explicit
+strong-defaults posture in README. Three-system convergence;
+LangGraph's durable-execution warnings are operational rather than
+threat-model framing; Voyager's research-artifact status makes the
+question less applicable.
+
+**Anti-patterns explicit as deliverable artifact.** openclaw VISION.md
+"What We Will Not Merge" lists patterns to avoid; AutoGen v0.4
+migration guide names `ConversableAgent.register_reply` and old
+user-proxy tool-routing as patterns to avoid, and `AssistantAgent`
+itself is documented as a "kitchen sink" prototype; LangGraph names
+replay-as-cache and interrupts-as-line-continuations as common
+misreadings. Three systems publish anti-patterns alongside
+recommended patterns.
+
+### Patterns converging across 2 systems (with internal-validation where present)
+
+**Multiple orchestration patterns coexist as first-class.** AutoGen
+documents round-robin, selector, swarm, graph, and lead-orchestrator;
+LangGraph documents prompt chaining, routing, parallelization,
+orchestrator-worker, ReAct, subgraphs, supervisor. Both express
+orchestration via message-protocol behavior contracts rather than
+universal orchestrator objects. Both are agent frameworks; substrate
+diversity is limited.
+
+**Component-local state persistence (no central state file).** AutoGen
+state save/load is component-local dictionaries with no single global
+state file as the system center. Voyager checkpoints to per-agent
+subdirectories under `ckpt/` (skill, curriculum, action, event).
+LangGraph's typed-channel-map is related but structurally different
+(channel-local within one schema, not file-per-component). The
+principle (state isolation by component, not one merge-point) is
+shared; the implementation shape diverges.
+
+**Append-only history; no destructive rollback.** LangGraph time
+travel: "`update_state` does **not** roll back a thread. It creates a
+new checkpoint that branches from the specified point. The original
+execution history remains intact." Voyager skill versioning is
+append-on-disk (new code as `<name>V2.js`, `<name>V3.js`),
+replace-in-vectordb. Internal-validation: cycle-20 noted this matches
+the redesign's draft-then-promote / append-only retention pattern
+(Eva advisory [#2408](https://github.com/EvaLok/schema-org-json-ld/issues/2408)).
+
+**Failed work as recorded artifact, not silent discard.** Voyager
+records failed tasks in `failed_tasks.json`; the curriculum agent
+reads both completed and failed history when selecting the next
+task. LangGraph pending-writes preserves successful sibling writes
+when a node fails mid-super-step; `WRITES_IDX_MAP = {ERROR: -1,
+SCHEDULED: -2, INTERRUPT: -3, RESUME: -4}` constants in checkpoint
+base treat failure states as persisted records.
+
+### Persistent divergences
+
+- **Agent-hierarchy stance is downstream of operator-vs-goal-driven
+  framing.** openclaw is operator-driven (user issues commands;
+  system executes them); PAI is goal-driven (system pursues user's
+  long-running goals). openclaw rejects agent-hierarchies; PAI
+  Principle 14 gestures toward them. The hierarchy choice follows
+  from the prior operator/goal choice.
+- **Memory architectural stance: openclaw treats memory as a
+  singleton plugin slot (one mechanism active, replaceable, not
+  layered); PAI treats memory as a top-level Principle 13.**
+  Architectural conservatism vs first-class-primitive framings of
+  the persistence question.
+- **State-shape divergence: file-per-component (AutoGen, Voyager) vs
+  typed-channel-map (LangGraph).** Both honor "no monolithic state
+  blob" but with different update granularities — whole-component
+  records vs per-channel reducers within one schema.
+
+The Phase-2-input section remains pending. These observations are
+substrate, not prescription — Phase 2 candidates can draw from
+3+-system convergence as positive evidence and from divergences as
+design-space-spanning alternatives. Single-system observations
+(captured in `_notes/cycle-22-cross-system-synthesis.md`) should not
+yet shape candidate generation.
 
 ## Phase 1 work plan (subject to evolution)
 
