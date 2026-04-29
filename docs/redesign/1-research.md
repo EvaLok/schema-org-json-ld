@@ -586,6 +586,9 @@ cross-system synthesis, gated on multi-system reading):
   as the named learning mechanism
 - Two-layer capability composition: hand-written primitives + LLM-composed
   skills over primitives
+- Compositionality (skills compose primitives; later skills compose earlier
+  skills) as the paper's named learning mechanism within the skill-library
+  architecture
 - Prompts as external files split by sub-task (curriculum decomposed
   across three prompt files for sub-decisions)
 - Structured critic output (`{success: bool, critique: str}`) rather

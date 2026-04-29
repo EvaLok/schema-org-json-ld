@@ -962,12 +962,16 @@ cross-substrate catalog — is in the F11 architectural-implication
 paragraph and the F12 hypothesis). This section collects v2 design
 implications per family for cycle-by-cycle reference during Phase 2.
 
-> **Defense accretion implication.** Cycle boundaries should be
-> checkpoint markers on a continuously-evolving state, not state
-> hard-boundaries that freeze worklogs and leave defense refreshers
-> stranded post-close. Defenses themselves should be re-examined for
-> load-bearingness; the catalog proves accumulation, not that each
-> defense is currently load-bearing.
+> **Defense accretion implication.** v2 must dissolve the freeze-vs-refresh
+> timing mismatch named in the family preamble. What v2 must AVOID is v1's
+> specific pattern: state hard-boundaries that freeze worklogs and leave
+> defense refreshers stranded post-close. The shape of the fix is a Phase 2
+> design choice across the family preamble's three resolutions — checkpoint
+> markers on a continuously-evolving state (option 3, continuous
+> reconciliation); pre-freeze timing alignment so refreshers complete
+> (options 1 and 2, earlier defenses or later freeze). Defenses themselves
+> should be re-examined for load-bearingness; the catalog proves
+> accumulation, not that each defense is currently load-bearing.
 
 > **Procedure / review overhead implication (F6/F7/F9).** Procedural
 > depth and review-disposition loops generate work proportional to
