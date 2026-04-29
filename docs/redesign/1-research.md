@@ -671,7 +671,10 @@ acknowledges parallel super-steps where one branch can fail while
 siblings completed. The `WRITES_IDX_MAP = {ERROR: -1, SCHEDULED: -2,
 INTERRUPT: -3, RESUME: -4}` constant in checkpoint base shows special
 writes are persisted in the writes-table indexing model rather than
-thrown only as process exceptions.
+thrown only as process exceptions. Durability of these writes is a
+tunable: `compile(durability="exit"|"async"|"sync")` exposes the
+performance/durability tradeoff explicitly rather than hiding it as a
+default.
 
 **Time travel as append-only fork, not destructive rollback.** Two
 operations: replay (retry from a prior checkpoint) and fork (branch from
@@ -730,8 +733,7 @@ execution does not auto-handle idempotence; the Agent Server can hide
 persistence setup but moves complexity into LangSmith infrastructure
 rather than removing it. The durable-execution docs themselves admit
 "the code does **NOT** resume from the **same line of code** where
-execution stopped." This is research-evaluation honesty, not v2-relevance
-smuggling.
+execution stopped."
 
 **Anchoring caveats on LangGraph.** These caveats argue *non-transfer*:
 each names a difference between LangGraph's substrate and the redesign's
@@ -807,8 +809,8 @@ cross-system synthesis, gated on multi-system reading):
 - Explicit position against reflexive multi-agent decomposition
 - Explicit non-goal: architectural opinionation ("LangGraph does not
   abstract prompts or architecture")
-- Explicit anti-patterns enumerated (kitchen-sink avoidance, replay-as-
-  cache mistake, interrupts-as-line-continuations mistake, etc.)
+- Explicit anti-patterns enumerated (replay-as-cache mistake, interrupts-
+  as-line-continuations mistake, etc.)
 - Honest implementation-vs-marketing-claims subsection in research
   evaluation discipline
 
