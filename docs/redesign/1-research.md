@@ -590,10 +590,10 @@ cross-system synthesis, gated on multi-system reading):
   across three prompt files for sub-decisions)
 - Structured critic output (`{success: bool, critique: str}`) rather
   than free-form review
-- LLM-generated skill descriptions as the embedding surface (descriptions
-  are lossy summaries; vectors index the summary, not the code)
-- QA-cache pattern for repeated curriculum lookups (vectordb-keyed cached
-  question→answer pairs)
+- LLM-generated skill descriptions as the embedding surface (embeddings
+  are over descriptions, not over raw code)
+- QA-cache pattern for repeated curriculum lookups (`qa_cache.json`
+  plus vectordb of cached questions, kept in sync)
 
 ## Cross-system observations (preliminary)
 

@@ -183,14 +183,27 @@ experiment.*
 The two families overlap because F11 (the temporal stage of
 defense-accretion) is the point where reconciliation-asymmetry binds —
 defenses fire post-close; the worklog freeze is pre-close; nothing
-reconciles. F11 is also where the freeze-vs-refresh timing collision
-(F11's local mechanism) plays out: artifacts freeze before refreshers
-finish, structurally producing post-close divergence between frozen
-artifacts and live state. v2 design implications for the two families
-converge: every state field needs a write-tool AND a reconciliation-tool;
-every channel needs a poller that produces state transitions; cycle
-boundaries should be checkpoint markers on a continuously-evolving state,
-not state hard-boundaries that freeze worklogs.
+reconciles. F11's local mechanism is the freeze-vs-refresh **timing
+mismatch**: defense-refreshers fire on cycle-boundary triggers
+(post-close, where their inputs arrive); the worklog freezes at C5
+(pre-close, by v1's architectural choice); the two timings disagree by
+minutes-to-hours. **The mismatch is bilateral — no side is
+architecturally privileged.** Three resolutions exist: earlier defenses
+(if their inputs allow), later freeze (if the worklog can remain mutable
+until refreshers complete), or continuous reconciliation (no hard freeze;
+checkpoint markers on evolving state). v1 added defenses at later timings
+without rethinking freeze timing — an asymmetric response to a symmetric
+problem; "artifacts freeze before refreshers finish" describes one side
+of the mismatch, not its architectural cause. v2 design implications for
+the two families partially overlap across the three resolutions: every
+state field needs a write-tool AND a reconciliation-tool, and every
+channel needs a poller that produces state transitions, regardless of
+which resolution v2 picks. The further claim that cycle boundaries should
+be checkpoint markers on a continuously-evolving state rather than
+state hard-boundaries that freeze worklogs is the option-3-specific
+prescription; whether v2 takes that path or a hard-freeze path with
+reconciliation-tooling on either side (options 1 or 2 with augmentation)
+is a Phase 2 design choice.
 
 The F-pattern naming below leads with the named pattern and the family.
 F-numbers remain as anchor IDs for cross-references but are de-emphasized.
@@ -726,17 +739,24 @@ state mutations tagged with `[cycle N]` for cycles 543, 544, 545:
   intrinsic-domain field (a counterexample would have weakened the claim;
   none was found).
 - **Architectural implication**. *Several v1 defenses are implemented as
-  end-of-cycle or next-cycle refreshers. Because artifacts freeze before
-  those refreshers finish, the architecture structurally produces
-  post-close divergence between frozen artifacts and live state.* The named tools
-  above (`verify-review-events`, `metric-snapshot`, `pipeline-check`'s
-  C5.5 write, `record-dispatch` on post-close dispatches) are the
-  refreshers; the C5 worklog freeze is the artifact frozen before they
-  run; `step_comment_acknowledged_gaps`, `agent_sessions`, etc. are the
-  state surfaces that diverge. F11 is the *temporal* face of the
-  defense-accretion family: defenses fire on cycle-boundary triggers,
-  the worklog freezes before those triggers, no reconciliation tool
-  reads the post-trigger state back into the frozen worklog.
+  end-of-cycle or next-cycle refreshers; the worklog freezes at C5
+  before those refreshers finish; the architecture structurally produces
+  post-close divergence between frozen artifacts and live state.* The
+  freeze-vs-refresh mismatch is **bilateral**: earlier defenses (if their
+  inputs allow), later freeze (if the worklog can remain mutable until
+  refreshers complete), or continuous reconciliation without a hard
+  freeze would each resolve it. v1's response was to add defenses at
+  later timings without changing C5's freeze timing — an asymmetric
+  response that preserves the mismatch rather than dissolving it. The
+  named tools above (`verify-review-events`, `metric-snapshot`,
+  `pipeline-check`'s C5.5 write, `record-dispatch` on post-close
+  dispatches) are the refreshers; the C5 worklog freeze is the artifact
+  frozen before they run; `step_comment_acknowledged_gaps`,
+  `agent_sessions`, etc. are the state surfaces that diverge. F11 is the
+  *temporal* face of the defense-accretion family: defenses fire on
+  cycle-boundary triggers; the worklog freezes before those triggers; no
+  reconciliation tool reads the post-trigger state back into the frozen
+  worklog.
 
   F1, F5, F11, and F12 are sibling manifestations of defense accretion.
   F1 names the response-shape pattern at the prompt/checklist substrate
@@ -897,8 +917,9 @@ tools (`verify-review-events`, `metric-snapshot`, `pipeline-check`'s
 C5.5 write, `record-dispatch`) fire on the cycle boundary and mutate
 state after the C5 worklog freeze; the defenses *are* the post-close
 mutations, and the worklog freeze has no reconciliation tool that
-updates it when they fire. The freeze-vs-refresh timing collision is
-F11's local mechanism; the named-tools-fire-post-close-on-named-fields
+updates it when they fire. The freeze-vs-refresh timing mismatch is
+F11's local mechanism (bilateral: see the family preamble for the three
+resolutions); the named-tools-fire-post-close-on-named-fields
 chain is observation-level evidence that the four F-patterns operate
 on the same surface (the same tools fire post-close, mutating the
 same fields, the same catalog records them) — shared activity, not
