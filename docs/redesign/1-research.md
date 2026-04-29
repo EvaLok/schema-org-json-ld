@@ -847,10 +847,12 @@ Prompts → Agents"). Voyager separates `voyager/control_primitives/`
 structured calls. AutoGen follows the same shape: model emits a
 schema-validated call (name + JSON arguments); host executes
 registered code. openclaw's plugin system separates extension code
-from the agent layer that invokes it. Five-system convergence across
-substrate variations (research code, agent and graph-state
-frameworks, personal-assistant, local-first gateway, spanning Python
-and TypeScript).
+from the agent layer that invokes it (architectural-shape match;
+LLM-proposes / code-executes is less foregrounded here than in the
+four agent-frameworks). Four-system foregrounded convergence with
+openclaw architectural-shape match, across substrate variations
+(research code, agent and graph-state frameworks, personal-assistant,
+local-first gateway, spanning Python and TypeScript).
 
 **Small core, capability extends via plugins/skills/tools/layers.**
 openclaw "Core stays lean; optional capability should usually ship as
@@ -881,7 +883,7 @@ replay-as-cache and interrupts-as-line-continuations as common
 misreadings. Three systems publish anti-patterns alongside
 recommended patterns.
 
-### Patterns converging across 2 systems (with internal-validation where present)
+### Patterns converging across 2 systems (with repo-internal cross-references where present)
 
 **Multiple orchestration patterns coexist as first-class.** AutoGen
 documents round-robin, selector, swarm, graph, and lead-orchestrator;
@@ -905,7 +907,7 @@ travel: "`update_state` does **not** roll back a thread. It creates a
 new checkpoint that branches from the specified point. The original
 execution history remains intact." Voyager skill versioning is
 append-on-disk (new code as `<name>V2.js`, `<name>V3.js`),
-replace-in-vectordb. Internal-validation: cycle-20 noted this matches
+replace-in-vectordb. Repo-internal: cycle-20 noted this matches
 the redesign's draft-then-promote / append-only retention pattern
 (Eva advisory [#2408](https://github.com/EvaLok/schema-org-json-ld/issues/2408)).
 
