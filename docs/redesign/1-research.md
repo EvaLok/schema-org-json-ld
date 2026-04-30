@@ -816,18 +816,23 @@ cross-system synthesis, gated on multi-system reading):
 
 ## Cross-system observations
 
-Five systems read at depth: openclaw, PAI (cycle 14); AutoGen
+Eight systems read at depth: openclaw, PAI (cycle 14); AutoGen
 (cycles 15-16, PR [#2763](https://github.com/EvaLok/schema-org-json-ld/pull/2763));
 Voyager (cycle 17); LangGraph (cycles 18-20, PR
-[#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)).
+[#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768));
+Cognition Devin (cycle 26, PR [#2780](https://github.com/EvaLok/schema-org-json-ld/pull/2780));
+OpenAI harness-engineering (cycle 26, PR [#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783));
+oh-my-codex (cycle 26, PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)).
 Observations below cross-validate where 3+ systems converge on the
-same pattern shape. The 3+ threshold creates a 60% bar at 5 systems
-read; if a 6th system supports a 2-system pattern, this rule
-elevates it to 3+ mechanically. Per cycle-18 anchoring-caveats-
-symmetric discipline, convergence across systems with diverse
-substrates is a positive transferability argument; 2-system patterns
-are recorded within this section with diversity-limit hedges,
-single-system observations are held in
+same pattern shape. The 3+ threshold was originally calibrated
+against 5 systems (60% bar); with 8 systems now read at depth, the
+threshold is preserved as the floor (the original calibration
+remains its design rationale) and convergence at higher counts is
+recorded as the strength of the pattern rather than a separate tier.
+Per cycle-18 anchoring-caveats-symmetric discipline, convergence
+across systems with diverse substrates is a positive transferability
+argument; 2-system patterns are recorded within this section with
+diversity-limit hedges, single-system observations are held in
 `_notes/cycle-22-cross-system-synthesis.md` pending deeper
 second-pass reads or adversarial-on-adversarial review (which can
 elevate them to 2-system on cross-system match).
@@ -840,9 +845,19 @@ in "What We Will Not Merge"; AutoGen v0.4 removed built-in sequential
 chat as "too opinionated and not flexible enough"; LangGraph
 multi-agent docs state "not every complex task requires this
 approach—a single agent ... can often achieve similar results."
-Three independent maintainers; none assert the opposite. PAI's
-Principle 14 ("Agent Personalities") gestures toward multi-agent
-without prescribing decomposition.
+PAI's Principle 14 ("Agent Personalities") gestures toward
+multi-agent without prescribing decomposition. Cognition Devin's
+"Don't Build Multi-Agents" post (Walden Yan, June 2025) is the
+strongest named-rejection in the surveyed systems — it explicitly
+calls OpenAI Swarm and Microsoft AutoGen "the wrong way of building
+agents" and argues context fragmentation makes multi-agent designs
+fragile (Flappy Bird example: independent agents make incompatible
+implicit decisions). *(Documented-claim per cycle-26 source-access
+note — `cognition.ai` blocked, content via secondary sources.)*
+oh-my-codex's `$team` runtime exists as opt-in but README explicitly
+says "$team is not the default onboarding path." Six systems with
+foregrounded support (Cognition Devin's named-rejection is the
+strongest); none assert the opposite as a default.
 
 **Deterministic code executes; LLM proposes (code-vs-prompts split).**
 PAI states this explicitly as Principles 5/6/11 ("Deterministic
@@ -855,10 +870,20 @@ schema-validated call (name + JSON arguments); host executes
 registered code. openclaw's plugin system separates extension code
 from the agent layer that invokes it (architectural-shape match;
 LLM-proposes / code-executes is less foregrounded here than in the
-four agent-frameworks). Four-system foregrounded convergence with
-openclaw architectural-shape match, across substrate variations
+four agent-frameworks). OpenAI's harness-engineering writeup
+foregrounds this as a thesis: "Humans steer. Agents execute" via
+mechanical enforcement layers (custom linters, CI checks, AGENTS.md
+as table-of-contents to deeper docs/) — the harness layer is
+deterministic, the agent loop is LLM-driven. oh-my-codex makes the
+same split explicit at the implementation level: MCP servers, the
+44KB keyword detector (deterministic pattern matching, not semantic
+classification per pattern 21 in `_notes/cycle-26-oh-my-codex-research.md`),
+and the Rust sparkshell harness all sit deterministically alongside
+the LLM-driven Codex tool loop. Six-system foregrounded convergence
+with openclaw architectural-shape match, across substrate variations
 (research code, agent and graph-state frameworks, personal-assistant,
-local-first gateway, spanning Python and TypeScript).
+local-first gateway, harness-as-environment, configuration-layer-on-
+top-of-CLI), spanning Python, TypeScript, and Rust.
 
 **Small core, capability extends via plugins/skills/tools/layers.**
 openclaw "Core stays lean; optional capability should usually ship as
@@ -866,8 +891,18 @@ plugins"; PAI 16 named principles plus plugin/skill architecture;
 AutoGen Core / AgentChat / Extensions / Studio / Bench layering;
 Voyager control primitives + skill library + prompts as three named
 layers; LangGraph low-level Pregel + higher-level prebuilt agents.
-Five-system convergence with shape variations (plugins, skills,
-layers, extensions) on the same architectural principle.
+OpenAI harness-engineering describes the harness as depth-first
+accumulation (capabilities added iteratively as failures surfaced;
+not pre-designed) — the small entry-point pattern is AGENTS.md
+(~100 lines as table of contents) extended by the structured `docs/`
+directory plus mechanical-enforcement layer plus per-task ephemeral
+worktrees. oh-my-codex is explicit: "OMX does NOT replace Codex"
+(README, repeatedly stated) — it is a configuration layer + hook
+harness with 39 skills, 30 role prompts, three first-party MCP
+servers, and a Rust sparkshell extension all sitting on top of an
+unmodified Codex CLI. Seven-system convergence with shape variations
+(plugins, skills, layers, extensions, harness-accumulation,
+configuration-layer-with-hooks) on the same architectural principle.
 
 **Strong-defaults security with operator-controlled knobs.** openclaw:
 default DM policy `pairing` (unknown senders blocked); sandbox modes
@@ -886,79 +921,77 @@ migration guide names `ConversableAgent.register_reply` and old
 user-proxy tool-routing as patterns to avoid, and `AssistantAgent`
 itself is documented as a "kitchen sink" prototype; LangGraph names
 replay-as-cache and interrupts-as-line-continuations as common
-misreadings. Three systems publish anti-patterns alongside
-recommended patterns.
+misreadings. Cognition Devin's "Don't Build Multi-Agents" post is
+the canonical example: a published anti-pattern argument framed as
+a prohibition (with named-target framework rejections — OpenAI
+Swarm, Microsoft AutoGen). OpenAI harness-engineering names "one big
+AGENTS.md" as the only explicitly named anti-pattern in the writeup,
+with four failure mechanisms (context crowding, salience collapse,
+rot, unverifiability). oh-my-codex maintains anti-patterns at
+multiple layers: CONTRIBUTING.md `<Bad>` examples ("Claiming
+completion without verification: 'should work correctly. Task
+complete.'"), explicit deprecations (`$web-clone` "hard-deprecated"),
+and `templates/AGENTS.md` opening with negative directives. Six
+systems publish anti-patterns alongside recommended patterns;
+Cognition Devin's framing is the strongest (entire post-as-anti-
+pattern-argument).
 
-### Patterns converging across 2 systems (with repo-internal cross-references where present)
-
-**Multiple orchestration patterns coexist as first-class.** AutoGen
+**Multiple orchestration patterns coexist as first-class.** *(Elevated
+from 2-system tier cycle 27 on oh-my-codex support.)* AutoGen
 documents round-robin, selector, swarm, graph, and lead-orchestrator;
 LangGraph documents prompt chaining, routing, parallelization,
 orchestrator-worker, ReAct, subgraphs, supervisor. Both express
 orchestration via message-protocol behavior contracts rather than
-universal orchestrator objects. Both are agent frameworks; substrate
-diversity is limited.
+universal orchestrator objects. oh-my-codex extends this with named
+workflow modes (`deep-interview`, `ralplan`, `ralph`, `team`,
+`autopilot`, `ultrawork`, `ultraqa`) governed by an explicit
+transition allowlist in `docs/STATE_MODEL.md` — multiple
+orchestration patterns coexist with deterministic transition policy
+preventing illegal mode shifts. Three systems with substrate
+diversity now broader than just agent frameworks (oh-my-codex is a
+configuration layer over an external CLI, not an agent framework
+itself).
 
-**Component-local state persistence (no central state file).** AutoGen
-state save/load is component-local dictionaries with no single global
-state file as the system center. Voyager checkpoints to per-agent
-subdirectories under `ckpt/` (skill, curriculum, action, event).
-LangGraph's typed-channel-map is related but structurally different
-(channel-local within one schema, not file-per-component). The
-principle (state isolation by component, not one merge-point) is
-shared; the implementation shape diverges.
+**Component-local state persistence (no central state file).**
+*(Elevated from 2-system tier cycle 27 on OpenAI harness and
+oh-my-codex support.)* AutoGen state save/load is component-local
+dictionaries with no single global state file as the system center.
+Voyager checkpoints to per-agent subdirectories under `ckpt/`
+(skill, curriculum, action, event). LangGraph's typed-channel-map
+is related but structurally different (channel-local within one
+schema, not file-per-component). OpenAI harness-engineering frames
+this as "plans as first-class versioned artifacts" — multiple plan
+files (active, completed, technical-debt) checked into the
+repository, with the explicit principle "from the agent's point of
+view, anything it can't access in-context while running effectively
+doesn't exist." oh-my-codex implements per-mode state files in
+`.omx/state/<mode>-state.json` with explicit session vs root scope
+reconciliation rules (`src/state/workflow-transition-reconcile.ts`)
+preventing compatibility-layer writes from resurrecting completed
+source modes. Five-system convergence; principle (state isolation by
+component, not one merge-point) is shared; implementation shape
+diverges across in-process dictionaries, file-per-component, typed
+channels, plans-as-artifacts, and per-mode state files with
+reconciliation.
 
-**Append-only history; no destructive rollback.** LangGraph time
-travel: "`update_state` does **not** roll back a thread. It creates a
-new checkpoint that branches from the specified point. The original
-execution history remains intact." Voyager skill versioning is
-append-on-disk (new code as `<name>V2.js`, `<name>V3.js`),
-replace-in-vectordb. Repo-internal: cycle-20 noted this matches
-the redesign's draft-then-promote / append-only retention pattern
-(Eva advisory [#2408](https://github.com/EvaLok/schema-org-json-ld/issues/2408)).
+**Failed work as recorded artifact, not silent discard.** *(Elevated
+from 2-system tier cycle 27 on oh-my-codex support.)* Voyager records
+failed tasks in `failed_tasks.json`; the curriculum agent reads both
+completed and failed history when selecting the next task. LangGraph
+pending-writes preserves successful sibling writes when a node fails
+mid-super-step; `WRITES_IDX_MAP = {ERROR: -1, SCHEDULED: -2,
+INTERRUPT: -3, RESUME: -4}` constants in checkpoint base treat
+failure states as persisted records. oh-my-codex Ralph progress
+ledger (`.omx/state/<session_or_root>/ralph-progress.json`) records
+failure entries with timestamps; the autoresearch loop's
+`iteration-ledger.json` records keep/discard/stop decisions per
+iteration with reasons. Three systems with structural similarity
+(Voyager's `failed_tasks.json` and oh-my-codex's iteration-ledger
+are the closest match in shape — append-only failure-record file
+read by subsequent decision-making code).
 
-**Failed work as recorded artifact, not silent discard.** Voyager
-records failed tasks in `failed_tasks.json`; the curriculum agent
-reads both completed and failed history when selecting the next
-task. LangGraph pending-writes preserves successful sibling writes
-when a node fails mid-super-step; `WRITES_IDX_MAP = {ERROR: -1,
-SCHEDULED: -2, INTERRUPT: -3, RESUME: -4}` constants in checkpoint
-base treat failure states as persisted records.
-
-**Memory as a first-class architectural concept, not derivative of
-state.** PAI Principle 13 names "Memory System — Everything worth
-knowing gets captured. History feeds future context" as one of 16
-numbered architectural principles. LangGraph documents short-term
-(thread-scoped checkpoints) and long-term (cross-thread `Store`) as
-distinct primitives, with explicit motivation: "With checkpointers
-alone, we cannot share information across threads. This motivates
-the need for the `Store` interface." The other three systems treat
-memory as derivative of state or component-local persistence (AutoGen
-model-context abstraction over conversation history; Voyager
-`ckpt/`-per-agent; openclaw memory-as-singleton-plugin-slot — already
-named in Persistent divergences below). PAI's framing is
-principle-shape (numbered architectural rule); LangGraph's is
-mechanism-shape (Store as an Extensions-level primitive with
-documented motivation). Convergence on architectural-elevation;
-asymmetry on framing-vocabulary.
-
-**Small fixed team with explicit role-separation.** Voyager's
-`voyager/agents/` defines four agents with named roles (ActionAgent:
-code generation; CurriculumAgent: task selection; CriticAgent:
-verification; SkillManager: storage) — the four agents are the
-system architecture. AutoGen documents the Magentic-One pattern
-(`MagenticOneGroupChat`) as a lead-orchestrator + specialized workers
-team with Task Ledger / Progress Ledger vocabulary for planning and
-tracking. Both have small fixed teams with named roles. Structural
-asymmetry: Voyager runs peer-flow (curriculum → action → critic →
-skill); Magentic-One runs lead-worker hierarchy (orchestrator
-dispatches to workers). Voyager's role-separation is the system
-architecture; Magentic-One is one of many AutoGen orchestration
-patterns (the multiple-orchestration-patterns 2-system convergence
-above). Convergence on small-fixed-team-with-named-roles; divergence
-on orchestration topology (peer-flow vs lead-worker-hierarchy).
-
-**Per-agent model selection as architectural primitive.** AutoGen's
+**Per-agent model selection as architectural primitive.** *(Elevated
+from 2-system tier cycle 27 on oh-my-codex support.)* AutoGen's
 Extensions API documents "model clients" as a layer abstraction;
 each AssistantAgent takes its own `model_client`, so per-agent model
 choice is architecturally first-class. Voyager assigns `gpt-4` to
@@ -966,11 +999,108 @@ ActionAgent, CurriculumAgent (main), and CriticAgent (novel
 reasoning) and `gpt-3.5-turbo` to CurriculumAgent QA-cache lookups
 and SkillManager skill-description generation (cached/derivative
 work) — explicit cost-vs-novelty framing in the research artifact.
-Convergence on per-agent-model-selection as architectural-primitive;
-asymmetry on rationale (Voyager foregrounds cost-tiering motivation;
-AutoGen documents the architectural flexibility without prescribing
-cost-tiering or any other usage rationale, leaving the choice to
-application operators).
+oh-my-codex extends per-agent model selection across providers:
+`src/config/models.ts` declares supported models GPT-5.4, GPT-5.4-mini,
+GPT-5.5, GPT-5.3-codex; the "mini composition seam" gates exact-model
+behavior; `$ask-claude` and `$ask-gemini` skills shell to non-OpenAI
+provider CLIs from within a Codex session. Three systems with
+asymmetric rationale (Voyager: cost-tiering; AutoGen: architectural
+flexibility without rationale prescription; oh-my-codex: cross-
+provider invocation as a first-class skill). Convergence on
+per-agent-model-selection as architectural-primitive; divergence on
+the rationale framing.
+
+**Append-only history; no destructive rollback.** *(Elevated from
+2-system tier cycle 27 on OpenAI harness and oh-my-codex support;
+DIVERSITY HEDGE in the elevation — convergence on principle,
+divergence on substrate.)* LangGraph time travel: "`update_state`
+does **not** roll back a thread. It creates a new checkpoint that
+branches from the specified point. The original execution history
+remains intact." Voyager skill versioning is append-on-disk (new
+code as `<name>V2.js`, `<name>V3.js`), replace-in-vectordb. OpenAI
+harness-engineering uses git as the substrate: repository as state,
+commits append, ephemeral worktrees torn down but history preserved.
+oh-my-codex implements file-backed migration with one-way
+compatibility windows (legacy `.omx/prd.json` → `.omx/plans/prd-<slug>.md`):
+legacy files preserved as read-only, schema migrations one-way, not
+destructive. **Diversity hedge:** the convergence is on the principle
+(no destructive history overwrite); the substrate diverges across
+in-process versioning (LangGraph branching, Voyager V2/V3) vs
+filesystem/git (OpenAI repo-as-state) vs one-way file migration
+(oh-my-codex). Repo-internal: cycle-20 noted this matches the
+redesign's draft-then-promote / append-only retention pattern (Eva
+advisory [#2408](https://github.com/EvaLok/schema-org-json-ld/issues/2408)).
+
+**Memory as a first-class architectural concept, not derivative of
+state.** *(Elevated from 2-system tier cycle 27 on Cognition Devin /
+OpenAI harness / oh-my-codex support; DIVERSITY HEDGE — convergence
+on architectural elevation, divergence on the specific primitive.)*
+PAI Principle 13 names "Memory System — Everything worth knowing
+gets captured. History feeds future context" as one of 16 numbered
+architectural principles. LangGraph documents short-term (thread-
+scoped checkpoints) and long-term (cross-thread `Store`) as distinct
+primitives, with explicit motivation: "With checkpointers alone, we
+cannot share information across threads. This motivates the need
+for the `Store` interface." Cognition Devin treats the agent trace
+as the unit of context — "the context isn't just the user's message
+but includes everything the agent has done — code files examined,
+questions asked, and answers received" — with Devin Wiki (Devin 2.0)
+as the closest documented cross-session persistent knowledge analog.
+*(Documented-claim per cycle-26 source-access note.)* OpenAI
+harness-engineering treats the repository as single source of record:
+"From the agent's point of view, anything it can't access in-context
+while running effectively doesn't exist. Knowledge that lives in
+Google Docs, chat threads, or people's heads are not accessible to
+the system." oh-my-codex implements `.omx/wiki/` markdown wiki with
+MCP wiki server (`src/wiki/`); SessionStart hook can inject bounded
+wiki context; markdown-first, search-first (not vector-based).
+Five-system convergence on memory-as-architectural-concern; divergence
+on the specific primitive — vector store (Voyager), typed channel
+(LangGraph Store), context trace (Cognition), repository-as-record
+(OpenAI), wiki server (oh-my-codex), principle-shape (PAI). The
+shared claim is that memory deserves architectural elevation; what
+counts as "memory" varies substantially across systems.
+
+**Small fixed team with explicit role-separation.** *(Elevated from
+2-system tier cycle 27 on oh-my-codex support; CONTRARY-STANCE NOTE
+on Cognition Devin's explicit rejection.)* Voyager's `voyager/agents/`
+defines four agents with named roles (ActionAgent: code generation;
+CurriculumAgent: task selection; CriticAgent: verification;
+SkillManager: storage) — the four agents are the system architecture.
+AutoGen documents the Magentic-One pattern (`MagenticOneGroupChat`)
+as a lead-orchestrator + specialized workers team with Task Ledger /
+Progress Ledger vocabulary for planning and tracking. oh-my-codex
+ships 30 named role prompts in `prompts/*.md` (Metis as analyst,
+Ralph as persistent executor, plus planner / architect / critic /
+verifier / researcher / etc.); workflow stages (`$deep-interview` →
+`$ralplan` → `$ralph` → `$team`) hand off across role-named agents.
+Three systems support; **Cognition Devin contradicts this pattern
+explicitly**: the "Don't Build Multi-Agents" stance and the single-
+threaded linear agent default reject task-decomposition into role-
+separated sub-agents. The contradiction is substantive — not absent-
+of-evidence, but published-anti-stance. The pattern elevates by
+mechanical count (3 supporting systems) but the elevation pairs with
+this contrary-stance note rather than just an asymmetry footnote;
+see Persistent Divergences below for fuller treatment to be added
+cycle 28. Structural asymmetries within the supporting three:
+Voyager runs peer-flow (curriculum → action → critic → skill);
+Magentic-One runs lead-worker hierarchy (orchestrator dispatches to
+workers); oh-my-codex's named-keyword workflow runs sequential mode
+transitions across role-named agents (planner → architect → critic
+within `ralplan`, then handoff to executor in `ralph`).
+
+### Patterns converging across 2 systems (with repo-internal cross-references where present)
+
+*Cycle 27: this subsection's prior seven entries elevated to 3+ tier
+on cycle-26-deliverable cross-validation (Cognition Devin / OpenAI
+harness-engineering / oh-my-codex). The elevated bullets appear
+within the 3+ section above. The cycle-28 Tier-2 restructure may
+reorganize the section by family or maturity rather than the binary
+2-vs-3+ tier scheme; this subsection is currently empty pending
+re-population by NEW 2-system patterns from cycle-28+ work
+(mechanical enforcement of constraints, plans-as-artifacts,
+entropy/AI-slop, etc. — see `_notes/cycle-27-three-dispatch-evaluation.md`
+for the candidate list).*
 
 ### Persistent divergences
 
