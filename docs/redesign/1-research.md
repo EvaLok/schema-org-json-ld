@@ -1012,8 +1012,9 @@ the rationale framing.
 
 **Append-only history; no destructive rollback.** *(Elevated from
 2-system tier cycle 27 on OpenAI harness and oh-my-codex support;
-DIVERSITY HEDGE in the elevation — convergence on principle,
-divergence on substrate.)* LangGraph time travel: "`update_state`
+the convergence is on the principle, the divergence is on the
+substrate — see body's "Diversity hedge" sentence for the in-process
+versioning vs filesystem/git split.)* LangGraph time travel: "`update_state`
 does **not** roll back a thread. It creates a new checkpoint that
 branches from the specified point. The original execution history
 remains intact." Voyager skill versioning is append-on-disk (new
@@ -1033,8 +1034,9 @@ advisory [#2408](https://github.com/EvaLok/schema-org-json-ld/issues/2408)).
 
 **Memory as a first-class architectural concept, not derivative of
 state.** *(Elevated from 2-system tier cycle 27 on Cognition Devin /
-OpenAI harness / oh-my-codex support; DIVERSITY HEDGE — convergence
-on architectural elevation, divergence on the specific primitive.)*
+OpenAI harness / oh-my-codex support; the convergence is on
+architectural elevation, the divergence is on the specific
+primitive — see body for the cross-system primitive list.)*
 PAI Principle 13 names "Memory System — Everything worth knowing
 gets captured. History feeds future context" as one of 16 numbered
 architectural principles. LangGraph documents short-term (thread-
@@ -1055,11 +1057,15 @@ the system." oh-my-codex implements `.omx/wiki/` markdown wiki with
 MCP wiki server (`src/wiki/`); SessionStart hook can inject bounded
 wiki context; markdown-first, search-first (not vector-based).
 Five-system convergence on memory-as-architectural-concern; divergence
-on the specific primitive — vector store (Voyager), typed channel
-(LangGraph Store), context trace (Cognition), repository-as-record
-(OpenAI), wiki server (oh-my-codex), principle-shape (PAI). The
-shared claim is that memory deserves architectural elevation; what
-counts as "memory" varies substantially across systems.
+on the specific primitive — typed channel (LangGraph Store), context
+trace (Cognition), repository-as-record (OpenAI), wiki server
+(oh-my-codex), principle-shape (PAI). The shared claim is that
+memory deserves architectural elevation; what counts as "memory"
+varies substantially across systems. *(Voyager's SkillManager + Chroma
+vectordb is an adjacent primitive but framed as skill-storage rather
+than memory-as-such in the source repo; not counted in the convergence
+to keep the body description and the count consistent — re-evaluate
+cycle 29+ if the framing changes.)*
 
 **Small fixed team with explicit role-separation.** *(Elevated from
 2-system tier cycle 27 on oh-my-codex support; CONTRARY-STANCE NOTE
