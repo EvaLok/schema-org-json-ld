@@ -1097,16 +1097,101 @@ within `ralplan`, then handoff to executor in `ralph`).
 
 ### Patterns converging across 2 systems (with repo-internal cross-references where present)
 
-*Cycle 27: this subsection's prior seven entries elevated to 3+ tier
-on cycle-26-deliverable cross-validation (Cognition Devin / OpenAI
-harness-engineering / oh-my-codex). The elevated bullets appear
-within the 3+ section above. The cycle-28 Tier-2 restructure may
-reorganize the section by family or maturity rather than the binary
-2-vs-3+ tier scheme; this subsection is currently empty pending
-re-population by NEW 2-system patterns from cycle-28+ work
-(mechanical enforcement of constraints, plans-as-artifacts,
-entropy/AI-slop, etc. — see `_notes/cycle-27-three-dispatch-evaluation.md`
-for the candidate list).*
+*The prior seven entries in this subsection elevated to 3+ tier
+cycle 27 on cycle-26-deliverable cross-validation (Cognition Devin /
+OpenAI harness-engineering / oh-my-codex). The elevated bullets
+appear within the 3+ section above. Re-populated cycle 29 with NEW
+2-system patterns surfaced by the cycle-26 dispatch deliverables;
+counts here use the cycle-28 recheck (see
+`_notes/cycle-28-claim-recheck-and-cold-readers.md` for the
+candidate-by-candidate verdict and 33% per-row correction rate from
+the cycle-27 first-pass matrix). The cycle-28 Tier-2 restructure
+(family-clustering vs maturity-clustering vs flat-with-ordering)
+remains deferred until the post-integration shape is visible.*
+
+**Mechanical enforcement of regression-tested behavioral constraints.**
+*(Added cycle 29 from cycle-26 dispatch deliverables; strict framing
+is 2-system; the convergence is on the principle that behavior
+constraints get test-suite enforcement rather than just doc-prescription.
+Loose-framing extensions in Voyager and LangGraph operate at different
+scope and rigidity — see body for the substrate-divergence hedge.)*
+OpenAI harness-engineering uses custom linters with agent-readable
+error messages and treats "golden principles" as mechanically-checked
+(PR [#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)
+deliverable patterns 8/9/12); rule violations surface as actionable
+diagnostics rather than soft documentation. oh-my-codex maintains
+behavioral prompt-contract regression tests in
+`src/hooks/__tests__/prompt-guidance-*.test.ts` (PR
+[#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)
+deliverable pattern 7) — agent-affecting prose has CI coverage on
+exact wording. Two-system strict convergence on
+behavioral-constraint-as-tested-artifact. **Diversity hedge:**
+Voyager's SkillManager + CurriculumAgent assert
+`vectordb._collection.count() == len(self.skills)` at construction
+(see Voyager section above) — this is mechanical enforcement but
+init-time-only and on data-state, not continuous behavior; LangGraph
+enforces channel types and reducer contracts statically via
+TypedDict / dataclass / Pydantic BaseModel — mechanical enforcement
+on data shape, not behavior. Both share the principle (mechanically-
+checked invariants over documented rules) at different scope and
+rigidity; counted as loose-framing convergence on the broader
+mechanical-enforcement principle, not as 4-system strict.
+
+**Plans/specs as first-class forward-versioned artifacts.** *(Added
+cycle 29 from cycle-26 dispatch deliverables; 2-system clean.)*
+OpenAI harness-engineering checks plan files into the repository
+across active / completed / technical-debt categories (PR
+[#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)
+deliverable pattern 7); plans are first-class versioned artifacts
+that the harness expects to read and write. oh-my-codex writes
+context snapshots to `.omx/context/{task-slug}-{timestamp}.md`
+before execution begins, with explicit fields for task statement,
+desired outcome, known facts, constraints, unknowns, and codebase
+touchpoints (PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)
+deliverable pattern 2). Two-system convergence on plan-as-forward-spec
+written before execution rather than reconstructed-after. Distinct
+from the elevated "Failed work as recorded artifact" pattern in the
+3+ section, which captures backward-looking task-history records
+(Voyager `failed_tasks.json`, LangGraph pending-writes, oh-my-codex
+ralph-progress); plans-as-artifacts is the forward-looking
+counterpart.
+
+**Entropy / AI slop as first-class engineering concern.** *(Added
+cycle 29 from cycle-26 dispatch deliverables; 2-system clean.)*
+OpenAI harness-engineering names entropy as first-class engineering
+concern and pairs it with golden principles + a doc-gardening
+agent (PR [#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)
+deliverable patterns 11/12) — the harness acknowledges agent-output
+quality drift as something requiring active mitigation infrastructure,
+not a one-time cleanup. oh-my-codex requires a deslop pass as
+mandatory post-completion step (PR
+[#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)
+deliverable pattern 13); the workflow embeds quality cleanup into
+each task's completion contract. Two-system convergence on
+recurring-cleanup-as-infrastructure (vs. accretion as design
+feature). Inversely-related to the redesign's prior accretion
+pattern — these systems treat accretion as a failure mode to clean,
+not a defensive structure to preserve.
+
+**Iteration ceilings with explicit numerical limits.** *(Added
+cycle 29 from cycle-26 dispatch deliverables; 2-system strict
+support, with Cognition Devin's session time-limit as adjacent
+partial at different bounding-axis. Cycle-28 recheck corrected the
+cycle-27 matrix that had MISSED Voyager's documented retry ceiling.)*
+oh-my-codex documents `max_iterations=10` for tool-loops and `max=5`
+for review-loops, plus an autoresearch loop with explicit
+keep/discard/stop per-iteration decision (PR
+[#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)
+deliverable pattern 6). Voyager's `action_agent_task_max_retries = 4`
+(see Voyager section above) bounds retries on action failure with
+critic-critique + execution-error fed into the next prompt; failed
+tasks accumulate in `failed_tasks.json` rather than retrying
+indefinitely. Two-system strict convergence on bounded-autonomy-loop
+as architectural primitive. Cognition Devin's documented 45-minute
+session time limit is adjacent (bounds total runtime rather than
+iteration count; *documented-claim per cycle-26 source-access
+note*) — the bounding axis differs but the principle (autonomous
+loops need explicit ceilings, not open-ended runs) is shared.
 
 ### Persistent divergences
 
