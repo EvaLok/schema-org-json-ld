@@ -9,8 +9,11 @@ is authoritative for the work that happens here.
 - **`0-retrospective.md`** — Phase 0 working draft. Honest catalog of v1
   failure patterns. Iterates across many cycles. Required reading before
   designing v2.
-- **`1-research.md`** — Phase 1 (later). External-system study (openclaw,
-  PAI, others).
+- **`1-research.md`** — Phase 1 index. Cross-system observations,
+  anchoring discipline, work plan. Per-system architecture summaries
+  live under **`1-research/systems/<system>.md`** (split out cycle 33
+  per the redesign-prompt's `evolve-the-mechanism` mandate; see
+  `_notes/cycle-33-research-restructure.md` for the migration record).
 - **`2-candidates.md` / `2-selection.md`** — Phase 2 (later). At least
   two distinct design candidates with rationale for selection.
 - **`3-experiments/`** — Phase 3 (later). Prototype, experiments,

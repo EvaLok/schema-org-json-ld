@@ -743,7 +743,13 @@ material — read them when useful, but you are not obligated to follow them.
     Plus any others you identify (LangGraph, Semantic Kernel, AutoGen,
     Voyager, Cognition's Devin writeups, etc.). Authorized to dispatch
     Copilot research-only tasks for parallel investigation. Output:
-    <code>docs/redesign/1-research.md</code>.
+    <code>docs/redesign/1-research.md</code> (the index, holding the
+    cross-system observations and the Phase 1 work plan) plus
+    per-system architecture summaries under
+    <code>docs/redesign/1-research/systems/&lt;system&gt;.md</code>
+    (one file per system read; layout introduced cycle 33,
+    2026-05-01 — see <code>_notes/cycle-33-research-restructure.md</code>
+    for the migration record).
 
     Phase 1 reading may proceed in parallel with finishing Phase 0
     once the retrospective has reached load-bearing-stable structural
