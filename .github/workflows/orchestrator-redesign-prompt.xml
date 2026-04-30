@@ -651,6 +651,80 @@ material — read them when useful, but you are not obligated to follow them.
 </communication>
 
 <!-- ================================================================
+     SECTION 6b: HOUSEKEEPING (mandatory periodic; judgment-driven)
+     ================================================================ -->
+<housekeeping>
+
+  <observation>
+    The issue tracker and draft-PR queue accumulate state that becomes
+    hard to navigate over time. As of cycle 33: 25 open issues spanning
+    2 months (some absorbed, some superseded, some active substrate —
+    no clear distinction); 10 of 11 open PRs are drafts that were never
+    intended to merge (Copilot research/feedback dispatches whose
+    content was integrated per-finding cycles ago). Useful information
+    is in there, but active vs absorbed is not legible at a glance.
+  </observation>
+
+  <directive>
+    Keep the issue tracker and PR queue legible. Close issues that have
+    been absorbed, superseded, or completed; close draft PRs whose
+    content has been integrated and whose originating issue is closed.
+    Use your judgment on what "absorbed" means in each case — a
+    feedback dispatch PR is absorbed when its findings have been
+    evaluated per-finding (cycle-7 / cycle-12 / cycle-31 pattern) and
+    the verdicts have landed in the artifact; a research dispatch PR is
+    absorbed when its architectural patterns have been integrated into
+    the relevant per-system file and the cross-system observations.
+  </directive>
+
+  <what-not-to-close>
+    - Open <code>question-for-eva</code> issues — Eva closes those
+      after acking.
+    - Open <code>input-from-eva</code> directives that name an ongoing
+      constraint (e.g., "Phase 1 authorized" for the duration of
+      Phase 1; "Redesign mode is active" for the duration of redesign).
+    - Anything where "absorbed" is uncertain. When in doubt, leave it
+      open and journal the question for the next cycle to revisit.
+    - Audit-repo cross-references — defer to the
+      <code>cross-repo-communication</code> discipline.
+  </what-not-to-close>
+
+  <closure-discipline>
+    When closing an issue or draft PR, leave a closing comment that
+    names where the absorbed content now lives — file path plus commit
+    SHA or cycle number. The closed-but-linked record preserves the
+    audit paper trail while removing the open-list noise. A closure
+    without a forward-link is worse than leaving the issue open.
+  </closure-discipline>
+
+  <cadence>
+    Treat housekeeping as periodic bounded-mechanical work, not a
+    separate phase. A cycle that's heavy on substantive work doesn't
+    need to sweep; a cycle with bounded-work capacity can include 2-4
+    closures with linking comments. The bar is "keep accumulation
+    bounded," not "process all open items every cycle." If the
+    accumulated count grows monotonically across many cycles, that
+    itself is a signal worth journaling.
+  </cadence>
+
+  <meta-observation severity="design-input">
+    Patterns observed during housekeeping are themselves design-input
+    for v2 candidate generation. Examples: if active-vs-absorbed is
+    structurally hard to tell without re-reading multi-cycle history,
+    that's a v1 persistence-shape failure mode worth Phase 2
+    consideration; if every research dispatch produces a draft PR
+    that never merges, the workflow primitive is mismatched to the
+    actual lifecycle and v2 should know it; if <code>input-from-eva</code>
+    directives accumulate without a clear "this directive is now
+    retired" mechanism, that's a missing primitive. Capture such
+    observations as journal entries or <code>_notes/</code> items —
+    they may anchor v2 decisions about issue-tracker integration,
+    PR-lifecycle semantics, and review-loop primitives.
+  </meta-observation>
+
+</housekeeping>
+
+<!-- ================================================================
      SECTION 7: PERSISTENCE (the multi-session problem)
      ================================================================ -->
 <persistence>
