@@ -1169,9 +1169,9 @@ mandatory post-completion step (PR
 deliverable pattern 13); the workflow embeds quality cleanup into
 each task's completion contract. Two-system convergence on
 recurring-cleanup-as-infrastructure (vs. accretion as design
-feature). Inversely-related to the redesign's prior accretion
-pattern — these systems treat accretion as a failure mode to clean,
-not a defensive structure to preserve.
+feature). Inversely-related to v1's accretion-as-defense pattern
+(F12 in `0-retrospective.md`) — these systems treat accretion as
+a failure mode to clean, not a defensive structure to preserve.
 
 **Iteration ceilings with explicit numerical limits.** *(Added
 cycle 29 from cycle-26 dispatch deliverables; 2-system strict
