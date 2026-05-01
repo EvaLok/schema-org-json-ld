@@ -2,7 +2,7 @@
 
 ## Status
 
-**v1.3 (cycle 38, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
+**v1.5 (cycle 41, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
 
@@ -19,6 +19,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.2 | 37 (2026-05-01) | `_notes/cycle-37-framework-v1.2-application-and-cold-reader.md` | Framework promoted to dedicated file `2-design-framework.md`. Six deferred decisions applied: Q[c] constraint 7 wording refinement, Q1 Axis 11→constraint 8 promotion, Q2 Axis 12 (Reconciliation discipline) added, Q3 ordering disclaimer added, Q4 Axis 13 (Harness-vs-session boundary) added, Q5 preserved-primitives subsection added. Cycle-37 cold-reader correction: F11 mapping refined to Axis 4+Axis 12 (drop Axis 2 from direct mapping; document indirect contribution in cross-axis deps). |
 | v1.3 | 38 (2026-05-01) | `_notes/cycle-38-cold-reader-and-v1.3-application.md` | Cycle-38 cold-reader on v1.2: three pre-commit questions all PASS (F11→Axis 4+Axis 12 stands; Axis 13 medium-vs-fat is real differentiation; constraint 8 is meaningful). Two refinements: (i) add "Axis 13 × Axis 7" cross-axis dependency (situational-review implementation strategy); (ii) backfill Maps-to lines on Axes 1, 3, 5, 6, 7 (cycle-37 same-cycle review minor finding (5) inherited from v1.0/v1.1). One flag for cycle-39+ verification: Axis 12 "v1-derived" caveat may be too strong given LangGraph interrupts as broader-axis analogue. |
 | v1.4 | 39 (2026-05-01) | `_notes/cycle-39-cold-reader-and-redispatch-escalation.md` | Cycle-39 cold-reader on v1.3: three pre-commit questions all PASS again (re-dispatch trigger did NOT fire on comment-on-existing-issue; Axis 12 "v1-derived" caveat correct; F-pattern table levels correct including F9→Axis 7 with Axis 13 indirect via cross-axis deps). Cycle-38 "v1-derived caveat may be too strong" flag verified-and-retired: HITL primitives in LangGraph/AutoGen are synchronous pause-resume mechanisms, structurally different from async reconciliation; clarification sentence added to Axis 12 Status. Cycle-39 cold-reader OVERCAUTIOUS finding mirrors cycle-37's Q[b] OVERCAUTIOUS pattern. |
+| v1.5 | 41 (2026-05-01) | `_notes/cycle-41-deeper-read-per-finding-evaluation.md` | Cycle-41 substantive findings from PR #2804 + #2805 deeper-read deliverables (Cognition + OpenAI). Three Cognition framework corrections applied: (i) Axis 1 — Cognition's "Don't Build Multi-Agents" (June 2025) was substantially walked back in April 22, 2026 follow-up; durable invariant is **writes-stay-single-threaded**, not single-threaded execution; Cognition now ships Managed Devins (coordinator + parallel children) and joins the small-fixed-team row; (ii) Axis 3 — Cognition has multi-layer memory architecture (5+ documented mechanisms); context-trace framing qualified to "primary in-session mechanism, multi-layer at longer horizons"; (iii) Axis 9 — 45-min session limit is unverified after direct primary-source access (docs say "if you can do it in three hours"); status downgraded from `documented-claim` to `unverified-after-direct-access`. Plus: Axis 9 OpenAI counter-evidence (Ralph Wiggum Loop has no iteration ceiling — pattern does NOT transfer to cron-driven systems). Plus: Status header v1.3→v1.5 freshness fix (was missed cycle-39 v1.4 bump). Two flags for cycle-42+: Axis 12 "Most likely v2 candidate position" annotation softening (Q[b] cold-reader); openclaw deeper-read dispatch (Q[c] BORDERLINE-PASS). |
 
 ## Purpose and scope
 
@@ -125,9 +126,9 @@ Twelve axes (numbered 1-10, 12, 13; Axis 11 absent — promoted to constraint
 
 | Position | Systems supporting | Notes |
 |---|---|---|
-| Single-threaded linear | Cognition Devin (named-rejection of multi-agent) | Strongest published anti-stance ("Don't Build Multi-Agents") |
-| Small fixed team with role-separation | Voyager (4 agents), AutoGen Magentic-One (lead + workers), oh-my-codex (30 named role prompts) | 3+/3 with Cognition contradiction |
-| Multi-agent peer (uncontrolled) | None | Rejected by 3+/6 systems as default |
+| Single-threaded linear | Cognition Devin June 2025 ("Don't Build Multi-Agents") | Position substantially walked back April 22, 2026; durable invariant is **writes-stay-single-threaded**, not single-threaded execution |
+| Small fixed team with role-separation | Voyager (4 agents), AutoGen Magentic-One (lead + workers), oh-my-codex (30 named role prompts), Cognition Devin Apr 2026 (Managed Devins coordinator + parallel children + clean-context Devin Review + Smart Friend consultation) | 4+/4 with writes-single-threaded as constraint, not multi-agent prohibition |
+| Multi-agent peer (uncontrolled) | None | Rejected by 4+/6 systems as default; Cognition explicitly rejects "unstructured swarms" in April 2026 follow-up |
 
 **v1's position:** single-threaded with Copilot dispatches as parallel workers
 (off-process). The dispatches are not "agents" in the small-fixed-team sense
@@ -135,8 +136,12 @@ Twelve axes (numbered 1-10, 12, 13; Axis 11 absent — promoted to constraint
 
 **v2 candidate space:** retain dispatch-as-worker (current shape) vs adopt
 small-fixed-team within the orchestrator session itself (e.g., planner /
-executor / critic / curator). Cognition's named-rejection makes single-
-threaded a defensible default.
+executor / critic / curator). The convergent constraint across all 4 systems
+that ship multi-agent designs is **writes stay single-threaded** — the
+load-bearing invariant is write-discipline, not agent-count. Candidates
+that allow multi-agent decomposition must declare how writes stay
+single-threaded; candidates that adopt single-threaded execution can cite
+the broader invariant rather than agent-count specifically.
 
 **Cross-axis dependency:** Axis 1 × Axis 7 (orchestration topology) —
 single-threaded forces single-topology; small-fixed-team enables but doesn't
@@ -190,7 +195,7 @@ what shape does it take?
 |---|---|---|
 | Singleton plugin slot (one mechanism active, replaceable) | openclaw | Persistent divergence — one pole |
 | Top-level architectural principle | PAI Principle 13 | Persistent divergence — other pole |
-| Context trace (everything-the-agent-has-done) | Cognition Devin | Strongest "memory is the trace" framing |
+| Context trace (everything-the-agent-has-done) | Cognition Devin (primary in-session mechanism; multi-layer at longer horizons) | Cycle-41 deeper read documents 5+ memory mechanisms (cross-session notes, Knowledge API, Playbooks, DeepWiki, Session Insights, hypervisor snapshots); context-trace is the in-session label |
 | Repository-as-record | OpenAI harness | "Anything not in-context doesn't exist" |
 | Wiki + search (markdown-first, search-first) | oh-my-codex (`.omx/wiki/` + MCP server) | Bounded context injection |
 | Typed channels (short/long-term distinction) | LangGraph (Store + checkpointer) | Closest to v1's intermediate-cache shape |
@@ -380,7 +385,7 @@ CORE-DESIGN-PRINCIPLE violation detection.
 |---|---|---|
 | None (open-ended runs) | Rare in surveyed | Implicit in v1's per-cycle non-bounded retry |
 | Loop count ceilings | oh-my-codex (`max_iterations=10`, `max=5`), Voyager (`action_agent_task_max_retries=4`) | 2-system strict |
-| Runtime ceiling | Cognition Devin (45-min session limit, *documented-claim*) | 1 adjacent partial — bounds runtime not iteration |
+| Runtime ceiling | ~~Cognition Devin (45-min session limit, *documented-claim*)~~ — **unverified after cycle-41 direct primary-source access**; docs say "if you can do it in three hours, Devin can most likely do it"; hypervisor snapshot infrastructure supports hours-long sessions | Anchor weakened; OpenAI Ralph Wiggum Loop is **counter-evidence** (no iteration ceiling, human backstop is the bound — does NOT transfer to cron-driven autonomous systems) |
 | Both (loop + runtime) | None explicitly in surveyed | Composable |
 
 **v1's position:** per-cycle there is no per-loop ceiling. The cycle ITSELF
