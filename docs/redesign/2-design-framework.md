@@ -2,7 +2,7 @@
 
 ## Status
 
-**v1.5 (cycle 41, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
+**v1.6 (cycle 42, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
 
@@ -20,6 +20,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.3 | 38 (2026-05-01) | `_notes/cycle-38-cold-reader-and-v1.3-application.md` | Cycle-38 cold-reader on v1.2: three pre-commit questions all PASS (F11→Axis 4+Axis 12 stands; Axis 13 medium-vs-fat is real differentiation; constraint 8 is meaningful). Two refinements: (i) add "Axis 13 × Axis 7" cross-axis dependency (situational-review implementation strategy); (ii) backfill Maps-to lines on Axes 1, 3, 5, 6, 7 (cycle-37 same-cycle review minor finding (5) inherited from v1.0/v1.1). One flag for cycle-39+ verification: Axis 12 "v1-derived" caveat may be too strong given LangGraph interrupts as broader-axis analogue. |
 | v1.4 | 39 (2026-05-01) | `_notes/cycle-39-cold-reader-and-redispatch-escalation.md` | Cycle-39 cold-reader on v1.3: three pre-commit questions all PASS again (re-dispatch trigger did NOT fire on comment-on-existing-issue; Axis 12 "v1-derived" caveat correct; F-pattern table levels correct including F9→Axis 7 with Axis 13 indirect via cross-axis deps). Cycle-38 "v1-derived caveat may be too strong" flag verified-and-retired: HITL primitives in LangGraph/AutoGen are synchronous pause-resume mechanisms, structurally different from async reconciliation; clarification sentence added to Axis 12 Status. Cycle-39 cold-reader OVERCAUTIOUS finding mirrors cycle-37's Q[b] OVERCAUTIOUS pattern. |
 | v1.5 | 41 (2026-05-01) | `_notes/cycle-41-deeper-read-per-finding-evaluation.md` | Cycle-41 substantive findings from PR #2804 + #2805 deeper-read deliverables (Cognition + OpenAI). Three Cognition framework corrections applied: (i) Axis 1 — Cognition's "Don't Build Multi-Agents" (June 2025) was substantially walked back in April 22, 2026 follow-up; durable invariant is **writes-stay-single-threaded**, not single-threaded execution; Cognition now ships Managed Devins (coordinator + parallel children) and joins the small-fixed-team row; (ii) Axis 3 — Cognition has multi-layer memory architecture (5+ documented mechanisms); context-trace framing qualified to "primary in-session mechanism, multi-layer at longer horizons"; (iii) Axis 9 — 45-min session limit is unverified after direct primary-source access (docs say "if you can do it in three hours"); status downgraded from `documented-claim` to `unverified-after-direct-access`. Plus: Axis 9 OpenAI counter-evidence (Ralph Wiggum Loop has no iteration ceiling — pattern does NOT transfer to cron-driven systems). Plus: Status header v1.3→v1.5 freshness fix (was missed cycle-39 v1.4 bump). Two flags for cycle-42+: Axis 12 "Most likely v2 candidate position" annotation softening (Q[b] cold-reader); openclaw deeper-read dispatch (Q[c] BORDERLINE-PASS). |
+| v1.6 | 42 (2026-05-01) | `_notes/cycle-42-cold-reader-and-v1.6-application.md` | Cycle-42 cold-reader on v1.5: Q(a) found two internal inconsistencies introduced by v1.5's Axis 1 Cognition update that were not propagated to other framework sections — applied. Q(b) PASS — C7 (microVM) and O7 (companion post) qualifications adequately propagated to per-system files; no over-acceptance. Q(c) decided both deferred flags warrant cycle-42 action — Axis 12 hybrid annotation softening applied; openclaw deeper-read dispatch executed via close-and-recreate primitive. Three v1.6 changes: (i) Axis 7 row — Cognition moved from "Single-pattern (one shape only)" to multi-pattern coexisting (Apr 2026 ships Managed Devins + Devin Review + Smart Friend — system-level multi-pattern); (ii) Cross-axis dependency map (Constraint 8 × Axis 1) — stale "(Cognition)" parenthetical example removed since Cognition now in small-fixed-team row; (iii) Axis 12 hybrid row annotation — replaced "Most likely v2 candidate position" (forward-looking forecast that could prejudice Phase 2 candidate generation) with cost-grounded descriptive reasoning ("Lowest per-channel design cost — different channels have different frequencies"). |
 
 ## Purpose and scope
 
@@ -322,10 +323,10 @@ prompt-level axes — language-port tools are extensions and fold into Axis 6.
 
 | Position | Systems supporting | Notes |
 |---|---|---|
-| Single-pattern (one shape only) | Cognition (single-threaded linear) | Forces simplicity at cost of flexibility |
-| Multi-pattern coexisting | AutoGen (round-robin/selector/swarm/graph), LangGraph (chaining/routing/parallelization/orchestrator-worker/ReAct/subgraphs/supervisor) | 3+/3 in surveyed |
+| Single-pattern (one shape only) | None in surveyed systems' current shipping architectures | Cognition June 2025 advocated this in "Don't Build Multi-Agents"; April 2026 walkback ships multi-pattern. v1's rigid checklist-driven sequence is the closest extant example — and is the v1 anti-pattern. |
+| Multi-pattern coexisting | AutoGen (round-robin/selector/swarm/graph), LangGraph (chaining/routing/parallelization/orchestrator-worker/ReAct/subgraphs/supervisor), Cognition Apr 2026 (Managed Devins coordinator + parallel children, Devin Review clean-context, Smart Friend frontier consultation) | 3+/3 in surveyed |
 | Sequential mode transitions with deterministic transition policy | oh-my-codex (`STATE_MODEL.md` allowlist) | Modes governed by allowlist preventing illegal shifts |
-| Lead-worker hierarchy | AutoGen Magentic-One | Specialized workers under orchestrator |
+| Lead-worker hierarchy | AutoGen Magentic-One, Cognition Apr 2026 (Managed Devins) | Specialized workers under orchestrator |
 | Peer-flow | Voyager (curriculum → action → critic → skill) | Round-robin among role-specialized peers |
 
 **v1's position:** rigid checklist-driven sequence (STARTUP → C phases →
@@ -454,7 +455,7 @@ into state?
 | No reconciliation: write-only outbound channels | v1 anti-pattern (F2/F3/F4/F11 emerge from this) |
 | Active polling: each outbound channel paired with a reader producing state transitions | High-cost; requires per-channel discipline |
 | Event-driven: state changes reactively when external events arrive | Requires inbound trigger infrastructure (webhook, GitHub Actions on event) |
-| Hybrid: polling for low-frequency channels, event-driven for high-frequency | Most likely v2 candidate position |
+| Hybrid: polling for low-frequency channels, event-driven for high-frequency | Lowest per-channel design cost — different channels have different frequencies |
 
 **Status:** v1-derived axis; no external system surveyed has an Eva-equivalent
 that would constrain the choice. Candidates that address Axis 12 are doing
@@ -592,9 +593,11 @@ Significant inter-axis constraints:
   primarily fixed by Axis 7 (situational vs fixed); Axis 13 shapes the
   implementation strategy for that fix.
 - **Constraint 8 (goal-driven) × Axis 1 (decomposition):** Goal-driven
-  pairs naturally with single-threaded long-running (Cognition); goal-
+  pairs naturally with single-threaded long-running execution; goal-
   driven within small-fixed-team requires explicit goal-coordination
-  primitive.
+  primitive (Cognition's Managed Devins coordinator pattern is one
+  surveyed instance — coordinator scopes child tasks to maintain
+  goal-coherence across parallel children).
 
 Largely orthogonal:
 
