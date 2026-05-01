@@ -2,7 +2,7 @@
 
 ## Status
 
-**v1.6 (cycle 42, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
+**v1.7 (cycle 43, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
 
@@ -21,6 +21,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.4 | 39 (2026-05-01) | `_notes/cycle-39-cold-reader-and-redispatch-escalation.md` | Cycle-39 cold-reader on v1.3: three pre-commit questions all PASS again (re-dispatch trigger did NOT fire on comment-on-existing-issue; Axis 12 "v1-derived" caveat correct; F-pattern table levels correct including F9→Axis 7 with Axis 13 indirect via cross-axis deps). Cycle-38 "v1-derived caveat may be too strong" flag verified-and-retired: HITL primitives in LangGraph/AutoGen are synchronous pause-resume mechanisms, structurally different from async reconciliation; clarification sentence added to Axis 12 Status. Cycle-39 cold-reader OVERCAUTIOUS finding mirrors cycle-37's Q[b] OVERCAUTIOUS pattern. |
 | v1.5 | 41 (2026-05-01) | `_notes/cycle-41-deeper-read-per-finding-evaluation.md` | Cycle-41 substantive findings from PR #2804 + #2805 deeper-read deliverables (Cognition + OpenAI). Three Cognition framework corrections applied: (i) Axis 1 — Cognition's "Don't Build Multi-Agents" (June 2025) was substantially walked back in April 22, 2026 follow-up; durable invariant is **writes-stay-single-threaded**, not single-threaded execution; Cognition now ships Managed Devins (coordinator + parallel children) and joins the small-fixed-team row; (ii) Axis 3 — Cognition has multi-layer memory architecture (5+ documented mechanisms); context-trace framing qualified to "primary in-session mechanism, multi-layer at longer horizons"; (iii) Axis 9 — 45-min session limit is unverified after direct primary-source access (docs say "if you can do it in three hours"); status downgraded from `documented-claim` to `unverified-after-direct-access`. Plus: Axis 9 OpenAI counter-evidence (Ralph Wiggum Loop has no iteration ceiling — pattern does NOT transfer to cron-driven systems). Plus: Status header v1.3→v1.5 freshness fix (was missed cycle-39 v1.4 bump). Two flags for cycle-42+: Axis 12 "Most likely v2 candidate position" annotation softening (Q[b] cold-reader); openclaw deeper-read dispatch (Q[c] BORDERLINE-PASS). |
 | v1.6 | 42 (2026-05-01) | `_notes/cycle-42-cold-reader-and-v1.6-application.md` | Cycle-42 cold-reader on v1.5: Q(a) found two internal inconsistencies introduced by v1.5's Axis 1 Cognition update that were not propagated to other framework sections — applied. Q(b) PASS — C7 (microVM) and O7 (companion post) qualifications adequately propagated to per-system files; no over-acceptance. Q(c) decided both deferred flags warrant cycle-42 action — Axis 12 hybrid annotation softening applied; openclaw deeper-read dispatch executed via close-and-recreate primitive. Three v1.6 changes: (i) Axis 7 row — Cognition moved from "Single-pattern (one shape only)" to multi-pattern coexisting (Apr 2026 ships Managed Devins + Devin Review + Smart Friend — system-level multi-pattern); (ii) Cross-axis dependency map (Constraint 8 × Axis 1) — stale "(Cognition)" parenthetical example removed since Cognition now in small-fixed-team row; (iii) Axis 12 hybrid row annotation — replaced "Most likely v2 candidate position" (forward-looking forecast that could prejudice Phase 2 candidate generation) with cost-grounded descriptive reasoning ("Lowest per-channel design cost — different channels have different frequencies"). |
+| v1.7 | 43 (2026-05-01) | `_notes/cycle-43-openclaw-per-finding-evaluation.md` | Cycle-43 substantive findings from PR #2809 deeper-read deliverable (openclaw, 893 lines, primary-source). 21 findings evaluated, 21 accepted (4 with qualification, 1 as revision-of-prior-claim, 0 rejected). Three framework changes: (i) Axis 2 row — openclaw added to "File-per-component" position with `global-state.ts` caveat (per-agent state isolation in `~/.openclaw/agents/<agentId>/`; Gateway-level globals exist per `src/global-state.ts` but contents not verified); 4-system support; (ii) Axis 3 row — openclaw note refined to clarify singleton-slot scope is the storage/retrieval layer, not full memory architecture (full architecture is layered: Markdown files + SQLite + active-memory sub-agent + dreaming consolidation); (iii) Axis 9 row — openclaw added to "Runtime ceiling" position with 48h-effectively-unbounded qualifier; stuck-session watchdog (`diagnostics.stuckSessionWarnMs`) noted as more interesting primitive than the bare timeout. Plus cycle-43 Q(c) cold-reader refinement: Axis 12 four-position table cost-framing balanced — "High-cost" → "Uniform mechanism (one pattern per channel); per-channel implementation overhead" on Active polling; "Lowest per-channel design cost" → "Mixed mechanism; design overhead spread per-channel-class rather than per-channel" on Hybrid. Also: cycle-40 v2-design observation about three reconciliation patterns refined (NOT retired) — openclaw's pattern is implementation-detail within Axis 12's existing **Event-driven** position, not a new axis position; the cross-system observation is now TWO axis-distinct patterns (sync HITL vs async) with implementation-nuance within async (cron+catchup, event-driven with persistent connections, webhook-on-event). |
 
 ## Purpose and scope
 
@@ -160,7 +161,7 @@ review treadmill) via dedicated-reviewer-role.
 | Position | Systems supporting | Notes |
 |---|---|---|
 | Single global state file | None | v1's `state.json` is the explicit anti-example; 3+/5 systems agree |
-| File-per-component | AutoGen, Voyager (`ckpt/<agent>/`), oh-my-codex (`.omx/state/<mode>-state.json`) | 3+/5 + diversity hedge |
+| File-per-component | AutoGen, Voyager (`ckpt/<agent>/`), oh-my-codex (`.omx/state/<mode>-state.json`), openclaw (`~/.openclaw/agents/<agentId>/` per-agent state isolation; Gateway-level globals exist per `src/global-state.ts`, contents not verified) | 4+/5 + diversity hedge |
 | Typed-channel-map within one schema | LangGraph | Persistent divergence — one pole |
 | Repository-as-state | OpenAI harness | git substrate; ephemeral worktrees |
 
@@ -194,7 +195,7 @@ what shape does it take?
 
 | Position | Systems supporting | Notes |
 |---|---|---|
-| Singleton plugin slot (one mechanism active, replaceable) | openclaw | Persistent divergence — one pole |
+| Singleton plugin slot (one mechanism active, replaceable) | openclaw | Persistent divergence — one pole. Cycle-43 deeper read: the singleton-slot scope is the storage/retrieval LAYER (`plugins.slots.memory`); the full memory architecture is layered on top — Markdown files (`MEMORY.md` + daily notes + `DREAMS.md`) + SQLite index + embedding-based hybrid search + active-memory sub-agent + dreaming background consolidation. |
 | Top-level architectural principle | PAI Principle 13 | Persistent divergence — other pole |
 | Context trace (everything-the-agent-has-done) | Cognition Devin (primary in-session mechanism; multi-layer at longer horizons) | Cycle-41 deeper read documents 5+ memory mechanisms (cross-session notes, Knowledge API, Playbooks, DeepWiki, Session Insights, hypervisor snapshots); context-trace is the in-session label |
 | Repository-as-record | OpenAI harness | "Anything not in-context doesn't exist" |
@@ -386,7 +387,7 @@ CORE-DESIGN-PRINCIPLE violation detection.
 |---|---|---|
 | None (open-ended runs) | Rare in surveyed | Implicit in v1's per-cycle non-bounded retry |
 | Loop count ceilings | oh-my-codex (`max_iterations=10`, `max=5`), Voyager (`action_agent_task_max_retries=4`) | 2-system strict |
-| Runtime ceiling | ~~Cognition Devin (45-min session limit, *documented-claim*)~~ — **unverified after cycle-41 direct primary-source access**; docs say "if you can do it in three hours, Devin can most likely do it"; hypervisor snapshot infrastructure supports hours-long sessions | Anchor weakened; OpenAI Ralph Wiggum Loop is **counter-evidence** (no iteration ceiling, human backstop is the bound — does NOT transfer to cron-driven autonomous systems) |
+| Runtime ceiling | ~~Cognition Devin (45-min session limit, *documented-claim*)~~ — **unverified after cycle-41 direct primary-source access**; docs say "if you can do it in three hours, Devin can most likely do it"; hypervisor snapshot infrastructure supports hours-long sessions. openclaw (`agents.defaults.timeoutSeconds` default 172800s = 48h, effectively-unbounded for typical use; the **stuck-session watchdog** `diagnostics.stuckSessionWarnMs` is a more interesting primitive — detects stale lanes and can release them) | Anchor weakened on Cognition; OpenAI Ralph Wiggum Loop is **counter-evidence** (no iteration ceiling, human backstop is the bound — does NOT transfer to cron-driven autonomous systems); openclaw's stuck-session watchdog is the transfer-relevant primitive |
 | Both (loop + runtime) | None explicitly in surveyed | Composable |
 
 **v1's position:** per-cycle there is no per-loop ceiling. The cycle ITSELF
@@ -453,9 +454,9 @@ into state?
 | Position | Notes |
 |---|---|
 | No reconciliation: write-only outbound channels | v1 anti-pattern (F2/F3/F4/F11 emerge from this) |
-| Active polling: each outbound channel paired with a reader producing state transitions | High-cost; requires per-channel discipline |
-| Event-driven: state changes reactively when external events arrive | Requires inbound trigger infrastructure (webhook, GitHub Actions on event) |
-| Hybrid: polling for low-frequency channels, event-driven for high-frequency | Lowest per-channel design cost — different channels have different frequencies |
+| Active polling: each outbound channel paired with a reader producing state transitions | Uniform mechanism (one pattern per channel); per-channel implementation overhead |
+| Event-driven: state changes reactively when external events arrive | Reactive handling; requires inbound trigger infrastructure (webhook, GitHub Actions on event); openclaw's Gateway is an instance — channels maintain persistent upstream connections, agent runs are per-event discrete turns |
+| Hybrid: polling for low-frequency channels, event-driven for high-frequency | Mixed mechanism; design overhead spread per-channel-class rather than per-channel; suited to workloads where different channels have different natural frequencies |
 
 **Status:** v1-derived axis; no external system surveyed has an Eva-equivalent
 that would constrain the choice. Candidates that address Axis 12 are doing
