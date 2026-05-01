@@ -18,6 +18,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.1 | 36 (2026-04-30) | `_notes/cycle-36-cold-reader-and-framework-iteration.md` | Cold-reader on v1.0: F11→Axis 9 corrected to F11→Axis 4+Axis 2 (Q[b] FAIL); Axis 2 plans-as-artifacts row removed (Q[a] cleanup); decisions documented for 5 open questions, deferred to v1.2 application |
 | v1.2 | 37 (2026-05-01) | `_notes/cycle-37-framework-v1.2-application-and-cold-reader.md` | Framework promoted to dedicated file `2-design-framework.md`. Six deferred decisions applied: Q[c] constraint 7 wording refinement, Q1 Axis 11→constraint 8 promotion, Q2 Axis 12 (Reconciliation discipline) added, Q3 ordering disclaimer added, Q4 Axis 13 (Harness-vs-session boundary) added, Q5 preserved-primitives subsection added. Cycle-37 cold-reader correction: F11 mapping refined to Axis 4+Axis 12 (drop Axis 2 from direct mapping; document indirect contribution in cross-axis deps). |
 | v1.3 | 38 (2026-05-01) | `_notes/cycle-38-cold-reader-and-v1.3-application.md` | Cycle-38 cold-reader on v1.2: three pre-commit questions all PASS (F11→Axis 4+Axis 12 stands; Axis 13 medium-vs-fat is real differentiation; constraint 8 is meaningful). Two refinements: (i) add "Axis 13 × Axis 7" cross-axis dependency (situational-review implementation strategy); (ii) backfill Maps-to lines on Axes 1, 3, 5, 6, 7 (cycle-37 same-cycle review minor finding (5) inherited from v1.0/v1.1). One flag for cycle-39+ verification: Axis 12 "v1-derived" caveat may be too strong given LangGraph interrupts as broader-axis analogue. |
+| v1.4 | 39 (2026-05-01) | `_notes/cycle-39-cold-reader-and-redispatch-escalation.md` | Cycle-39 cold-reader on v1.3: three pre-commit questions all PASS again (re-dispatch trigger did NOT fire on comment-on-existing-issue; Axis 12 "v1-derived" caveat correct; F-pattern table levels correct including F9→Axis 7 with Axis 13 indirect via cross-axis deps). Cycle-38 "v1-derived caveat may be too strong" flag verified-and-retired: HITL primitives in LangGraph/AutoGen are synchronous pause-resume mechanisms, structurally different from async reconciliation; clarification sentence added to Axis 12 Status. Cycle-39 cold-reader OVERCAUTIOUS finding mirrors cycle-37's Q[b] OVERCAUTIOUS pattern. |
 
 ## Purpose and scope
 
@@ -456,6 +457,19 @@ more design work than those addressing externally-validated axes; candidates
 may also choose to fold this into existing axes (e.g., Axis 4 history
 substrate where event-driven means "git events trigger state recompute")
 rather than treating as separate.
+
+**Note: HITL primitives are not reconciliation analogues** *(verified
+cycle 39, retired cycle-38's "v1-derived caveat may be too strong" flag)*.
+LangGraph interrupts and AutoGen HITL primitives are synchronous pause-resume
+mechanisms — the caller is the active sender of `Command(resume=...)` (or
+equivalent), the graph/agent is the passive receiver waiting at a specific
+node. Axis 12's reconciliation concerns asynchronous absorption of external
+events that arrive independently of the orchestrator's execution thread
+(Eva responds when she responds; audit posts when audit posts; PR merges
+when reviewers merge). The orchestrator cannot pause-and-wait — it runs on
+a cron and must catch up to whatever happened since last cycle. Different
+structural shape; HITL is not a reconciliation analogue. AutoGen explicitly
+disclaims "global reconciliation of all component states" (per-system file).
 
 **v1's position:** no reconciliation. Outbound channels (issue creates, PR
 creates, journal commits) are well-developed; inbound reconciliation does
