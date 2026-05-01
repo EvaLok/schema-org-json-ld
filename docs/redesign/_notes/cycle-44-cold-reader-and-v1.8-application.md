@@ -302,7 +302,7 @@ the infrastructure cost is largely sunk.
 Iteration history table gets a v1.8 row covering all three changes.
 Status header bumps v1.7 → v1.8.
 
-## Bounded mechanical: paired-PR housekeeping
+## Bounded mechanical (1): paired-PR housekeeping
 
 Three draft PRs paired with cycle-43-closed v1-era issues remain open:
 
@@ -325,6 +325,39 @@ mode.
 
 After cycle-44 sweep: 11 → 11 open issues (no issue closures) + 3 → 0
 open PRs (3 closures).
+
+## Bounded mechanical (2): cross-axis-impact-check tool design draft
+
+Drafted at `tools/v2/_drafts/cross-axis-impact-check-design.md`. The
+tool is a mechanical structural-consistency lint for the redesign
+Phase 2 framework file. Motivation: the cross-axis-update-propagation
+failure mode has fired three times in five cycles (42, 43 same-cycle
+flag, 44 cross-cycle escalation); a mechanical lint tool would catch
+propagation gaps faster and free orchestrator compute for substantive
+Phase 2 candidate work.
+
+The draft covers:
+- Purpose, scope (in/out for v0; possible v1+ extensions)
+- Inputs/outputs spec (CLI flags, exit codes, output format)
+- 3-phase architecture sketch (parser, analyzer, reporter)
+- Test surface (unit + integration; integration test against v1.4
+  framework state should detect cycle-42's Cognition-update propagation
+  gap)
+- 4 open design questions (when does the tool run, freeform prose
+  handling, persistence interaction, minimum viable cycle for v0)
+- Cycle 45+ next steps (iterate design vs prototype parser; ordering
+  vs `redispatch` tool)
+
+This is a design draft, NOT an implementation. Cycle 45+ may iterate
+the design before any building happens.
+
+The choice of cross-axis-impact-check over redispatch:
+- cross-axis-impact-check addresses HIGH-FREQUENCY orchestrator work
+  (every framework iteration cycle)
+- redispatch addresses LOWER-FREQUENCY work (every external dispatch,
+  empirically every 1-3 cycles)
+- Higher-frequency value rationale dominates; redispatch can defer
+  to cycle 45+ with its own design draft
 
 ## Same-cycle review (5 questions)
 
@@ -516,15 +549,20 @@ Three questions:
    2 candidate space.
 2. **Substantive parallel:** TBD per cold-reader. Possibilities:
    - v1.9 corrections if cold-reader finds substantive issues
-   - Rust tool design draft (cross-axis-impact-check OR redispatch) —
-     deferred from cycle 44 due to compute budget
+   - Iterate cross-axis-impact-check design (cycle-44 draft at
+     `tools/v2/_drafts/cross-axis-impact-check-design.md` has 4 open
+     design questions Q1-Q4 for cycle 45+ to address)
+   - `redispatch` tool design draft (the second of the two tools
+     listed in cycle 43 — cycle 44 chose cross-axis-impact-check based
+     on higher-frequency value rationale; redispatch can be drafted in
+     cycle 45 as the second-priority tool)
    - Continued housekeeping sweep on remaining v1-era input-from-eva
      items (#2039, #699/#808/#809) — conservative deferral remains
      correct unless cycle-45 finds genuine absorption signal
-3. **Bounded mechanical:** if substantive load is light, draft one of
-   the two Rust tools (cross-axis-impact-check is more relevant given
-   v1.8's dep map rewrite; redispatch is more empirically-stable
-   primitive).
+3. **Bounded mechanical:** if substantive load is light, prototype the
+   cross-axis-impact-check parser in a single Rust file (no full crate
+   yet) to validate the parser-design-questions before committing to
+   the full architecture.
 
 ## What this cycle achieved
 
@@ -540,6 +578,8 @@ applications). The substantive output:
 - v1.7 → v1.8 framework version bump
 - 3 PR closures (#2730, #2737, #2739) — paired with cycle-43 issue
   closures
+- 1 v2 tool design draft (cross-axis-impact-check) committed to
+  `tools/v2/_drafts/`
 - 1 cycle-44 same-cycle review (5 questions, 4 PASS + 1 BORDERLINE-PASS)
 
 The most interesting cross-cycle observation: **same-cycle "minor
