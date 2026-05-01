@@ -2,7 +2,7 @@
 
 ## Status
 
-**v1.7 (cycle 43, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
+**v1.8 (cycle 44, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
 
@@ -22,6 +22,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.5 | 41 (2026-05-01) | `_notes/cycle-41-deeper-read-per-finding-evaluation.md` | Cycle-41 substantive findings from PR #2804 + #2805 deeper-read deliverables (Cognition + OpenAI). Three Cognition framework corrections applied: (i) Axis 1 — Cognition's "Don't Build Multi-Agents" (June 2025) was substantially walked back in April 22, 2026 follow-up; durable invariant is **writes-stay-single-threaded**, not single-threaded execution; Cognition now ships Managed Devins (coordinator + parallel children) and joins the small-fixed-team row; (ii) Axis 3 — Cognition has multi-layer memory architecture (5+ documented mechanisms); context-trace framing qualified to "primary in-session mechanism, multi-layer at longer horizons"; (iii) Axis 9 — 45-min session limit is unverified after direct primary-source access (docs say "if you can do it in three hours"); status downgraded from `documented-claim` to `unverified-after-direct-access`. Plus: Axis 9 OpenAI counter-evidence (Ralph Wiggum Loop has no iteration ceiling — pattern does NOT transfer to cron-driven systems). Plus: Status header v1.3→v1.5 freshness fix (was missed cycle-39 v1.4 bump). Two flags for cycle-42+: Axis 12 "Most likely v2 candidate position" annotation softening (Q[b] cold-reader); openclaw deeper-read dispatch (Q[c] BORDERLINE-PASS). |
 | v1.6 | 42 (2026-05-01) | `_notes/cycle-42-cold-reader-and-v1.6-application.md` | Cycle-42 cold-reader on v1.5: Q(a) found two internal inconsistencies introduced by v1.5's Axis 1 Cognition update that were not propagated to other framework sections — applied. Q(b) PASS — C7 (microVM) and O7 (companion post) qualifications adequately propagated to per-system files; no over-acceptance. Q(c) decided both deferred flags warrant cycle-42 action — Axis 12 hybrid annotation softening applied; openclaw deeper-read dispatch executed via close-and-recreate primitive. Three v1.6 changes: (i) Axis 7 row — Cognition moved from "Single-pattern (one shape only)" to multi-pattern coexisting (Apr 2026 ships Managed Devins + Devin Review + Smart Friend — system-level multi-pattern); (ii) Cross-axis dependency map (Constraint 8 × Axis 1) — stale "(Cognition)" parenthetical example removed since Cognition now in small-fixed-team row; (iii) Axis 12 hybrid row annotation — replaced "Most likely v2 candidate position" (forward-looking forecast that could prejudice Phase 2 candidate generation) with cost-grounded descriptive reasoning ("Lowest per-channel design cost — different channels have different frequencies"). |
 | v1.7 | 43 (2026-05-01) | `_notes/cycle-43-openclaw-per-finding-evaluation.md` | Cycle-43 substantive findings from PR #2809 deeper-read deliverable (openclaw, 893 lines, primary-source). 21 findings evaluated, 21 accepted (4 with qualification, 1 as revision-of-prior-claim, 0 rejected). Three framework changes: (i) Axis 2 row — openclaw added to "File-per-component" position with `global-state.ts` caveat (per-agent state isolation in `~/.openclaw/agents/<agentId>/`; Gateway-level globals exist per `src/global-state.ts` but contents not verified); 4-system support; (ii) Axis 3 row — openclaw note refined to clarify singleton-slot scope is the storage/retrieval layer, not full memory architecture (full architecture is layered: Markdown files + SQLite + active-memory sub-agent + dreaming consolidation); (iii) Axis 9 row — openclaw added to "Runtime ceiling" position with 48h-effectively-unbounded qualifier; stuck-session watchdog (`diagnostics.stuckSessionWarnMs`) noted as more interesting primitive than the bare timeout. Plus cycle-43 Q(c) cold-reader refinement: Axis 12 four-position table cost-framing balanced — "High-cost" → "Uniform mechanism (one pattern per channel); per-channel implementation overhead" on Active polling; "Lowest per-channel design cost" → "Mixed mechanism; design overhead spread per-channel-class rather than per-channel" on Hybrid. Also: cycle-40 v2-design observation about three reconciliation patterns refined (NOT retired) — openclaw's pattern is implementation-detail within Axis 12's existing **Event-driven** position, not a new axis position; the cross-system observation is now TWO axis-distinct patterns (sync HITL vs async) with implementation-nuance within async (cron+catchup, event-driven with persistent connections, webhook-on-event). |
+| v1.8 | 44 (2026-05-01) | `_notes/cycle-44-cold-reader-and-v1.8-application.md` | Cycle-44 cold-reader on v1.7: Q(a) BORDERLINE-FAIL on Axis 2 × Axis 3 cross-axis dep map phrasing precision (cycle-43 same-cycle Q1 had flagged as minor; cycle-44 cross-cycle escalated to load-bearing). Three changes applied: (i) Axis 2 × Axis 3 dep map rewritten to name specific Axis 3 positions that align with each Axis 2 position (file-per-component aligns with three filesystem-based memory positions: singleton plugin slot WITH filesystem storage, top-level architectural principle with filesystem memory, wiki+search with file-per-entry); (ii) F8 mapping rationale extended to mention stuck-session watchdog as detection-and-recovery primitive alongside Bounded loops as prevention primitive (covers v1.7-introduced openclaw `diagnostics.stuckSessionWarnMs` instance); (iii) Axis 12 event-driven annotation wording-symmetry — added "shared inbound infrastructure" framing alongside the "requires X" cost framing (event-driven uses shared infrastructure: one webhook handles all subscribed channels, vs N readers for active polling). Q(b) PASS — per-finding evaluation calibration adequate (OC9 qualification appropriately hedged, OC13 verdict consistent with pattern transfer to existing COPILOT-DISPATCHES three-tier structure). Q(c) PASS — cost-framing balance adequate; minor wording-symmetry opportunity (item iii above) addressed. |
 
 ## Purpose and scope
 
@@ -455,7 +456,7 @@ into state?
 |---|---|
 | No reconciliation: write-only outbound channels | v1 anti-pattern (F2/F3/F4/F11 emerge from this) |
 | Active polling: each outbound channel paired with a reader producing state transitions | Uniform mechanism (one pattern per channel); per-channel implementation overhead |
-| Event-driven: state changes reactively when external events arrive | Reactive handling; requires inbound trigger infrastructure (webhook, GitHub Actions on event); openclaw's Gateway is an instance — channels maintain persistent upstream connections, agent runs are per-event discrete turns |
+| Event-driven: state changes reactively when external events arrive | Reactive handling; shared inbound infrastructure (one webhook or GitHub Actions trigger handles all subscribed channels — for a public-repo orchestrator the Actions platform is already-paid; per-event handler configuration is a bounded one-time cost); openclaw's Gateway is an instance — channels maintain persistent upstream connections, agent runs are per-event discrete turns |
 | Hybrid: polling for low-frequency channels, event-driven for high-frequency | Mixed mechanism; design overhead spread per-channel-class rather than per-channel; suited to workloads where different channels have different natural frequencies |
 
 **Status:** v1-derived axis; no external system surveyed has an Eva-equivalent
@@ -559,9 +560,17 @@ Significant inter-axis constraints:
   threaded forces single-topology. Small-fixed-team enables but doesn't
   force multi-topology coexistence.
 - **Axis 2 (state) × Axis 3 (memory):** State representation shapes
-  natural memory primitive — file-per-component → memory-as-component-file;
-  typed-channel-map → memory-as-channel; repo-as-state → memory-as-files-
-  in-repo.
+  which Axis 3 positions are natural — file-per-component aligns with
+  filesystem-based memory positions (singleton plugin slot WITH
+  filesystem storage as in openclaw's `~/.openclaw/agents/<agentId>/`;
+  top-level architectural principle with filesystem memory as in PAI;
+  wiki+search with file-per-entry as in oh-my-codex's `.omx/wiki/`);
+  typed-channel-map aligns with typed channels with checkpointer
+  (LangGraph); repo-as-state aligns with repository-as-record (OpenAI
+  harness). The natural-alignment framing is supportive rather than
+  exclusive: file-per-component does not preclude context-trace memory
+  or other non-filesystem Axis 3 positions, but pairs more naturally
+  with the listed filesystem-based positions.
 - **Axis 4 (history substrate) × Axis 2 (state):** State representation
   choice constrains history substrate options — file-per-component pairs
   naturally with one-way migration or git; typed-channel-map pairs with
@@ -623,7 +632,7 @@ per cycle-37 cold-reader.
 | F5 (state.json as procedural-leak) | Defense + Reconciliation | Axis 2, Axis 8 | File-per-component or typed-channel separates concerns; mechanical CI catches procedural-leak patterns |
 | F6 (cyclomatic procedure depth) | Procedure overhead | Axis 7, Axis 13 | Multi-pattern with transition policy lighter than rigid checklist; fat-harness extracts procedure from prompt |
 | F7 (self-management dominance) | Procedure overhead | Axis 1, Axis 8, Axis 9, Axis 13 | Specialization + mechanical enforcement + iteration ceilings + fat-harness reduce self-management surface |
-| F8 (abandonment cascades) | Tooling fragility | Axis 9, CORE-DESIGN-PRINCIPLE | Bounded loops + single-implementation discipline (no parallel implementations) |
+| F8 (abandonment cascades) | Tooling fragility | Axis 9, CORE-DESIGN-PRINCIPLE | Bounded loops (prevention; loop-count ceiling positions) or stuck-session watchdog for runtime-ceiling positions (detection-and-recovery; openclaw's `diagnostics.stuckSessionWarnMs` instance — detect stale runs and release lanes) + single-implementation discipline (no parallel implementations) |
 | F9 (adversarial-review treadmill) | Procedure overhead | Axis 7 | Multi-pattern shape replaces fixed adversarial-review step with situational invocation |
 | F10 (audit's value is broader read scope) | Design-implication | Not a v2 axis | Audit-side concern; audit-as-peer pattern preserved per redesign prompt SECTION 2 |
 | F11 (post-close mutations) | Defense + Reconciliation | Axis 4, Axis 12 | Append-only history (Axis 4) prevents destructive write semantics that lose post-close mutations; reconciliation discipline (Axis 12) refreshes frozen worklog against post-close state. *(Axis 2 indirect contributor — see cross-axis deps; not load-bearing for direct F11 fix.)* |
