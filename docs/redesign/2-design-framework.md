@@ -2,7 +2,7 @@
 
 ## Status
 
-**v1.2 (cycle 37, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
+**v1.3 (cycle 38, 2026-05-01).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
 
@@ -17,6 +17,7 @@ each iteration step lives in the corresponding `_notes/cycle-N-*.md` file.
 | v1.0 | 35 (2026-04-30) | `_notes/cycle-35-phase2-design-axes-and-cold-reader.md` | Initial Phase 2 design-axes synthesis: 7 convergent constraints + 11 axes + cross-axis dependency map + F-pattern→axis mapping + Phase 2 candidate template + 5 open framework questions |
 | v1.1 | 36 (2026-04-30) | `_notes/cycle-36-cold-reader-and-framework-iteration.md` | Cold-reader on v1.0: F11→Axis 9 corrected to F11→Axis 4+Axis 2 (Q[b] FAIL); Axis 2 plans-as-artifacts row removed (Q[a] cleanup); decisions documented for 5 open questions, deferred to v1.2 application |
 | v1.2 | 37 (2026-05-01) | `_notes/cycle-37-framework-v1.2-application-and-cold-reader.md` | Framework promoted to dedicated file `2-design-framework.md`. Six deferred decisions applied: Q[c] constraint 7 wording refinement, Q1 Axis 11→constraint 8 promotion, Q2 Axis 12 (Reconciliation discipline) added, Q3 ordering disclaimer added, Q4 Axis 13 (Harness-vs-session boundary) added, Q5 preserved-primitives subsection added. Cycle-37 cold-reader correction: F11 mapping refined to Axis 4+Axis 12 (drop Axis 2 from direct mapping; document indirect contribution in cross-axis deps). |
+| v1.3 | 38 (2026-05-01) | `_notes/cycle-38-cold-reader-and-v1.3-application.md` | Cycle-38 cold-reader on v1.2: three pre-commit questions all PASS (F11→Axis 4+Axis 12 stands; Axis 13 medium-vs-fat is real differentiation; constraint 8 is meaningful). Two refinements: (i) add "Axis 13 × Axis 7" cross-axis dependency (situational-review implementation strategy); (ii) backfill Maps-to lines on Axes 1, 3, 5, 6, 7 (cycle-37 same-cycle review minor finding (5) inherited from v1.0/v1.1). One flag for cycle-39+ verification: Axis 12 "v1-derived" caveat may be too strong given LangGraph interrupts as broader-axis analogue. |
 
 ## Purpose and scope
 
@@ -140,6 +141,11 @@ threaded a defensible default.
 single-threaded forces single-topology; small-fixed-team enables but doesn't
 force multi-topology coexistence.
 
+**Maps to:** F7 (self-management dominance — role-specialization, including
+a dedicated reviewer / curator / reconciler agent, reduces self-management
+surface for the primary agent). Indirect contributor to F9 (adversarial-
+review treadmill) via dedicated-reviewer-role.
+
 ### Axis 2 — State representation primitive
 
 **The choice:** what is the unit of persistent state?
@@ -203,6 +209,13 @@ closest to wiki+search but without the search infrastructure.
 state representation; Axis 3 × Axis 1 (decomposition) — small-fixed-team
 can have per-agent memory subsystems.
 
+**Maps to:** Convergent constraint 7 (memory architectural elevation —
+Axis 3 makes the specific shape choice within the constraint). Indirect
+contributor to F7 (self-management dominance) via cold-start cost — rich
+memory reduces re-derivation each cycle, freeing compute for primary work.
+Axis 3's load-bearing role is constraint-7-shape rather than direct
+F-pattern fix.
+
 ### Axis 4 — History/Provenance substrate
 
 **The choice:** where does append-only history live?
@@ -260,6 +273,11 @@ layout decision (`plans/active/`, `plans/completed/`, `plans/technical-debt/`)
 and a transition lifecycle. Skipping this axis means relying on journal +
 notes for the same purpose.
 
+**Maps to:** F4 (frozen-artifact lifecycle fragility) — plan lifecycle
+primitives (`active/completed/technical-debt`) address freeze/refresh
+timing as a structural design choice rather than ad-hoc per-artifact
+handling.
+
 ### Axis 6 — Extension shape
 
 **The choice:** if small-core extends via something, what?
@@ -280,6 +298,12 @@ file-existence + naming convention.
 **v2 candidate space:** retaining Rust-tools-as-extension shape is the path
 of least migration cost, with the question being whether to add a discovery/
 registration primitive (skill / plugin manifest) on top.
+
+**Maps to:** Convergent constraint 6 (small core, capability extends via
+something — Axis 6 makes the specific extension-mechanism choice). Axis 6's
+load-bearing role is constraint-6-shape rather than direct F-pattern fix.
+Folds polyglot / multi-language schema strategy as schema-domain extension
+choice (Phase 3 prototype's load-bearing test, not a v2 prompt-level axis).
 
 **Considered-and-folded:** polyglot / multi-language schema strategy is
 schema-domain-specific. Phase 3 prototype includes one polyglot end-to-end
@@ -308,6 +332,14 @@ strongest match for "orchestrator handles novel situations" because
 different situations may call for different topologies.
 
 **Cross-axis dependency:** Axis 7 × Axis 1 (decomposition) — see Axis 1.
+Axis 7 × Axis 13 (harness-vs-session boundary) — fat-harness can implement
+situational-review by controlling when review fires, supporting Axis 7's
+multi-pattern situational invocation; thin/medium harness leaves WHEN-
+review decisions in prompt.
+
+**Maps to:** F6 (cyclomatic procedure depth — multi-pattern with transition
+policy lighter than rigid checklist) and F9 (adversarial-review treadmill —
+situational invocation breaks the every-cycle review-firing loop).
 
 **Considered-and-folded:** Eva-checkpoint mechanism specifics ("what
 triggers a checkpoint") fold into Axis 7 — the topology determines what
@@ -533,6 +565,13 @@ Significant inter-axis constraints:
 - **Axis 13 (harness-vs-session) × Axis 8 (mechanical enforcement):** Fat
   harness implies more mechanical-enforcement surface area (more
   deterministic code to lint and test).
+- **Axis 13 (harness-vs-session) × Axis 7 (orchestration topology):** Fat-
+  harness can implement Axis 7's multi-pattern situational-review by
+  controlling when review fires (vs every cycle). Thin/medium harness leaves
+  WHEN-review decisions in prompt, where the v1 anti-pattern (every-cycle
+  review-firing) tends to recur. F9 (adversarial-review treadmill) is
+  primarily fixed by Axis 7 (situational vs fixed); Axis 13 shapes the
+  implementation strategy for that fix.
 - **Constraint 8 (goal-driven) × Axis 1 (decomposition):** Goal-driven
   pairs naturally with single-threaded long-running (Cognition); goal-
   driven within small-fixed-team requires explicit goal-coordination
