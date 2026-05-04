@@ -830,6 +830,17 @@ material — read them when useful, but you are not obligated to follow them.
     claims (Eva's call, signaled via input-from-eva). Phase 2
     candidate generation still requires explicit post-retrospective
     checkpoint approval.
+
+    Phase 1 "research" is open-ended in depth, not just in breadth.
+    A system being listed in the inventory at stub status is not the
+    same as that system being researched. A first-pass read is not
+    the same as a deeper read. A deeper read is not the same as
+    having extracted the implications for the redesign. The default
+    substantive activity in Phase 1 is to push the deepest unfinished
+    research front forward — see CYCLE-COMPOSITION-POLARITY for the
+    concrete polarity rule. Polishing the design framework against
+    the corpus already in hand is bounded-mechanical fallback work;
+    it is not the default.
   </phase>
 
   <phase number="2" name="multiple-design-candidates">
@@ -998,6 +1009,64 @@ material — read them when useful, but you are not obligated to follow them.
   </visibility>
 
 </iteration-until-approval>
+
+<!-- ================================================================
+     SECTION 9.6: CYCLE-COMPOSITION-POLARITY
+     What the substantive focal of each Phase 1 cycle should be.
+     ================================================================ -->
+<cycle-composition-polarity>
+
+  <principle>
+    Each cycle has at least one "substantive focal" — the work that
+    justifies the cycle's existence. In Phase 1, the polarity of that
+    selection is fixed:
+  </principle>
+
+  <default-substantive-focal>
+    Advance the research corpus. Concretely, one of:
+    - Dispatch a deeper-read on a Phase 1 system still at stub status
+      or with explicitly-deferred reads
+    - Cross-system synthesis writeup comparing two or more systems
+      already read at depth
+    - v1-system retrospective extraction of lessons not yet absorbed
+      into the redesign
+    - Implications mining from an existing per-system research note —
+      what it means for the redesign that has not yet been written
+      down
+    - Audit the design framework against a fresh real-world case
+      (system interaction, v1 incident) to surface where the framework
+      is silent or wrong
+  </default-substantive-focal>
+
+  <fallback-substantive-focal>
+    Cold-reader on the design framework. Used ONLY when no default
+    substantive option is viable in this cycle (e.g., all stub /
+    deferred reads are already in flight and awaiting return, no
+    synthesis pair is ready, no fresh evidence to audit against).
+    When fallback is used, the cycle entry must explicitly state it
+    is fallback and name what blocked the default options.
+  </fallback-substantive-focal>
+
+  <why>
+    Cold-reader's outputs feed cold-reader's next inputs, which
+    produces convergent framework polish without necessarily producing
+    convergent understanding. Eighteen consecutive cycles of
+    cold-reader-only iteration (cycles 44-61, framework v1.5 → v1.22)
+    demonstrated this asymptotic local-optimum dynamic. Inverting the
+    default forces the cycle's most expensive thinking onto problems
+    where new evidence or new synthesis is the path forward, with
+    framework polish available only when expansion is genuinely
+    blocked.
+  </why>
+
+  <scope>
+    This polarity applies to Phase 1 substantive work. Phase 0
+    retrospective iteration is governed by ITERATION-UNTIL-APPROVAL.
+    Phase 2 and later have their own substantive shapes; this
+    section will be reconsidered when Phase 2 opens.
+  </scope>
+
+</cycle-composition-polarity>
 
 <!-- ================================================================
      SECTION 10: ABORT CRITERIA
