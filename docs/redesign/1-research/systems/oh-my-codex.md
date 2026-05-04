@@ -2,17 +2,28 @@
 
 [← back to Phase 1 index](../../1-research.md)
 
-**Status: stub.** A Copilot research dispatch landed in cycle 26 as
-PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784),
-which is the evidence base. A deeper orchestrator-direct read of
-the repository is queued under issue
+**Status: stub; cycle-63 deeper read in flight.** A Copilot research dispatch
+landed in cycle 26 as PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784),
+which is the evidence base for this stub (PR closed-without-merge per the
+absorption convention; the 299-line deliverable lives on the never-merged
+branch `copilot/redesign-research-phase-1-survey` at commit `f291ec05`,
+with patterns absorbed into [`1-research.md`](../../1-research.md)
+cross-system observations across cycles 27-32 and split into this
+per-system file at cycle 33). A deeper code-level read of the repository
+is dispatched at cycle 63 as
+[#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833), targeting
+the three operationally-largest files cycle-26 explicitly flagged as
+not-read-in-full (`src/hooks/keyword-detector.ts` 44KB,
+`src/config/generator.ts` 43KB, `src/autoresearch/runtime.ts` 45KB) plus
+code-level confirm/refine of cycle-26's 22 named patterns; supersedes the
+closed cycle-26 dispatch tracking issue
 [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782).
-Per-pattern citations live in the cross-system observations section
-of [`1-research.md`](../../1-research.md); this stub assembles those
-citations into a per-system view so the asymmetry with the
-deeper-read systems is visible rather than hidden. (Of the three
-cycle-26 dispatches, oh-my-codex has the densest citation footprint
-across cross-system observations.)
+Per-pattern citations live in the cross-system observations section of
+[`1-research.md`](../../1-research.md); this stub assembles those
+citations into a per-system view so the asymmetry with the deeper-read
+systems is visible rather than hidden. (Of the three cycle-26 dispatches,
+oh-my-codex has the densest citation footprint across cross-system
+observations.)
 
 ## Sources read so far
 
@@ -139,9 +150,18 @@ runtime."
 ## To-be-completed
 
 The dispatch deliverable (PR #2784) plus
-`_notes/cycle-26-oh-my-codex-research.md` together cover roughly 13
-named patterns plus a handful of additional observations in cycle-26
-notes. A direct repository read with code-level citations and a
-fuller pattern inventory is queued under issue
-[#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782).
-When that read lands, this file should grow to deep-dive depth.
+`_notes/cycle-26-oh-my-codex-research.md` (on never-merged branch
+`copilot/redesign-research-phase-1-survey` per absorption convention)
+together cover roughly 22 named patterns. A code-level read with
+file:line citations is dispatched at cycle 63 as
+[#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833),
+targeting the three operationally-largest files cycle-26 flagged as
+not-read-in-full (`keyword-detector.ts`, `generator.ts`,
+`autoresearch/runtime.ts`) plus the state/hooks/MCP-server modules and
+the Rust sparkshell crate. The closed cycle-26 dispatch tracking issue
+[#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782) is
+superseded by [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833).
+When the deliverable lands at
+`docs/redesign/_notes/cycle-63-oh-my-codex-deeper-read.md`, this file
+should grow to deep-dive depth (per-finding evaluation cycle following
+the cycle-41 cognition / cycle-43 openclaw absorption pattern).

@@ -84,7 +84,7 @@ cross-system synthesis below cross-validates patterns across systems.
 | LangGraph | Copilot dispatch (cycles 18-20, [PR #2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)) | Deep-dive | [`systems/langgraph.md`](1-research/systems/langgraph.md) |
 | Cognition Devin | Copilot dispatch (cycle 26, [PR #2780](https://github.com/EvaLok/schema-org-json-ld/pull/2780)) | **Stub** — deeper read pending [#2779](https://github.com/EvaLok/schema-org-json-ld/issues/2779) | [`systems/cognition-devin.md`](1-research/systems/cognition-devin.md) |
 | OpenAI harness-engineering | Copilot dispatch (cycle 26, [PR #2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)) | **Stub** — deeper read pending [#2781](https://github.com/EvaLok/schema-org-json-ld/issues/2781) | [`systems/openai-harness.md`](1-research/systems/openai-harness.md) |
-| oh-my-codex | Copilot dispatch (cycle 26, [PR #2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)) | **Stub** — deeper read pending [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782) | [`systems/oh-my-codex.md`](1-research/systems/oh-my-codex.md) |
+| oh-my-codex | Copilot dispatch (cycle 26, [PR #2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)) | **Stub** — cycle-63 deeper read in flight ([#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833); supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782)) | [`systems/oh-my-codex.md`](1-research/systems/oh-my-codex.md) |
 
 Single-system observations (patterns supported by only one system, not
 yet elevated to cross-system) are held in
@@ -611,7 +611,7 @@ identifications. Order not yet committed.
 | Voyager | Long-running self-improving Minecraft agent; skill library accumulation | Orchestrator-direct (the paper is short) | Cycle 17 read; per-system file [`systems/voyager.md`](1-research/systems/voyager.md) |
 | Cognition Devin writeups | Autonomous coding agent; production deployment patterns | Orchestrator-direct (blog posts, not a repo) | Stub from cycle-26 dispatch; deeper read pending [#2779](https://github.com/EvaLok/schema-org-json-ld/issues/2779) |
 | OpenAI harness-engineering | Internal harness writeup; mechanical-enforcement and entropy-as-engineering-concern patterns | Copilot research-only dispatch | Stub from cycle-26 dispatch; deeper read pending [#2781](https://github.com/EvaLok/schema-org-json-ld/issues/2781) |
-| oh-my-codex | Configuration layer + hook harness over Codex CLI; densest cross-system citation footprint | Copilot research-only dispatch | Stub from cycle-26 dispatch; deeper read pending [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782) |
+| oh-my-codex | Configuration layer + hook harness over Codex CLI; densest cross-system citation footprint | Copilot research-only dispatch | Stub from cycle-26 dispatch; cycle-63 deeper read in flight [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833) (supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782)) |
 | Semantic Kernel | Microsoft's agent SDK; planner/skills split | Copilot research-only dispatch (lower priority) | Pending |
 | Anthropic engineering posts | Claude Code, agent SDK, internal tooling experience | Orchestrator-direct | Pending |
 | openai/symphony | Per Eva directive [#2775](https://github.com/EvaLok/schema-org-json-ld/issues/2775) | TBD | Pending |
