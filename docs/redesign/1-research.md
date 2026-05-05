@@ -587,20 +587,20 @@ design-space-spanning alternatives. Single-system observations
 (captured in `_notes/cycle-22-cross-system-synthesis.md`) should not
 yet shape candidate generation.
 
-## Implications-mining clusters (cycles 62-72)
+## Implications-mining clusters (cycles 62-74)
 
 The Family-level observations above record cross-system patterns
 from the first-pass per-system reads (cycles 14-32). A deeper-pass
 over the same six deep-dive systems ran across cycles 62-69 under
 the polarity inversion of [#2829](https://github.com/EvaLok/schema-org-json-ld/issues/2829),
 mining ~10 per-system implications per cycle and clustering them by
-architectural concern. Synthesis cycles 65, 70, 72 elevated the
+architectural concern. Synthesis cycles 65, 70, 72, 74 elevated the
 catalogue and extended it with cross-cluster intersections. The
 mining + synthesis arc produced **45 implications across 9
-architectural clusters across 6 systems**, with cross-cluster
-intersection patterns (A↔B, F↔H, D↔I primary; A↔C/B↔C/F↔I/E↔I
-flagged) showing how mechanisms compose across architectural
-concerns to produce emergent properties.
+architectural clusters across 6 systems**, with seven elevated
+cross-cluster intersection patterns (A↔B, F↔H, D↔I from cycle 72;
+A↔C, B↔C, F↔I, E↔I from cycle 74) showing how mechanisms compose
+across architectural concerns to produce emergent properties.
 
 **Full catalogue:** [`1-research/clusters.md`](1-research/clusters.md)
 (per cycle-73 restructure; see
@@ -608,14 +608,15 @@ concerns to produce emergent properties.
 The catalogue is load-bearing Phase 2 evidence-base alongside the
 Family-level cross-system observations above; it contains per-cluster
 sub-shape catalogues, Phase 2 design-input mapping clusters to v1
-failure modes, cross-cluster intersection patterns, open structural
-questions, and the cycles 62-72 mining cadence summary. Per-cycle
-process documents under
+failure modes, seven cross-cluster intersection disciplines, open
+structural questions, and the cycles 62-74 mining cadence summary.
+Per-cycle process documents under
 [`_notes/cycle-62-autogen-implications.md`](_notes/cycle-62-autogen-implications.md)
 through [`_notes/cycle-69-voyager-implications.md`](_notes/cycle-69-voyager-implications.md)
 plus the synthesis-cycle notes
 ([`_notes/cycle-65-cross-implications-synthesis.md`](_notes/cycle-65-cross-implications-synthesis.md),
-[`_notes/cycle-72-cross-cluster-intersections.md`](_notes/cycle-72-cross-cluster-intersections.md))
+[`_notes/cycle-72-cross-cluster-intersections.md`](_notes/cycle-72-cross-cluster-intersections.md),
+[`_notes/cycle-74-cross-cluster-intersections-deeper.md`](_notes/cycle-74-cross-cluster-intersections-deeper.md))
 hold the per-cycle mining/synthesis state from which the catalogue
 was elevated.
 

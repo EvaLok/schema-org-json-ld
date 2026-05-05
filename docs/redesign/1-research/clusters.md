@@ -1,4 +1,4 @@
-# Implications-mining clusters (cycles 62-72)
+# Implications-mining clusters (cycles 62-74)
 
 This file holds the deeper-pass implications-mining catalogue and
 cross-cluster intersection patterns. It is the load-bearing Phase 2
@@ -19,10 +19,13 @@ under [`../_notes/cycle-62-autogen-implications.md`](../_notes/cycle-62-autogen-
 through [`../_notes/cycle-69-voyager-implications.md`](../_notes/cycle-69-voyager-implications.md);
 a first synthesis at
 [`../_notes/cycle-65-cross-implications-synthesis.md`](../_notes/cycle-65-cross-implications-synthesis.md)
-covered the AutoGen + LangGraph layer. This file is the elevation
-to a permanent reference that cycles 65/66/67/68/69 deferred to a future
-synthesis cycle (now cycle 70), extended by cycle 72's cross-cluster
-intersections synthesis, and migrated to its own file at cycle 73.
+covered the AutoGen + LangGraph layer; the cross-cluster intersections
+synthesis lives at
+[`../_notes/cycle-72-cross-cluster-intersections.md`](../_notes/cycle-72-cross-cluster-intersections.md).
+This file is the elevation to a permanent reference that cycles
+65/66/67/68/69 deferred to a future synthesis cycle (now cycle 70),
+extended by cycle 72's cross-cluster intersections synthesis, and
+migrated to its own file at cycle 73.
 
 The clusters are a deeper layer than the Families: Families are
 named pattern themes; clusters are named *architectural concerns*
@@ -439,7 +442,7 @@ Phase 2 candidates SHOULD weight cluster I patterns highly even at
   harness) — agent-readable error messages on quality violations,
   CI-enforced
 
-## Cross-cluster intersections (cycle 72 synthesis)
+## Cross-cluster intersections (cycles 72 + 74 synthesis)
 
 The within-cluster catalogues above (clusters A-I, ~9 sub-shapes
 per foregrounded cluster) tell Phase 2 candidate authors *what
@@ -453,10 +456,13 @@ mechanisms composing at their boundary."
 Cycle 70's hand-off named three priority intersections for cycle
 72 synthesis: cluster A↔B (storage-discipline at cycle-boundary
 moments), cluster F↔H (stratification of feedback mechanisms),
-cluster D↔I (documentation-as-policy-enforcement). Each is examined
-below with sub-patterns from the corpus and Phase 2 implications.
-Four additional intersections (A↔C, B↔C, F↔I, E↔I) are flagged
-briefly for future synthesis cycles.
+cluster D↔I (documentation-as-policy-enforcement). Cycle 72 flagged
+four additional intersections (A↔C, B↔C, F↔I, E↔I) for future
+synthesis; cycle 74 elevates them to full treatment. The seven
+intersections together describe the cross-cluster architectural-
+discipline surface Phase 2 candidates compose against. Each is
+examined below with sub-patterns from the corpus and Phase 2
+implications.
 
 ### A↔B: storage-discipline at cycle-boundary moments
 
@@ -687,54 +693,345 @@ enforcement mechanism (mechanical linter, watchdog, harness-
 policy) to convert documentation into prevention; otherwise the
 catalog is decorative.
 
-### Additional intersections (flagged for future synthesis)
+### A↔C: lifecycle operations at named phase boundaries
 
-Four additional cross-cluster intersections are visible in the
-corpus but not deeply mined this cycle. Brief observations:
+Cluster A defines *when* in the cycle phase-boundary moments occur
+(termination predicates, super-step boundaries, watchdog detection).
+Cluster C names *what kinds of lifecycle ops* exist beyond resume
+(terminate, reset, fork, replay, reactive event-trigger, stuck-watchdog
+with stale-lane release). Their intersection: lifecycle ops execute AT
+named cluster A boundaries — typed cycle-internal vocabulary instead of
+ad-hoc lifecycle execution.
 
-- **A↔C: lifecycle operations beyond resume mapped to phase
-  boundaries.** Cluster C lifecycle ops (terminate, fork, replay,
-  reset, watchdog) happen AT cluster A boundaries. Sub-patterns:
-  termination predicate (A) + terminate operation (C); stuck-
-  watchdog (A) + lane-release (C); session-fork (C) + super-step-
-  boundary (A). Without the intersection, lifecycle ops have
-  ad-hoc execution semantics. Phase 2 implication: typed
-  lifecycle requires explicit phase-boundary-where-lifecycle-op-
-  applies pairings.
+Five sub-patterns from the corpus:
 
-- **B↔C: storage operations on lifecycle-event boundaries.**
-  Cluster B persistence + cluster C lifecycle ops. fork creates
-  a branch in component-local persistence; replay reads existing
-  failure-records to construct cycle context; reset truncates
-  cluster B storage at a checkpoint. Phase 2 implication: rich
-  cluster C lifecycle operations require coordinated cluster B
-  mechanics — fork-without-storage-branching produces
-  inconsistent forks; replay-without-failure-records produces
-  context-free replays.
+1. **Termination-predicate × terminate operation** (AutoGen I-3 —
+   within-system pair). Cluster A termination predicate IS the trigger
+   condition; cluster C terminate IS the lifecycle op the predicate
+   triggers. AutoGen architecturally pairs them: predicate-fires →
+   terminate-runs. Without the intersection, terminate fires on fuzzy
+   criteria (e.g., turn-limit hit) and termination predicates evaluate
+   without triggering anything; the cycle terminates via timeout or
+   external interrupt rather than typed completion.
 
-- **F↔I: tier-stratification of harness enforcement** (openclaw
-  I-O6 capability-tier + I-O1 default-deny harness). Tier 1
-  read-only enforced strictly; Tier 3 autonomous-with-standing-
-  orders has fewer restrictions. Stratification of enforcement
-  strictness per tier. Phase 2 implication: stratified
-  enforcement allows graduated autonomy without blanket-permissive
-  or blanket-restrictive policies.
+2. **Stuck-watchdog × lane-release** (openclaw I-O5 — within-system
+   pair, two-cluster cast). Cluster A I-O5 is the watchdog as
+   phase-boundary detection (recovery-without-abort lifecycle
+   operation per cycle 70 phrasing); cluster C I-O5 is the same
+   mechanism cast as lane-release lifecycle op. The same I-O5
+   implication is BOTH a cluster A boundary-detection sub-shape AND
+   a cluster C lifecycle-op sub-shape. The intersection IS what
+   makes I-O5 actionable: watchdog without lane-release detects
+   stuckness silently; lane-release without watchdog has no trigger.
+   Recovery-without-abort emerges only at the intersection.
 
-- **E↔I: typed boundary discipline as enforcement substrate**
-  (openclaw TypeBox + cluster I harness enforcement; LangGraph
-  per-key reducers + boundary validation). TypeBox schemas (E)
-  feed harness policy (I); boundary validation IS policy
-  enforcement. Phase 2 implication: typed boundaries make
-  I-level enforcement mechanical rather than ad-hoc; without
-  typed boundaries, cluster I enforcement requires hand-written
-  rules per boundary.
+3. **Super-step boundary × fork** (LangGraph I-L1 super-step + I-L4
+   time travel — within-system pair). Cluster A super-step boundary
+   creates the clean-state moment; cluster C fork operates AT that
+   moment to produce a checkpoint or branch. Without the intersection,
+   mid-super-step fork produces inconsistent state (some channels
+   merged, others not) and downstream replay can't reliably reproduce.
 
-These four additional intersections are flagged but not deeply
-mined this cycle. Future synthesis cycles can elevate them as
-needed; PAI deeper-read [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
+4. **Super-step boundary × replay** (LangGraph I-L1 + I-L4). Cluster
+   A super-step boundary IS the replay point; cluster C replay reads
+   state at a super-step checkpoint and re-executes downstream.
+   Without the intersection, replay reads fuzzy mid-super-step state
+   and produces non-deterministic re-execution. The intersection makes
+   time-travel architecturally trivial — every super-step boundary
+   is automatically a valid replay point.
+
+5. **Phase-boundary × reactive event-trigger** (openclaw reactive-bot-
+   comment-pickup + cluster A boundary). Reactive event-triggers
+   (cluster C) introduce an out-of-cycle boundary type; the
+   orchestrator's normal cluster A super-step semantics extend to
+   handle "event arrived between cycles." Without the intersection,
+   event-triggers either pre-empt the current super-step (chaos) or
+   queue silently until the next cycle (latency without typed
+   handling). The intersection produces typed event-handling: events
+   become first-class boundaries with their own state-write semantics.
+
+**v1 failure modes addressed by A↔C**:
+
+- **Implicit cycle-phasing** (v1's cycle structure is procedural-prompt
+  rather than typed-state): A↔C sub-pattern 1 (termination-predicate
+  × terminate) provides explicit phase-boundary semantics with named
+  termination triggers
+- **No-recovery-without-abort** (v1's stuck-dispatch handling at cycle
+  71 — orchestrator filed a malformed dispatch and only diagnosed it
+  8 cycles later because the watchdog was diagnostic-only, not
+  action-taking): A↔C sub-pattern 2 (stuck-watchdog × lane-release) is
+  the recovery mechanism v1 lacks — diagnostic comment alone is not
+  recovery, lane-release IS recovery
+- **Abandonment cascade** (v1 loses track of failed cycles between
+  sessions): A↔C sub-pattern 5 (phase-boundary × reactive event-
+  trigger) provides typed mechanism for cross-session event handling
+  — failed-cycle events trigger structured next-cycle pickup rather
+  than relying on next-cycle's cold-read of the journal
+
+**Phase 2 implication**: A↔C is the *typed-lifecycle* enabler. v2
+candidates with cluster A boundaries AND cluster C lifecycle ops but
+**not** their intersection get ad-hoc execution semantics —
+terminate/fork/replay/reset exist but fire at fragile timing
+assumptions. The intersection discipline (each cluster C op declares
+the cluster A boundary at which it fires) is what makes lifecycle
+vocabulary architecturally trustworthy. v2 candidate-shape implication:
+every cluster C lifecycle op should name its cluster A boundary (e.g.,
+terminate fires at end-of-super-step on predicate match; fork fires at
+named checkpoint boundary). Orphan cluster C ops (no associated cluster
+A boundary) are smell of lifecycle-without-phase-discipline.
+
+### B↔C: storage operations on lifecycle-event boundaries
+
+Cluster B defines *what gets persisted and where* (component-local
+persistence, active-vs-monotonic, failure-as-artifact, semantic-
+retrieval, plans-as-versioned-artifacts). Cluster C defines *what
+lifecycle ops exist*. Their intersection: cluster C ops produce
+cluster B writes — fork branches storage, replay reads storage to
+construct context, reset truncates storage at a checkpoint, watchdog
+writes failure-record before lane-release, event-trigger loads relevant
+component state.
+
+Five sub-patterns from the corpus:
+
+1. **Fork × component-local-persistence-branch** (LangGraph I-L4 fork
+   + Voyager I-V3 component-local persistence). Cluster C fork
+   operation needs cluster B component-local persistence to support
+   efficient branching: each component branches independently rather
+   than the monolithic state being copied. Without the intersection,
+   fork copies all state (expensive) OR creates inconsistent branches
+   where some components are forked and others aren't.
+
+2. **Replay × failure-record-as-context-source** (Voyager I-V8
+   failure-as-first-class-artifact + cluster C replay). Replay
+   reconstructs cycle context partly from cluster B failure-records —
+   "what was tried last time, what failed, what was recorded." Without
+   the intersection, replay has no failure-context and re-tries
+   already-failed approaches. Voyager's curriculum agent reads
+   failed_tasks.json plus completed_tasks.json before next-task
+   selection — this IS the B↔C intersection in operation.
+
+3. **Reset × active-surface-vs-monotonic-history** (Voyager I-V5
+   active-vs-monotonic + cluster C reset). Cluster C reset truncates
+   the active retrieval surface but preserves monotonic-history
+   (cluster B active-vs-monotonic discipline is what makes reset safe).
+   Without the intersection, reset either destroys history (loss of
+   failure-record evidence + retrospective material) OR doesn't
+   actually reset (stale active surface persists alongside new state).
+
+4. **Watchdog × failure-record-write** (openclaw I-O5 watchdog +
+   cluster B I-V8 failure-as-artifact). Watchdog detection triggers
+   cluster B failure-record write before lane-release. Without the
+   intersection, watchdog releases lanes silently → loss of v2
+   design-input evidence. The v1 cycle-71 stuck-dispatch incident
+   illustrates this directly: the orchestrator self-diagnosed the
+   malformed dispatch and produced a diagnosis comment on the dispatch
+   issue, but no structured failure-record persisted to a known
+   storage surface for next-cycle composition decisions; the diagnosis
+   lives only in unstructured issue comments and the journal.
+
+5. **Event-trigger × per-component resume opt-in** (openclaw reactive
+   event-trigger + Voyager I-V3 per-component resume). Reactive
+   event-triggers (cluster C) need cluster B per-component resume:
+   the event handler loads only its own component state, not central
+   state. Without the intersection, event handlers reload everything
+   (slow + interferes with other components) OR run on stale state
+   (handler doesn't know its component-state is out of date).
+
+**v1 failure modes addressed by B↔C**:
+
+- **Forgotten-failure** (v1's failed dispatches and abandoned cycles
+  disappear into journal entries): B↔C sub-pattern 4 (watchdog ×
+  failure-record-write) provides the typed mechanism — watchdog
+  detection IS a failure-record-write trigger, producing structured
+  artifact rather than journal prose
+- **No-experiment-branching** (v1 can't fork its state to try
+  alternatives without disrupting in-flight cycle work): B↔C
+  sub-pattern 1 (fork × component-local-persistence-branch) enables it
+- **Reset-destroys-history concern** (any naive v1 reset would lose
+  retrospective evidence): B↔C sub-pattern 3 (reset × active-vs-
+  monotonic) shows reset can preserve history by stratifying the
+  storage surfaces
+
+**Phase 2 implication**: B↔C is the *operational vocabulary on storage*
+intersection. Cluster B mechanisms without cluster C lifecycle ops
+produces "frozen" storage architecture — write semantics but no
+operations on top. Cluster C ops without cluster B coordination produces
+ad-hoc state mutations divorced from the architectural storage layer.
+The intersection produces typed lifecycle operating on typed storage.
+v2 candidate-shape implication: any cluster C lifecycle op must declare
+its cluster B effect (which storage surfaces it touches, what it
+writes, what it preserves vs truncates). Orphan cluster C ops without
+cluster B effect specification are smell of lifecycle-divorced-from-
+storage.
+
+### F↔I: tier-stratification of harness enforcement
+
+Cluster F provides 8 stratification axes (version, task-class,
+capability-tier, terminology, role, cost-tier, autonomy-mode,
+capability-layer). Cluster I provides 2 enforcement sub-shapes
+(permission-policy default-deny harness + quality-policy mechanical
+linters). Their intersection: enforcement strictness stratified by
+F-axis tier — different tiers get different policy strictness,
+different roles get different validation, different cost-tiers get
+different quality-gates.
+
+Five sub-patterns from the corpus:
+
+1. **Capability-tier × default-deny-harness** (openclaw I-O6
+   capability-tier + I-O1 default-deny — within-system pair). Tier 1
+   read-only enforced strictly via default-deny on writes; Tier 3
+   autonomous-with-standing-orders has substantially fewer harness
+   restrictions. The intersection IS what makes graduated autonomy
+   possible. Without the intersection, blanket policies — either
+   everyone strict (Tier 3 can't operate) or everyone permissive
+   (Tier 1 has no protection).
+
+2. **Cost-tier × quality-policy enforcement** (Voyager I-V2 cost-tier
+   + OpenAI harness mechanical linters). Different cost tiers warrant
+   different quality-policy strictness — high-cost tier (Opus / gpt-4)
+   gets full mechanical-linter validation since cost amortizes across
+   rare-but-deep usage; low-cost tier (Haiku / gpt-3.5-turbo) gets
+   advisory-only since per-action cost is low and running full
+   validation on every action wastes capacity. Without the
+   intersection, uniform quality enforcement → either wastes high-cost
+   capacity on simple validations or over-validates simple low-cost
+   output.
+
+3. **Role × tool-call validation per role** (Cognition I-C4 reviewer
+   role + cluster I tool-call validation, with cluster G role-
+   asymmetric context as substrate). Reviewer role has clean-context
+   (no shared traces with action role) AND different tool-call
+   validation: review-mode tools (read repo, read traces, file
+   critique) vs action-mode tools (write repo, dispatch issues, mutate
+   state). Stratification of policy by role. Without the intersection,
+   all roles share validation policy and reviewer can call action-tools
+   that compromise review independence.
+
+4. **Autonomy-mode × policy-strictness** (Voyager I-V9 autonomy-mode
+   toggle + cluster I). Manual autonomy-mode → operator approves
+   before each significant action (less harness-enforcement needed
+   because operator-in-loop catches violations); auto autonomy-mode
+   → strict harness-enforcement (operator absent, harness must
+   substitute). Stratification of enforcement strictness by autonomy
+   mode. Without the intersection, auto and manual share policy →
+   either auto under-enforced (operator absent + lax harness) or
+   manual over-blocked (operator present + strict harness creates
+   friction).
+
+5. **Capability-layer × promotion-gate** (Voyager I-V10 capability-
+   layer composition + openclaw plugin-discovery/promotion gated by
+   ClawHub security review). Primitives layer = trusted (hand-written
+   by humans, code-reviewed); skills/compositions layer = needs
+   promotion-gate (LLM-generated, must pass security review before
+   promotion to active retrieval). Stratification of promotion-policy
+   by capability layer. Without the intersection, all layers share
+   semantics — primitives needlessly gated (slow evolution) OR
+   LLM-compositions promoted unreviewed (security risk).
+
+**v1 failure modes addressed by F↔I**:
+
+- **Blanket-policy-with-no-tier-discrimination** (v1's tool permissions
+  apply uniformly across the orchestrator regardless of task class,
+  role, autonomy mode, or capability layer): F↔I sub-patterns 1 + 4
+  are the direct fix — tier-stratified default-deny + autonomy-mode-
+  stratified strictness
+- **Reviewer-action-conflation** (v1 has no role-stratification, so
+  any role can call any tool): F↔I sub-pattern 3 (role × tool-call
+  validation) is the mechanism v1 lacks
+- **Capability-promotion-without-review-gate** (any v2 with LLM-
+  generated skills that doesn't have F↔I sub-pattern 5 will
+  accumulate unreviewed compositions in production): F↔I makes the
+  gate explicit
+
+**Phase 2 implication**: F↔I is the *graduated-autonomy* enabler. v2
+candidates with cluster F sub-axes AND cluster I enforcement but no
+F↔I intersection get blanket-strict OR blanket-permissive policy →
+either the orchestrator can't function or the system is unsafe. F↔I
+intersection produces tiered autonomy: wide tier-1 protection + light
+tier-3 enablement. v2 candidate-shape implication: every cluster I
+enforcement mechanism should declare which cluster F sub-axis tiers
+it applies to (e.g., default-deny strict on tier 1, advisory on tier 3;
+mechanical linter strict on cost-tier-Opus, advisory on cost-tier-
+Haiku). Blanket cluster I rules without F-axis stratification are
+smell of enforcement-without-tier-discipline.
+
+### E↔I: typed boundary discipline as enforcement substrate
+
+Cluster E provides typed boundary semantics (2 sub-shapes: schema-
+discipline at process-boundaries via TypeBox single-source-of-truth
++ typed-channel-merger-rules via LangGraph per-key reducers). Cluster
+I provides harness enforcement (2 sub-shapes: default-deny permission-
+policy + mechanical-linter quality-policy). Their intersection: typed
+boundaries are *the substrate enforcement runs on* — schema validation
+IS policy enforcement; per-key reducer rules ARE merge-time policy.
+Typed boundaries make I-level enforcement mechanical rather than
+hand-rule-driven.
+
+Four sub-patterns from the corpus:
+
+1. **TypeBox schemas × harness validation** (openclaw — within-system
+   pair). TypeBox is single-source-of-truth that produces validators
+   in TypeScript / Swift / JSON-Schema; cluster I enforces those
+   validators at boundaries (default-deny on schema mismatch). The
+   intersection IS the substrate: schema *is* the policy, validator
+   *is* the harness check. Without the intersection, harness has
+   hand-written validation rules that drift from TypeBox schemas →
+   silent acceptance of invalid data or false rejection of valid data.
+
+2. **Per-key reducer rules × policy-at-merge-time** (LangGraph I-L2
+   per-key reducers + cluster I). Per-key reducers are typed merge-
+   rules; cluster I treats them as merge-time policy boundaries —
+   policy fires at the merge, not after. Without the intersection,
+   merge happens then policy validates retrospectively → expensive
+   rollback when invalid merges propagate.
+
+3. **Schema discipline × default-deny on schema mismatch** (openclaw
+   E + I-O1 default-deny). Default-deny semantics: data not matching
+   schema is rejected by default rather than coerced to fit. Without
+   the intersection, mismatches are silent (data drift accumulates)
+   or coerced (data shape silently changes from declared shape).
+
+4. **Structured tool output × downstream-typed consumption** (cross-
+   system; AutoGen typed tool args + Cognition I-C4 review handoff +
+   cluster I). Structured tool output IS contract consumed by next
+   agent or harness check — not a JSON suggestion that downstream
+   consumers parse defensively, but a typed message validated at
+   handoff. Without the intersection, structured output is decorative;
+   type drift accumulates as different agents make different parsing
+   assumptions.
+
+**v1 failure modes addressed by E↔I**:
+
+- **Ad-hoc validation** (v1 has hand-written validation at various
+  boundaries — state.json, dispatch payloads, journal entries — and
+  these drift independently): E↔I sub-pattern 1 (schemas as harness
+  source-of-truth) eliminates hand-written validation
+- **Silent-data-coercion** (v1 has no default-deny on schema
+  mismatches, so type errors are silently coerced rather than
+  caught): E↔I sub-pattern 3 catches them
+- **Stale-reference accumulation** (cycles 60-61 cleanup work — v1's
+  summary table references drifted across cycles because no merge-
+  time validation): E↔I sub-pattern 2 (merge-time policy) provides
+  the mechanism
+
+**Phase 2 implication**: E↔I is the *enforcement-on-typed-substrate*
+intersection. v2 candidates with cluster E typed boundaries but no
+cluster I enforcement get typed-boundaries-with-no-enforcement
+(typing-as-decoration); v2 candidates with cluster I enforcement but
+no cluster E typed boundaries get hand-written-validators-that-drift.
+The intersection produces *typed boundaries that ARE enforcement
+boundaries* — single source of truth for shape and policy. v2
+candidate-shape implication: every cluster E typed boundary should
+be enforceable by cluster I machinery; schema feeds harness validator
+without manual translation. Cluster E patterns without I-level
+enforcement integration are decorative typing.
+
+Note: cluster E is 3-system convergent (LangGraph + AutoGen +
+openclaw), substantially less foregrounded than the F↔H or D↔I
+intersection clusters. Sub-pattern density (4 vs 5 elsewhere) reflects
+the smaller corpus. PAI deeper-read [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
 or oh-my-codex deeper-read [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
-returns may also surface new sub-patterns within these
-intersections.
+returns may surface additional sub-patterns within E↔I.
 
 ### Meta-observation: cross-cluster as next-layer v2 design-input
 
@@ -754,38 +1051,77 @@ well. Concrete failure modes such candidates produce:
 - *cluster D anti-pattern catalog + cluster I harness but no
   D↔I intersection* → anti-patterns documented but not
   enforced → same lagging-retrospective enforcement as v1
+- *cluster A boundaries + cluster C lifecycle ops but no A↔C
+  intersection* → ad-hoc lifecycle execution → same
+  no-recovery-without-abort failure as v1 cycle 71 stuck-dispatch
+- *cluster B storage + cluster C lifecycle ops but no B↔C
+  intersection* → lifecycle ops divorced from storage → same
+  forgotten-failure pattern as v1
+- *cluster F sub-axes + cluster I enforcement but no F↔I
+  intersection* → blanket-policy without tier discrimination →
+  either orchestrator under-empowered or system unsafe
+- *cluster E typed boundaries + cluster I enforcement but no
+  E↔I intersection* → either decorative typing or hand-written
+  validators that drift → same ad-hoc validation as v1
 
 The within-cluster sub-shape catalogues from cycle 70 provide
 WHAT mechanisms exist; the cross-cluster intersections from
-cycle 72 provide HOW mechanisms compose to produce emergent
+cycles 72 + 74 provide HOW mechanisms compose to produce emergent
 architectural properties. v2 candidate evaluation can be sharpened
-by intersection coverage: how many of the cross-cluster
-intersection disciplines does the candidate's architecture
-explicitly address?
+by intersection coverage: how many of the seven cross-cluster
+intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C, F↔I, E↔I) does
+the candidate's architecture explicitly address?
 
 **Cluster I substrate-correlation revisited.** Cycle 70's
 observation that cluster I is substrate-correlated to v1's
 substrate (GitHub-Actions-anchored multi-actor with audit) is
 strengthened by D↔I, F↔I, and E↔I intersections — three of the
-seven flagged cross-cluster intersections involve cluster I. This
-re-confirms cycle 70's recommendation: Phase 2 candidates SHOULD
-weight cluster I patterns highly even at 2-system convergence
-depth, AND they should weight cluster I's intersections (D↔I,
-F↔I, E↔I) as part of the substrate-fit evaluation.
+seven elevated cross-cluster intersections involve cluster I.
+After cycle 74 elevated F↔I and E↔I from flagged-only to full
+treatment, the substrate-correlation argument hardens: every
+cluster I sub-shape now has at least one full intersection
+discipline (D↔I for documentation-as-policy, F↔I for tier-
+stratification, E↔I for typed-substrate enforcement). Phase 2
+candidates SHOULD weight cluster I patterns highly even at
+2-system convergence depth, AND they should weight all three
+cluster I intersections (D↔I, F↔I, E↔I) as part of the
+substrate-fit evaluation. v1 substrate's GitHub-Actions-multi-
+actor-with-audit shape correlates strongly with cluster I's
+canonical substrate; this is not a peripheral cluster for v2.
+
+**Cluster C as lifecycle-vocabulary linchpin.** After cycle 74,
+cluster C now participates in two full intersections (A↔C and
+B↔C), elevating its load-bearing role for Phase 2 candidates
+that adopt rich lifecycle vocabulary. The pair A↔C + B↔C
+combined produces *typed lifecycle operating on typed storage* —
+v2 candidates that adopt cluster C lifecycle ops without both
+intersections will produce ad-hoc lifecycle that mutates storage
+unpredictably. Cluster C's 4-system clean depth (no Voyager
+contribution) places it at the same depth as cluster H.
 
 **Symmetric-vs-asymmetric intersection observation.** Some
 intersections are symmetric — both clusters contribute mechanisms
 that compose at their boundary (A↔B is symmetric: cluster A
 boundaries trigger cluster B writes AND cluster B writes inform
-cluster A boundary semantics). Others are asymmetric — one
-cluster's artifacts feed the other's mechanisms (D↔I is
+cluster A boundary semantics; A↔C is symmetric in a different
+sense — termination predicate triggers terminate AND terminate
+establishes a phase boundary, the trigger and the consequence
+each provide context for the other). Others are asymmetric —
+one cluster's artifacts feed the other's mechanisms (D↔I is
 asymmetric: cluster D documentation feeds cluster I enforcement,
-not the reverse; cluster I doesn't produce documentation that
-feeds cluster D). v2 candidate-shape implication: asymmetric
-intersections require explicit pipe-direction (which cluster's
-artifact feeds which cluster's mechanism); symmetric intersections
-require explicit composition-rule (how the two clusters'
-mechanisms coordinate at their shared boundary).
+not the reverse; F↔I is asymmetric: F provides tier definitions,
+I consumes them; E↔I is asymmetric: E schemas feed I validators;
+B↔C is mostly asymmetric with a partial reverse channel — C ops
+trigger B writes, except for failure-record-as-replay-context
+where B reads inform C replay). Of the seven intersections, A↔B
+and A↔C are symmetric; F↔H is mostly symmetric (feedback shapes
+respond to stratification AND vice versa); the remaining four
+(D↔I, B↔C, F↔I, E↔I) are asymmetric. v2 candidate-shape
+implication: asymmetric intersections require explicit pipe-
+direction (which cluster's artifact feeds which cluster's
+mechanism); symmetric intersections require explicit composition-
+rule (how the two clusters' mechanisms coordinate at their
+shared boundary).
 
 ## Open structural questions
 
@@ -857,7 +1193,7 @@ cycles, deferred this synthesis:
    the threshold; cycle 72 demonstrates the same threshold reached
    via deeper-pass content rather than per-system content).
 
-## Implications-mining cadence summary (cycles 62-72)
+## Implications-mining cadence summary (cycles 62-74)
 
 - Cycle 62: AutoGen mining (8 implications)
 - Cycle 63: oh-my-codex deeper-read dispatch construction
@@ -891,17 +1227,29 @@ cycles, deferred this synthesis:
 - Cycle 73: cluster-section file restructure (this file extracted
   from the index per the cycle-33-style split; index retains a
   brief summary + quick-reference cluster table + link here)
+- Cycle 74: cold-reader on cycle-73 restructure (3/3 PASS with
+  3 minor findings — undocumented preamble paragraph + self-
+  reference rewrite + section-header rename; clusters.md content
+  verbatim modulo documented transformations) + deeper synthesis
+  on the four flagged intersections from cycle 72 (A↔C, B↔C,
+  F↔I, E↔I — all four elevated to full treatment matching cycle-
+  72 format with 4-5 sub-patterns each, v1 failure-mode mapping,
+  Phase 2 implication; ~340 lines added; cluster-I substrate-
+  correlation hardened — every cluster I sub-shape now has a
+  full intersection discipline; cluster C re-foregrounded as
+  lifecycle-vocabulary linchpin via A↔C + B↔C dual participation)
 
 Total: 45 implications across 6 systems across 9 clusters across
-8 mining cycles, plus 3 synthesis cycles producing within-cluster
-sub-shape catalogues + cross-cluster intersection patterns + per-
-cycle process documents under `../_notes/`. Implications-mining
-cadence on unique deep-dive systems is exhausted post-cycle 69.
-Future mining requires either dispatch deliveries (oh-my-codex
-via [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
+8 mining cycles, plus 4 synthesis cycles (65, 70, 72, 74) producing
+within-cluster sub-shape catalogues + 7 cross-cluster intersection
+disciplines (A↔B, F↔H, D↔I, A↔C, B↔C, F↔I, E↔I) + per-cycle
+process documents under `../_notes/`. Implications-mining cadence
+on unique deep-dive systems is exhausted post-cycle 69. Future
+mining requires either dispatch deliveries (oh-my-codex via
+[#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
 still in flight, PAI via [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
 dispatched cycle 71) OR re-mining existing systems at deeper
 depth. Synthesis cycles continue extending upward (within-cluster
 → cross-cluster → potentially cross-system architectural-pattern
 synthesis) while waiting for new mining material; the synthesis
-arc has been substantively additive across cycles 65, 70, 72.
+arc has been substantively additive across cycles 65, 70, 72, 74.
