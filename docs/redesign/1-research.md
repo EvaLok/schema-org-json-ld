@@ -1019,6 +1019,354 @@ Phase 2 candidates SHOULD weight cluster I patterns highly even at
   harness) — agent-readable error messages on quality violations,
   CI-enforced
 
+### Cross-cluster intersections (cycle 72 synthesis)
+
+The within-cluster catalogues above (clusters A-I, ~9 sub-shapes
+per foregrounded cluster) tell Phase 2 candidate authors *what
+mechanisms exist for each architectural concern*. Cross-cluster
+intersections tell Phase 2 candidate authors *how mechanisms
+compose across architectural concerns to produce emergent
+properties* — and where v1's failure modes are not just "missing
+a sub-shape" but "missing the discipline of two clusters'
+mechanisms composing at their boundary."
+
+Cycle 70's hand-off named three priority intersections for cycle
+72 synthesis: cluster A↔B (storage-discipline at cycle-boundary
+moments), cluster F↔H (stratification of feedback mechanisms),
+cluster D↔I (documentation-as-policy-enforcement). Each is examined
+below with sub-patterns from the corpus and Phase 2 implications.
+Four additional intersections (A↔C, B↔C, F↔I, E↔I) are flagged
+briefly for future synthesis cycles.
+
+#### A↔B: storage-discipline at cycle-boundary moments
+
+Cluster A defines *when* in the cycle phase-boundary moments
+occur; cluster B defines *what* gets persisted and *where*. Their
+intersection is the discipline of cluster B storage writes
+happening at named cluster A boundaries — which is what produces
+consistent state across cycles.
+
+Five sub-patterns from the corpus:
+
+1. **Sync invariants asserted at session-init** (Voyager I-V4 +
+   cluster B dual-storage discipline). Cluster A boundary (cycle
+   init) + cluster B invariant (vectordb count vs JSON manifest
+   count). The intersection IS a cluster A operation that enforces
+   a cluster B consistency invariant. Without the intersection
+   discipline, dual-storage drift accumulates silently across
+   cycles.
+
+2. **State-commit at end-of-super-step** (LangGraph I-L1 + I-L2).
+   Cluster A super-step boundary + cluster B per-key reducer
+   rules. Each super-step ends with a coordinated state-commit
+   through reducers; cluster B reducer rules ARE cluster A
+   boundary semantics. Without explicit super-step boundaries,
+   reducer rules fire at fuzzy points and produce write-write
+   conflicts.
+
+3. **Failure-record-write at retry-exhaustion** (Voyager I-V7 +
+   I-V8). Cluster A bounded-retry-with-feedback (retry exhaustion
+   is a defined phase boundary) + cluster B failure-as-first-
+   class-artifact (the write target). Retry exhaustion triggers a
+   structured cluster B failure record. Without the intersection,
+   exhausted retries produce ad-hoc journal mentions that get
+   forgotten by the next cycle's composition decision.
+
+4. **Watchdog-release-with-state-cleanup** (openclaw I-O5 +
+   cluster B). Cluster A stuck-watchdog (lifecycle operation) +
+   cluster B lane-state-and-failure-record (storage cleanup
+   target). When the watchdog releases a stale lane, cluster B
+   storage is coordinated cleanup (lane state cleared, optional
+   failure record written). Without the intersection,
+   watchdog-released lanes leave dangling state that the next
+   cycle must reason about.
+
+5. **Component-local persistence loaded at init** (AutoGen I-6 +
+   Voyager I-V3 cross-system parallel). Cluster A init phase +
+   cluster B component-local persistence per agent. Each component
+   loads its own state at init; cluster A super-step boundary +
+   cluster B distributed-storage. Without the intersection, init
+   loads from inconsistent points and produces partial-state
+   sessions where some components have current state and others
+   have stale state.
+
+**v1 failure modes addressed by A↔B**:
+
+- **Stale-reference accumulation** (cleanup work cycles 60-61):
+  cluster B writes happening at fuzzy cluster A boundaries
+  produce stale references; sync-invariants-at-init (intersection
+  sub-pattern 1) catches drift at the init boundary
+- **Abandonment cascade**: dispatches dropped between sessions
+  because cluster A has no explicit cycle-end boundary triggering
+  cluster B failure-record write; intersection sub-pattern 3
+  (failure-record-write-at-retry-exhaustion) provides the
+  discipline
+- **Forgotten-failure**: failed cycles disappear into journal
+  entries because cluster B failure-as-artifact discipline isn't
+  triggered at any cluster A boundary; intersection sub-patterns
+  3 + 4 provide both the trigger and the write
+
+**Phase 2 implication**: A↔B is the highest-priority intersection
+for v1 failure-mode coverage. v2 candidates that adopt cluster A
+boundaries AND cluster B mechanisms but **not** their intersection
+will have super-step semantics + storage architecture but the
+same stale-reference / abandonment / forgotten-failure failure
+modes as v1. The intersection discipline (cluster B writes happen
+at named cluster A boundaries) is what closes the gap. v2
+candidate-shape implication: every cluster B write target should
+name the cluster A boundary at which it fires; orphaned cluster
+B writes (no associated boundary) are smell of within-cluster-
+mechanism without intersection-discipline.
+
+#### F↔H: stratification of feedback mechanisms
+
+Cluster F provides 8 stratification axes (version, task-class,
+capability-tier, terminology, role, cost-tier, autonomy-mode,
+capability-layer). Cluster H provides 4 post-session feedback
+sub-shapes (tight-cycle meta-feedback, score-gated consolidation,
+continuous-background gardening, capability-accumulation). Their
+intersection: feedback mechanisms differentiated along F-axes —
+different feedback frequency, authority, gating, scope, or
+content for different tiers.
+
+Five sub-patterns from the corpus:
+
+1. **Capability-layer × capability-accumulation** (Voyager I-V10 +
+   I-V5/I-V6). Cluster F capability-layer (primitives vs
+   LLM-composed compositions) + cluster H capability-accumulation.
+   The capability layer determines what gets accumulated as
+   feedback. Primitives are hand-written and don't accumulate;
+   compositions/skills accumulate. Stratification of WHICH layer
+   produces capability-accumulation feedback.
+
+2. **Autonomy-mode × tight-cycle-vs-continuous** (Voyager I-V9 +
+   openclaw operator-tier + cluster H tight + continuous).
+   Cluster F autonomy-mode (auto vs manual) determines feedback
+   frequency. Manual mode → tight-cycle Session-Insights-style
+   (operator reads between cycles); auto mode → continuous-
+   background gardening or score-gated consolidation (no human
+   reads each cycle). Different autonomy modes get different
+   feedback shapes.
+
+3. **Cost-tier × score-gated consolidation** (Voyager I-V2 +
+   openclaw I-O9). Cluster F cost-tier (model-per-task-class) +
+   cluster H score-gated consolidation. High-cost tier (gpt-4 /
+   Opus) needs gating to amortize cost across cycles; low-cost
+   tier (gpt-3.5-turbo / Haiku) might do continuous-without-gating
+   because per-action cost is low. Stratification of feedback
+   economics.
+
+4. **Role × clean-context-reviewer feedback** (Cognition I-C4 +
+   cluster F role-stratification + cluster G role-asymmetric).
+   When role-stratified architecture has a reviewer role
+   (Cognition Devin Review, I-C4), the reviewer's feedback IS the
+   cluster H mechanism for that role. Reviewer-role feedback
+   (clean-context, no shared traces with action role) is shaped
+   differently from action-role self-reflection. Stratification
+   of feedback authority and trust.
+
+5. **Task-class × Playbook-derived feedback** (Cognition I-C6 +
+   cluster H tight-cycle). Cluster F task-class stratification
+   (Playbook templates per task-class with outcome + steps +
+   advice + forbidden) + cluster H tight-cycle. Each task class
+   gets its own Playbook-derived meta-feedback shape; different
+   task classes get different feedback templates and different
+   `forbidden` lists. Stratification of feedback content per
+   task class.
+
+**v1 failure mode addressed by F↔H**: chronic-category currency
+loop. v1 has uniform feedback for all chronic categories
+regardless of category urgency, autonomy mode, or capability-
+layer relevance. F↔H stratification produces differentiated
+cross-cycle learning — high-priority chronic categories with
+elevated feedback frequency, low-priority categories with
+score-gated consolidation, capability-accumulating categories
+at the appropriate layer.
+
+**Phase 2 implication**: v2 candidates with cluster F sub-axes
+AND cluster H mechanisms but **not** their intersection produce
+uniform-feedback-across-tiers (v1's pattern). The intersection
+is where stratification produces differentiated cross-cycle
+learning. v2 candidate-shape implication: light-stratification
+candidates (2-3 F sub-axes) need 1-2 H sub-shapes; heavy-
+stratification candidates (all 8 F sub-axes) need at least 3
+H sub-shapes to match the discrimination granularity. Orphaned
+F sub-axes (axis with no associated H mechanism differentiation)
+are smell of stratification-without-feedback-discipline.
+
+#### D↔I: documentation-as-policy-enforcement
+
+Cluster D produces honest documentation (anti-pattern catalogs,
+walkbacks, invariants/derivations stratified, failure records,
+MIGRATIONS.md). Cluster I produces harness-enforced security/
+policy boundaries (default-deny, before_tool_call.block-true,
+mechanical linters with agent-readable error messages). Their
+intersection: documentation that is *machine-readable* and feeds
+cluster I enforcement.
+
+Five sub-patterns from the corpus:
+
+1. **Anti-pattern catalog × mechanical-linter** (openclaw I-O2
+   ANTI-PATTERNS.md + OpenAI harness mechanical linters). The
+   anti-pattern catalog is documentation (cluster D) AND the
+   source of linter rules (cluster I). The intersection IS the
+   catalog being machine-readable enough to drive enforcement.
+   Without the intersection, anti-patterns are advisory only —
+   the catalog says "don't do X" but nothing prevents X.
+
+2. **VISION.md "What We Will Not Merge" × ClawHub security
+   review** (openclaw). Documentation declaration of forbidden
+   patterns (cluster D) + harness-enforced policy at PR/dispatch
+   time (cluster I). The "Will Not Merge" list IS the
+   enforcement boundary; documentation and policy are the same
+   artifact at different consumption layers.
+
+3. **POSITIONS.md × tool-call validation** (Cognition I-C1
+   walkback protocol + cluster I). Versioned positions
+   documented (cluster D walkback as first-class artifact) AND
+   enforced as constraints on tool calls (cluster I). The
+   intersection: position changes propagate to enforcement
+   without manual policy update.
+
+4. **Invariants/Derivations stratified × axiom-enforcement**
+   (Cognition I-C2 + cluster I). Invariants section is durable
+   axiomatic documentation (cluster D invariants/derivations
+   stratification) + enforcement that derivation-changes don't
+   silently change axioms (cluster I machine check).
+   Intersection: stratified documentation enables stratified
+   enforcement (strict on invariants, advisory on derivations).
+
+5. **Failure-record × failure-pattern-detection-watchdog**
+   (Voyager I-V8 + cluster I). Structured failure records as
+   documentation (cluster D failure-as-recorded-artifact)
+   consumed by a watchdog/lint that detects re-occurring failure
+   patterns (cluster I). Documentation-becomes-policy via
+   repeat-detection: a documented failure that recurs N times
+   becomes an enforced anti-pattern.
+
+**v1 failure mode addressed by D↔I**: anti-patterns documented
+in retrospective but not enforced. v1's retrospective cycle
+catches anti-patterns retrospectively (lagging enforcement); the
+system can re-introduce a documented anti-pattern and only catches
+it on the next retrospective cycle. D↔I intersection produces
+immediate enforcement at policy boundaries. v1's specific
+instance: the chronic-category currency loop was a documented
+anti-pattern (multiple retrospective cycles named it) that
+re-occurred across many subsequent cycles because no I-level
+enforcement prevented the orchestrator from re-entering it.
+
+**Phase 2 implication**: v2 candidates with cluster D
+documentation but no cluster I enforcement get
+*lagging-corrective* behavior (retrospective-style catch). v2
+candidates with both produce *immediate-prevention* behavior
+(catch at point-of-violation). The intersection is what
+determines whether documentation is advisory or load-bearing. v2
+candidate-shape implication: candidates that adopt cluster D
+anti-pattern catalogs MUST also adopt at least one cluster I
+enforcement mechanism (mechanical linter, watchdog, harness-
+policy) to convert documentation into prevention; otherwise the
+catalog is decorative.
+
+#### Additional intersections (flagged for future synthesis)
+
+Four additional cross-cluster intersections are visible in the
+corpus but not deeply mined this cycle. Brief observations:
+
+- **A↔C: lifecycle operations beyond resume mapped to phase
+  boundaries.** Cluster C lifecycle ops (terminate, fork, replay,
+  reset, watchdog) happen AT cluster A boundaries. Sub-patterns:
+  termination predicate (A) + terminate operation (C); stuck-
+  watchdog (A) + lane-release (C); session-fork (C) + super-step-
+  boundary (A). Without the intersection, lifecycle ops have
+  ad-hoc execution semantics. Phase 2 implication: typed
+  lifecycle requires explicit phase-boundary-where-lifecycle-op-
+  applies pairings.
+
+- **B↔C: storage operations on lifecycle-event boundaries.**
+  Cluster B persistence + cluster C lifecycle ops. fork creates
+  a branch in component-local persistence; replay reads existing
+  failure-records to construct cycle context; reset truncates
+  cluster B storage at a checkpoint. Phase 2 implication: rich
+  cluster C lifecycle operations require coordinated cluster B
+  mechanics — fork-without-storage-branching produces
+  inconsistent forks; replay-without-failure-records produces
+  context-free replays.
+
+- **F↔I: tier-stratification of harness enforcement** (openclaw
+  I-O6 capability-tier + I-O1 default-deny harness). Tier 1
+  read-only enforced strictly; Tier 3 autonomous-with-standing-
+  orders has fewer restrictions. Stratification of enforcement
+  strictness per tier. Phase 2 implication: stratified
+  enforcement allows graduated autonomy without blanket-permissive
+  or blanket-restrictive policies.
+
+- **E↔I: typed boundary discipline as enforcement substrate**
+  (openclaw TypeBox + cluster I harness enforcement; LangGraph
+  per-key reducers + boundary validation). TypeBox schemas (E)
+  feed harness policy (I); boundary validation IS policy
+  enforcement. Phase 2 implication: typed boundaries make
+  I-level enforcement mechanical rather than ad-hoc; without
+  typed boundaries, cluster I enforcement requires hand-written
+  rules per boundary.
+
+These four additional intersections are flagged but not deeply
+mined this cycle. Future synthesis cycles can elevate them as
+needed; PAI deeper-read [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
+or oh-my-codex deeper-read [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
+returns may also surface new sub-patterns within these
+intersections.
+
+#### Meta-observation: cross-cluster as next-layer v2 design-input
+
+The cross-cluster layer expresses *architectural-discipline-
+emergent-from-mechanism-composition* rather than mechanism-by-
+mechanism choices. Phase 2 candidates that adopt within-cluster
+sub-shapes WITHOUT thinking about cross-cluster intersections
+will produce systems where the mechanisms exist but don't compose
+well. Concrete failure modes such candidates produce:
+
+- *cluster A super-step semantics + cluster B storage but no
+  A↔B intersection* → super-step boundaries don't trigger
+  storage commits → same stale-reference failure as v1
+- *cluster F sub-axes + cluster H mechanisms but no F↔H
+  intersection* → uniform feedback across tiers → same
+  chronic-category currency loop as v1
+- *cluster D anti-pattern catalog + cluster I harness but no
+  D↔I intersection* → anti-patterns documented but not
+  enforced → same lagging-retrospective enforcement as v1
+
+The within-cluster sub-shape catalogues from cycle 70 provide
+WHAT mechanisms exist; the cross-cluster intersections from
+cycle 72 provide HOW mechanisms compose to produce emergent
+architectural properties. v2 candidate evaluation can be sharpened
+by intersection coverage: how many of the cross-cluster
+intersection disciplines does the candidate's architecture
+explicitly address?
+
+**Cluster I substrate-correlation revisited.** Cycle 70's
+observation that cluster I is substrate-correlated to v1's
+substrate (GitHub-Actions-anchored multi-actor with audit) is
+strengthened by D↔I, F↔I, and E↔I intersections — three of the
+seven flagged cross-cluster intersections involve cluster I. This
+re-confirms cycle 70's recommendation: Phase 2 candidates SHOULD
+weight cluster I patterns highly even at 2-system convergence
+depth, AND they should weight cluster I's intersections (D↔I,
+F↔I, E↔I) as part of the substrate-fit evaluation.
+
+**Symmetric-vs-asymmetric intersection observation.** Some
+intersections are symmetric — both clusters contribute mechanisms
+that compose at their boundary (A↔B is symmetric: cluster A
+boundaries trigger cluster B writes AND cluster B writes inform
+cluster A boundary semantics). Others are asymmetric — one
+cluster's artifacts feed the other's mechanisms (D↔I is
+asymmetric: cluster D documentation feeds cluster I enforcement,
+not the reverse; cluster I doesn't produce documentation that
+feeds cluster D). v2 candidate-shape implication: asymmetric
+intersections require explicit pipe-direction (which cluster's
+artifact feeds which cluster's mechanism); symmetric intersections
+require explicit composition-rule (how the two clusters'
+mechanisms coordinate at their shared boundary).
+
 ### Open structural questions
 
 Three structural questions surfaced by the implications-mining
@@ -1068,12 +1416,34 @@ cycles, deferred this synthesis:
    loose component-coupling will produce orphans whose value is in
    cross-system convergence.
 
-### Implications-mining cadence summary (cycles 62-69)
+4. **File-size threshold crossed; cluster section split deferred
+   to next synthesis cycle.** Cycle 70's hand-off observed
+   `1-research.md` approaching the cycle-33 restructure trigger
+   (~1422 lines / 78KB). Cycle 72's cross-cluster intersections
+   subsection (~310 lines added) puts the file past the trigger.
+   Cycle 72 deferred the structural restructure (combining content
+   addition with structural restructure in the same cycle is risky
+   — link breakage, inconsistent diffs, and the editorial decisions
+   compound). The next synthesis cycle (cycle 73+, or whenever new
+   dispatch material arrives) should split the cluster section to a
+   separate file like `1-research/clusters.md` mirroring the
+   cycle-33 per-system-files split. The split criterion is now
+   firmly met (line count > 1422 trigger; the `## Implications-
+   mining clusters` section alone is ~1000 lines and could be its
+   own file). v2 design-input from this observation: the
+   file-size-driven restructure pattern is itself a meta-
+   architectural-pattern; v2 candidates with active-surface
+   artifacts should plan for periodic restructure triggers and
+   have explicit thresholds (cycle-33 demonstrated 1422 lines as
+   the threshold; cycle 72 demonstrates the same threshold reached
+   via deeper-pass content rather than per-system content).
+
+### Implications-mining cadence summary (cycles 62-72)
 
 - Cycle 62: AutoGen mining (8 implications)
 - Cycle 63: oh-my-codex deeper-read dispatch construction
   ([#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833),
-  in flight 7+ cycles)
+  in flight 9+ cycles as of cycle 72)
 - Cycle 64: LangGraph mining (8 implications)
 - Cycle 65: cross-implications synthesis (first synthesis cycle;
   produced 6 elevation drafts, deferred actual elevation to a
@@ -1083,15 +1453,36 @@ cycles, deferred this synthesis:
 - Cycle 68: OpenAI harness mining (10 implications)
 - Cycle 69: Voyager mining (10 implications, exhausts unique
   deep-dive system pool)
-- Cycle 70 (this cycle): synthesis with elevation to this section
+- Cycle 70: synthesis with elevation of within-cluster sub-shape
+  catalogues to this section (second synthesis cycle; completed
+  the deferral cycle 65 set up — Family-format observations for
+  clusters A/B/D/F/H + Phase 2 design-input + open structural
+  questions, file 736→1241 lines)
+- Cycle 71: PAI deeper-read dispatch construction
+  ([#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842))
+  + stuck-dispatch self-healing finding diagnosing #2833 8-cycle
+  malformation (root cause: filed without `Copilot` as assignee;
+  orchestrator-bot lacks GraphQL permission to self-fix; mitigation
+  = diagnosis comments requesting Eva manually assign Copilot)
+- Cycle 72 (this cycle): cross-cluster intersections synthesis
+  (third synthesis cycle; A↔B, F↔H, D↔I primary deep-mine plus
+  4 additional intersections A↔C/B↔C/F↔I/E↔I flagged for future
+  synthesis; ~310 lines added; file-size threshold crossed,
+  restructure deferred to cycle 73+)
 
 Total: 45 implications across 6 systems across 9 clusters across
-8 cycles. Implications-mining cadence on unique deep-dive systems
-is exhausted post-cycle 69. Future mining requires either dispatch
-deliveries (oh-my-codex via #2833 still in flight, PAI via future
-dispatch — see Phase 1 work plan below) OR re-mining existing
-systems at deeper depth. Synthesis cycles become the dominant
-cycle composition until new mining material arrives.
+8 mining cycles, plus 3 synthesis cycles producing within-cluster
+sub-shape catalogues + cross-cluster intersection patterns + per-
+cycle process documents under `_notes/`. Implications-mining
+cadence on unique deep-dive systems is exhausted post-cycle 69.
+Future mining requires either dispatch deliveries (oh-my-codex
+via [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
+still in flight, PAI via [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
+dispatched cycle 71) OR re-mining existing systems at deeper
+depth. Synthesis cycles continue extending upward (within-cluster
+→ cross-cluster → potentially cross-system architectural-pattern
+synthesis) while waiting for new mining material; the synthesis
+arc has been substantively additive across cycles 65, 70, 72.
 
 ## Phase 1 work plan (subject to evolution)
 
