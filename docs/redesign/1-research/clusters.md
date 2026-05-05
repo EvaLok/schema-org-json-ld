@@ -1103,25 +1103,39 @@ contribution) places it at the same depth as cluster H.
 intersections are symmetric — both clusters contribute mechanisms
 that compose at their boundary (A↔B is symmetric: cluster A
 boundaries trigger cluster B writes AND cluster B writes inform
-cluster A boundary semantics; A↔C is symmetric in a different
-sense — termination predicate triggers terminate AND terminate
-establishes a phase boundary, the trigger and the consequence
-each provide context for the other). Others are asymmetric —
-one cluster's artifacts feed the other's mechanisms (D↔I is
-asymmetric: cluster D documentation feeds cluster I enforcement,
-not the reverse; F↔I is asymmetric: F provides tier definitions,
-I consumes them; E↔I is asymmetric: E schemas feed I validators;
-B↔C is mostly asymmetric with a partial reverse channel — C ops
-trigger B writes, except for failure-record-as-replay-context
-where B reads inform C replay). Of the seven intersections, A↔B
-and A↔C are symmetric; F↔H is mostly symmetric (feedback shapes
-respond to stratification AND vice versa); the remaining four
-(D↔I, B↔C, F↔I, E↔I) are asymmetric. v2 candidate-shape
-implication: asymmetric intersections require explicit pipe-
-direction (which cluster's artifact feeds which cluster's
-mechanism); symmetric intersections require explicit composition-
-rule (how the two clusters' mechanisms coordinate at their
-shared boundary).
+cluster A boundary semantics — sub-pattern 2 makes this explicit
+with "cluster B reducer rules ARE cluster A boundary semantics").
+A↔C is **mixed-symmetry**: sub-pattern 2 (stuck-watchdog ×
+lane-release) is genuinely symmetric because the same I-O5
+implication is cast as both a cluster A boundary-detection
+sub-shape and a cluster C lifecycle-op sub-shape; sub-patterns 1
+and 5 are weakly bidirectional (termination-predicate triggers
+terminate, with the converse "terminate establishes a phase
+boundary" being somewhat tautological by definition; phase-boundary
+semantics extend to handle reactive event-triggers introduced by
+cluster C); sub-patterns 3 and 4 (super-step boundary × fork or
+replay) are clearly A→C asymmetric. A↔C is therefore less
+symmetric than A↔B overall, but contributes one genuinely
+symmetric data point (the I-O5 dual-cluster cast) that A↔B does
+not have. Other intersections are asymmetric — one cluster's
+artifacts feed the other's mechanisms (D↔I is asymmetric: cluster
+D documentation feeds cluster I enforcement, not the reverse;
+F↔I is asymmetric: F provides tier definitions, I consumes them;
+E↔I is asymmetric: E schemas feed I validators; B↔C is mostly
+asymmetric with a partial reverse channel — C ops trigger B
+writes, except for failure-record-as-replay-context where B
+reads inform C replay). Of the seven intersections, A↔B is
+symmetric; A↔C is mixed-symmetry; F↔H is mostly symmetric
+(feedback shapes respond to stratification AND vice versa); the
+remaining four (D↔I, B↔C, F↔I, E↔I) are asymmetric. v2
+candidate-shape implication: asymmetric intersections require
+explicit pipe-direction (which cluster's artifact feeds which
+cluster's mechanism); symmetric intersections require explicit
+composition-rule (how the two clusters' mechanisms coordinate at
+their shared boundary); mixed-symmetry intersections require
+both — pipe-direction for the asymmetric sub-patterns, composition-
+rule for the symmetric sub-patterns, and the candidate must name
+which sub-patterns it adopts.
 
 ## Open structural questions
 
