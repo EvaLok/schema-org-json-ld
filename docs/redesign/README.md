@@ -14,6 +14,11 @@ is authoritative for the work that happens here.
   live under **`1-research/systems/<system>.md`** (split out cycle 33
   per the redesign-prompt's `evolve-the-mechanism` mandate; see
   `_notes/cycle-33-research-restructure.md` for the migration record).
+  The deeper-pass implications-mining catalogue (cluster A-I sub-shape
+  catalogues, Phase 2 design-input mapping clusters to v1 failure
+  modes, cross-cluster intersection patterns from cycle 72 synthesis)
+  lives at **`1-research/clusters.md`** (split out cycle 73; see
+  `_notes/cycle-73-cluster-restructure.md`).
 - **`2-candidates.md` / `2-selection.md`** — Phase 2 (later). At least
   two distinct design candidates with rationale for selection.
 - **`3-experiments/`** — Phase 3 (later). Prototype, experiments,
