@@ -76,17 +76,29 @@ depth count.
 
 **v1-substrate instantiation annotation work begun cycle 86
 (audit#454 M1 absorption); M2 self-management cost annotations
-begun cycle 87.** Cluster A received full substrate-fit annotations
-cycle 86 as proof-of-format using cycle 85's D3 sub-cluster grouping
-scaffold. Cluster B receives substrate-fit + self-management cost
-annotations cycle 87 (M1 + M2 layers interleaved per sub-shape).
-Cycles 88-89 extend the annotation to clusters D / F / H (most-
-foregrounded next), then C / E / G / I per cycle 85's M1-M5 multi-
-cycle plan. M2 retro-annotation for cluster A is deferred to cycle
-88+. Annotation format (substrate-fit STRONG / PARTIAL / ABSENT +
-self-management cost LOW / MODERATE / HIGH + current v1 instantiation
-+ design work needed) and Phase 2 evaluation use are documented in
-the cluster A and cluster B subsections below.
+begun cycle 87; M2 retro for cluster A and M3 v1 strengths layer
+begun cycle 88.** Cluster A received full substrate-fit
+annotations cycle 86 as proof-of-format using cycle 85's D3
+sub-cluster grouping scaffold; cluster A M2 retro-annotations
+landed cycle 88 (4 LOW + 5 MODERATE + 0 HIGH). Cluster B received
+substrate-fit + self-management cost annotations cycle 87 (M1 + M2
+layers interleaved per sub-shape). Cluster D received M1 + M2
+annotations cycle 88 (2 STRONG + 6 PARTIAL + 1 ABSENT; 4 LOW +
+5 MODERATE + 0 HIGH — most substrate-aligned cluster annotated
+to date). Cluster F received M1 + M2 annotations cycle 88 (0
+STRONG + 3 PARTIAL + 5 ABSENT; 2 LOW + 4 MODERATE + 2 HIGH —
+least substrate-aligned cluster annotated to date). M3 v1
+strengths layer added cycle 88 with framing + 3 distinct v1
+strengths surfaced from STRONG sub-shapes (process-isolation
+A↔B dual-cast; anti-patterns published; walkback as artifact).
+Cycle 89 extends the annotation to clusters C / E / G / H / I per
+cycle 85's M1-M5 multi-cycle plan, plus M2 retro for clusters
+B/D/F if not already present. Annotation format (substrate-fit
+STRONG / PARTIAL / ABSENT + self-management cost LOW / MODERATE /
+HIGH + current v1 instantiation + design work needed) and Phase 2
+evaluation use are documented in the per-cluster subsections
+below; M3 layer documented as standalone cluster-spanning
+subsection between clusters B and D.
 
 ## Cluster A: cycle-internal boundaries with state-write semantics
 
@@ -135,17 +147,22 @@ not just at the cluster A level — a candidate covering only
 phase-boundary semantics is not equivalent to a candidate covering
 all four sub-cluster groupings.
 
-**v1-substrate instantiation (M1, cycle 86 audit#454 absorption).**
-Each of the 9 sub-shapes is annotated with how its mechanism maps
-to v1's substrate (GitHub Actions runner / Rust tools / Claude Code
-session / cron trigger / repository-as-state / GitHub issue tracker).
-Annotation format: substrate-fit (STRONG / PARTIAL / ABSENT) +
-current v1 instantiation if any + design work needed for Phase 2
-candidates that adopt the sub-shape. Phase 2 candidate evaluation
-uses these annotations to weight implementation effort by ABSENT
-count and to identify mechanisms that v1's substrate provides "for
-free" (STRONG) versus those requiring substantial substrate-design
-work.
+**v1-substrate instantiation (M1, cycle 86 audit#454 absorption) +
+self-management cost (M2, cycle 88 audit#454 absorption — retro
+annotation alongside M1 cluster D + F work).** Each of the 9
+sub-shapes is annotated with how its mechanism maps to v1's
+substrate (GitHub Actions runner / Rust tools / Claude Code session
+/ cron trigger / repository-as-state / GitHub issue tracker) +
+self-management cost (LOW / MODERATE / HIGH). Annotation format:
+substrate-fit (STRONG / PARTIAL / ABSENT) + current v1
+instantiation if any + design work needed for Phase 2 candidates
+that adopt the sub-shape + self-management cost. Phase 2 candidate
+evaluation uses these annotations to weight implementation effort
+by ABSENT count and to identify mechanisms that v1's substrate
+provides "for free" (STRONG) versus those requiring substantial
+substrate-design work; M2 layer additionally weights per-cycle
+decision overhead. Cluster A M2 grades use the same LOW / MODERATE
+/ HIGH scale as cluster B (see cluster B M2 framing for definition).
 
 *Phase-boundary semantics sub-shapes:*
 
@@ -159,7 +176,11 @@ work.
    Phase 2 write artifacts / Phase 3 post comments) + per-state-
    surface reducer rules declared in a registry. Substrate via Rust
    tool `enforce-phase-boundary` invoked at session start and at
-   phase transitions.
+   phase transitions. **Self-management cost: MODERATE.** Reducer
+   registry needs maintenance as state surfaces are added or
+   retired; per-channel routing adds minor decision cost per cycle;
+   phase-boundary discipline becomes self-enforcing once tool is in
+   place.
 
 2. **Phase-boundary state semantics (AutoGen I-3 + LangGraph
    I-L1)** — substrate-fit ABSENT. v1's cycle has implicit phase
@@ -169,7 +190,10 @@ work.
    machine (`cycle-state.json` with phase tag + transition guards).
    Substrate via Rust tool `cycle-state-machine` embedded in
    cycle-runner harness; transitions emit state-write semantics
-   declared per phase.
+   declared per phase. **Self-management cost: MODERATE.** State
+   machine schema evolves as new phases are added; transition guards
+   need maintenance; once schema is stable, per-cycle cost is low
+   (substrate enforces).
 
 3. **Termination predicates as cycle-internal phase delimiters
    (AutoGen I-3)** — substrate-fit ABSENT. v1 terminates on
@@ -180,6 +204,9 @@ work.
    cycle-end-comment-posted"). Substrate via Rust tool
    `phase-termination-check` that runs at phase boundaries; exits
    non-zero if predicates fail (escalates via question-for-eva).
+   **Self-management cost: LOW.** Predicates declared per phase;
+   substrate enforces; predicate set evolves slowly. No per-cycle
+   decision overhead beyond the standard phase-completion check.
 
 4. **Per-key reducers with explicit merge rules (LangGraph
    I-L2)** — substrate-fit PARTIAL. v1 has implicit reducers
@@ -191,6 +218,11 @@ work.
    Substrate via Rust tool `apply-state-update` that takes
    (surface, update) and applies the declared reducer; files
    declare reducer via header comment or central registry file.
+   **Self-management cost: MODERATE.** State surface registry needs
+   maintenance as surfaces are added; per-surface reducer choice is
+   one-time per surface but write-routing per cycle adds minor
+   decision cost. Boundary with cluster B sub-shape 2 short/long
+   split (state-surface-registry) — same substrate; same cost level.
 
 *Recovery operations sub-shapes:*
 
@@ -207,7 +239,10 @@ work.
    cycle issues for incomplete artifacts and outputs structured
    remediation hints. Optional integration with cycle-runner
    harness for automatic recovery or escalation to question-for-
-   eva.
+   eva. **Self-management cost: LOW.** Watchdog runs deterministically
+   at session start; orchestrator only acts on remediation hints.
+   The watchdog itself is one-time tool design; no per-cycle
+   maintenance overhead.
 
 6. **Sync invariants at init (Voyager I-V4)** — substrate-fit
    ABSENT. v1 session init reads recent journal entries and the
@@ -219,7 +254,9 @@ work.
    system list matches systems/ subdirectory; cycle issue label
    state coherent. Outputs structured remediation text on
    divergence; exits non-zero on critical divergence to halt cycle
-   entry.
+   entry. **Self-management cost: LOW.** Sync-check runs
+   automatically at session start; orchestrator only acts on
+   divergence reports; invariant set evolves slowly.
 
 7. **Bounded retries with critic-feedback fed forward (Voyager
    I-V7)** — substrate-fit ABSENT. v1's dispatch failures (Copilot
@@ -232,6 +269,11 @@ work.
    preserved in retry payload; structured failure diagnostic on
    max-retries-exceeded. Each retry includes critique context from
    prior attempt fed forward into the next-attempt issue body.
+   **Self-management cost: MODERATE.** Critic-feedback prompts need
+   maintenance per failure class as new failure classes emerge;
+   retry semantics need calibration (max-retries, back-off, what
+   counts as failure for retry purposes). Per-cycle cost is low
+   (tool runs retry); design-time and evolution cost is moderate.
 
 *Concurrency / queuing sub-shape:*
 
@@ -250,6 +292,12 @@ work.
    Most v1-substrate-aligned: option (c) with Rust tool
    `lane-queue-status` reading issue labels — preserves
    repository-as-state without architectural shift.
+   **Self-management cost: MODERATE.** Lane assignment requires
+   orchestrator decision per work-unit (which lane does this work
+   belong to?); lane-queue maintenance involves issue-label
+   discipline; per-lane stuck-watchdog adds substrate complexity.
+   Most cost is concentrated at work-unit creation (one-time per
+   work-unit), not per-cycle baseline.
 
 *Process isolation sub-shape:*
 
@@ -265,6 +313,11 @@ work.
    candidates that deviate (e.g., persistent worker process) lose
    the property and must re-derive it via different mechanism
    (Docker container per cycle; in-memory sandbox reset).
+   **Self-management cost: LOW.** Substrate handles process
+   isolation; orchestrator pays no cost. Cross-references the
+   cluster B sub-shape 5 repository-as-state STRONG annotation —
+   same v1 substrate property dual-cast across cluster lenses (per
+   audit#454 D2 dual-cast classification).
 
 **Substrate-fit summary across cluster A's 9 sub-shapes:**
 - **STRONG (1):** process-isolation via ephemeral worktrees
@@ -281,6 +334,26 @@ behavior). The 1 STRONG sub-shape (process-isolation) is
 inherited from the substrate; Phase 2 candidates should not
 assume it requires implementation.
 
+**Self-management cost summary across cluster A's 9 sub-shapes
+(M2 retro, cycle 88):**
+- **LOW (4):** termination predicates (3), stuck-session watchdog
+  (5), sync invariants at init (6), process-isolation (9)
+- **MODERATE (5):** super-step semantics (1), phase-boundary state
+  semantics (2), per-key reducers (4), bounded retries with feedback
+  (7), lane-aware FIFO (8)
+- **HIGH (0):** none
+
+Cluster A self-management cost distribution (4 LOW + 5 MODERATE
++ 0 HIGH) is bimodal LOW/MODERATE: substrate-handled mechanisms
+(watchdog, sync-check, predicate evaluation) cluster at LOW;
+declarative-registry mechanisms (reducer registry, state machine,
+lane queue) cluster at MODERATE. No HIGH-cost sub-shapes in cluster
+A — design substrate offloads continuous-evaluation work to tools
+once the substrate is in place. Phase 2 candidates adopting most
+of cluster A inherit moderate per-cycle decision cost concentrated
+on declarative-registry maintenance (reducer choice per surface,
+state-machine schema, lane assignment per work-unit).
+
 **Phase 2 evaluation use of these annotations:**
 
 - *Implementation effort* — weight by ABSENT count; cluster A's
@@ -296,6 +369,14 @@ assume it requires implementation.
   explicitly acknowledge which mechanisms they inherit (don't
   need to design) versus which they implement; failure to do so
   is itself a Phase 2 evaluation flag for under-specification
+- *Self-management cost* (M2 retro added cycle 88) — Phase 2
+  candidates adopting cluster A inherit 4 LOW + 5 MODERATE per-cycle
+  cost; no HIGH-cost sub-shapes. Candidates favoring LOW-cost
+  sub-shapes (termination predicates + watchdog + sync-check +
+  process-isolation) minimize per-cycle overhead. The
+  declarative-registry-heavy alternative (reducer registry + state
+  machine + lane queue) inherits the MODERATE sub-shapes and is
+  the higher-decision-cost path.
 
 **Phase 2 implication**: cluster A is near-mandatory. v1's failure
 modes (stale-reference accumulation, abandonment cascade,
@@ -616,6 +697,118 @@ combination they adopt (parsimonious 3-sub-shape candidate vs
 all-9-sub-shape rich candidate; repository-anchored vs file-per-
 component vs hybrid).
 
+## Cluster-spanning v1 strengths layer (M3, cycle 88 audit#454 absorption)
+
+Audit#454 named "what v1 already does well is unnamed" as M3
+missing. M1 substrate-fit annotations identify STRONG sub-shapes
+per cluster; M3 layer surfaces these as cluster-spanning v1
+strengths to be preserved by Phase 2 candidates. Cycle 88
+implements M3 framing + initial annotations for clusters annotated
+to date (A, B, D, F). STRONG sub-shapes from cycles 86-88
+annotations yield 3 distinct v1 strengths after de-duplication of
+dual-cast substrate properties:
+
+**v1 strength 1: Process-isolation via ephemeral worktrees**
+(A↔B substrate-property dual-cast). v1 inherits this from GitHub
+Actions runner: each cron-triggered cycle runs in a fresh runner
+with the repo cloned fresh; no state carries across runners except
+through the repository (commits) and external systems (issues,
+labels, comments). Cross-references: cluster A sub-shape 9 STRONG,
+cluster B sub-shape 5 STRONG (same v1 substrate property dual-cast
+across cluster lenses per audit#454 D2 dual-cast classification).
+*Phase 2 implication*: candidates that preserve "cycle = isolated
+process" inherit this without effort; candidates that deviate
+(persistent worker, in-memory state across cycles) lose the
+property and must re-derive it via different mechanism (Docker
+container per cycle, in-memory sandbox reset). This is the
+strongest substrate-inherited v1 strength — single property,
+single substrate, two cluster-lens annotations.
+
+**v1 strength 2: Anti-patterns as published artifact alongside
+recommended patterns**. v1 has 0-retrospective.md (Phase 0 honest
+disclosure of v1 failure modes), journal entries (per-cycle prose
+acknowledging failures and uncertainty), clusters.md "v1-failure-
+mode mapping" subsection (5 named v1 failure modes mapped to which
+cluster sub-shapes address them), and the cycle 33 housekeeping
+observation (issue-tracker accumulation as v1 failure pattern
+documented as design-input). Cross-references: cluster D sub-shape
+1 STRONG. *Phase 2 implication*: candidates that preserve this
+discipline inherit honest failure documentation as default;
+candidates that suppress failure-disclosure (e.g., framing all v1
+failures as "v1 wins" or hiding failure cases) lose this v1
+strength. The substrate (git repository, public repo, journal
+directory) supports this inherently — the discipline is the
+strength, not the substrate.
+
+**v1 strength 3: Walkback as first-class artifact preserving
+prior framing alongside revised one**. v1 has framework iteration
+history preserved in 2-design-framework.md (v1.0-v1.22 changes
+documented across cycles 35-61), per-cycle _notes/ capturing
+reasoning at the time of decision, git history preserving prior
+commits. Cycle 73 cluster restructure preserved prior structure
+note in _notes/cycle-73-restructure.md; cycle 85 D2 dual-cast vs
+compositional revision preserved prior framing in clusters.md
+text via "compositional vs dual-cast classification" preamble.
+Cross-references: cluster D sub-shape 2 STRONG. *Phase 2
+implication*: candidates that preserve git-backed history +
+per-cycle _notes/ + framework iteration history inherit this
+without extra effort; candidates that compress history (squash
+all framework changes into "v2 framework v1.0") lose this v1
+strength.
+
+**M3 layer use across clusters:**
+
+- *Phase 2 evaluation* — candidates should explicitly acknowledge
+  which v1 strengths they preserve vs deviate from; failure to
+  acknowledge is itself a Phase 2 evaluation flag for
+  under-specification (parallel to "free from substrate"
+  inheritance under-specification flag in cluster A and B M1
+  layers)
+- *Substrate inheritance vs convention inheritance* — strength 1
+  (process-isolation) is substrate-inherited (GitHub Actions
+  runner property); strengths 2 (anti-patterns published) and 3
+  (walkback as artifact) are convention-inherited (depend on v1
+  documentation discipline, not substrate property). The
+  distinction matters for Phase 2: substrate-inherited strengths
+  cost nothing to preserve; convention-inherited strengths cost
+  ongoing discipline.
+- *Across-cycle preservation* — strengths 2 and 3 require ongoing
+  discipline; if v1 documentation discipline lapses across many
+  cycles (e.g., cycles where journal entries become slim, _notes/
+  drop in detail, framework iteration history becomes uneven),
+  the strength erodes. M3 layer is a record-keeping discipline as
+  much as a substrate property. Per cycle 87 reflection on
+  iteration-until-approval, sustained discipline across cycles is
+  itself the load-bearing factor.
+- *Cluster F adds no v1 strengths to M3 layer* — cluster F
+  (tool-suite stratification) has 0 STRONG sub-shapes per cycle
+  88 M1 annotation. v1 has rudimentary stratification (Rust tools
+  as primitives + orchestrator as LLM-composed) but no formal
+  stratification across cluster F's 8 sub-axes. Phase 2 candidates
+  have substantial design-work surface in cluster F regardless of
+  which v1 strengths they preserve. This is the first cluster
+  annotated to add nothing to M3 — empirical confirmation that
+  M3 layer composition is per-cluster and not all clusters
+  contribute equally.
+- *M3 vs M2 distinction* — M3 names what v1 already does well
+  (positive framing of substrate + convention); M2 names per-cycle
+  decision overhead (negative framing of self-management cost).
+  M3 strengths can correlate with M2 LOW grades (substrate or
+  convention handles) but not always: cluster D sub-shape 2
+  (walkback) is STRONG + LOW (substrate-handled); cluster D
+  sub-shape 1 (anti-patterns) is STRONG + LOW (convention-handled).
+  Both M2 LOW grades are M3-strength candidates because the work
+  is already happening at low cost.
+
+**M3 layer growth across cycles 89+**: cycles 89+ may add v1
+strengths from clusters C / E / G / H / I as M1 annotations land;
+cycle 89 plan covers those clusters. Expected: cluster G (role-
+asymmetric context — clean-context-reviewer pattern) likely adds
+1 STRONG strength via v1's audit-as-peer pattern; cluster I
+(harness-enforced security/policy boundaries) likely adds 0-1
+STRONG via v1's GitHub Actions secret injection + branch
+protection. Other clusters less certain at this stage.
+
 ## Cluster D: documentation honesty
 
 `[5-system clean + Voyager partial]` AutoGen + LangGraph + Cognition
@@ -648,12 +841,241 @@ qualifier; structurally distinct from Cognition's June-2025-vs-
 April-2026 walkback because openclaw's catalog is upfront with
 non-permanence built in).
 
+**v1-substrate instantiation (M1, cycle 88 audit#454 absorption —
+third cluster after cycle 86 cluster A and cycle 87 cluster B) +
+self-management cost (M2, cycle 88).** Each of the 9 sub-shapes is
+annotated with substrate-fit (STRONG / PARTIAL / ABSENT) +
+self-management cost (LOW / MODERATE / HIGH) + current v1
+instantiation if any + design work needed for Phase 2 candidates
+that adopt the sub-shape. Cluster D sub-shapes do NOT divide
+cleanly into sub-cluster groupings (parallel to cluster B); the 9
+sub-shapes mostly cover documentation form (anti-patterns,
+walkback, invariants/derivations, migration, AGENTS.md,
+structured-failure, failure-as-artifact, under-delegation,
+anti-pattern non-permanence) — overlapping concerns rather than
+orthogonal groupings. Annotations proceed linearly without
+sub-grouping.
+
+1. **Anti-patterns as published artifact alongside recommended
+   patterns (six-system Family E [3+/6 systems])** — substrate-fit
+   STRONG. v1 has 0-retrospective.md (Phase 0 retrospective with
+   anti-patterns named), journal entries that honestly acknowledge
+   failures (e.g., cycle 71 stuck-dispatch documented in journal +
+   _notes), clusters.md "v1-failure-mode mapping" subsection naming
+   5 v1 failure modes mapped to cluster sub-shapes, and the cycle
+   33 housekeeping observation (issue-tracker accumulation as v1
+   anti-pattern). v1 already does this work via the redesign
+   discipline. Phase 2 candidates that preserve "publish anti-
+   patterns as first-class material" inherit this without effort;
+   candidates that suppress anti-pattern publication lose this v1
+   strength. **Self-management cost: LOW.** Substrate (git repo,
+   public repo, journal directory) supports this inherently; the
+   discipline is the strength.
+
+2. **Walkback as first-class artifact preserving prior thesis
+   alongside revised one (Cognition I-C1)** — substrate-fit STRONG.
+   v1 preserves prior framing alongside revisions: framework
+   iteration history v1.0-v1.22 preserved in 2-design-framework.md
+   across cycles 35-61; per-cycle _notes/ capture reasoning at the
+   time of decision; git preserves prior commits. Cycle 73 cluster
+   restructure walkback documented in _notes; cycle 85 D2 dual-cast
+   vs compositional revision preserved prior framing via
+   classification preamble in clusters.md. Phase 2 candidates that
+   preserve git-backed history + per-cycle _notes/ + framework
+   iteration history inherit this without effort; candidates that
+   compress history lose this v1 strength. **Self-management cost:
+   LOW.** Git-backed history is automatic; per-cycle _notes/ is
+   already-baseline cycle work; iteration history preserved by
+   minimal-change discipline established cycles 35-61.
+
+3. **Invariants vs derivations as separate published layers
+   (Cognition I-C2)** — substrate-fit PARTIAL. v1 has
+   2-design-framework.md with framework axes and constraints, but
+   invariants vs derivations are not stratified into separate
+   layers. The Constraint 8 promotion (cycle 37 v1.2) is the
+   closest formalized stratification (axis-promoted-to-constraint
+   pattern). Design work: explicit stratification of v2 prompt
+   into "invariants" (non-negotiable structural commitments, e.g.,
+   process-isolation) and "derivations" (revisable on evidence,
+   e.g., specific tool names). Substrate via prompt structure
+   convention (separate subsections + version-comment header per
+   layer); no Rust tool needed. **Self-management cost: MODERATE.**
+   Stratification requires per-revision evaluation (is this an
+   invariant or a derivation?); cross-references between layers
+   add maintenance cost; promotion-from-derivation-to-invariant
+   requires explicit ratification (cycle 37 Constraint 8 pattern).
+
+4. **Migration guide as first-class artifact with explicit
+   deprecation semantics (AutoGen I-1)** — substrate-fit ABSENT.
+   v1 has no migration guide for v1→v2 yet; that work is Phase 4
+   cutover deliverable. The pre-cutover checkpoint requires
+   migration runbook + rollback runbook (per artifact-composition
+   in this prompt), but those are Phase 4 outputs not Phase 1
+   substrate. Design work: structured migration guide format with
+   per-component deprecation-and-replacement semantics (table or
+   per-component subsections). Substrate via Rust tool
+   `migration-status` showing per-component migration progress; v1
+   retention discipline (~30 cycles minimum after cutover) declared
+   explicitly. **Self-management cost: MODERATE.** Migration guide
+   requires per-deprecation maintenance during cutover phase;
+   outside cutover, low ongoing cost. Cost is concentrated at
+   version-boundary moments (Phase 4 cutover; future v2→v3
+   transitions).
+
+5. **AGENTS.md as table-of-contents to deeper docs/ rather than
+   single monolithic prompt (OpenAI harness I-OH1)** — substrate-fit
+   PARTIAL. v1 has the orchestrator prompt + STARTUP_CHECKLIST.xml
+   + COMPLETION_CHECKLIST.xml + docs/redesign/ tree. The prompt is
+   currently large (~600+ lines with extensive section structure),
+   more monolithic than TOC-pointing-to-deeper-docs. STARTUP_CHECKLIST
+   and COMPLETION_CHECKLIST act as deeper docs the prompt references,
+   but the v2 prompt may be substantially smaller per the
+   core-design-principle (prompt instructs orchestrator to invoke
+   tools; tools handle procedure). Design work: v2 prompt
+   structured as TOC pointing to per-task playbooks (cluster F
+   sub-axis 2 dual-cast) + per-component capability declarations
+   (cluster F sub-axis 3 dual-cast) + per-tool documentation.
+   Substrate via filesystem layout convention; no Rust tool needed
+   but cross-references must be maintained. **Self-management
+   cost: MODERATE.** TOC needs maintenance as docs grow or change;
+   cross-references break if files are renamed without updating;
+   periodic TOC audit is cycle work.
+
+6. **Structured failure-mechanism decomposition for documented
+   anti-patterns (OpenAI harness I-OH3 — four named failure
+   mechanisms for "one big AGENTS.md")** — substrate-fit PARTIAL.
+   v1 has unstructured failure documentation in journals (cycle 71
+   stuck-dispatch documented but not with structured failure-
+   mechanism decomposition); cluster B sub-shape 8 (failure-as-
+   first-class-artifact) overlaps with this — same need for
+   structured schema. Design work: per-anti-pattern structured
+   decomposition with named failure mechanisms (root cause,
+   observed symptoms, mitigations attempted). Substrate via Rust
+   tool `failure-record` (cross-cast with cluster B sub-shape 8).
+   **Self-management cost: MODERATE.** Each anti-pattern requires
+   structured analysis (more cost than journal prose);
+   decomposition templates evolve over time. Same cost level as
+   cluster B sub-shape 8 (failure-as-first-class-artifact) — they
+   share substrate.
+
+7. **Failure-as-first-class-recorded-artifact (Voyager I-V8 +
+   openclaw + OpenAI harness sub-failure decomposition)** —
+   substrate-fit PARTIAL. Same as cluster B sub-shape 8
+   (substrate-fit PARTIAL, self-management cost MODERATE).
+   Dual-cast across cluster B (storage architecture lens —
+   failure-as-stored-artifact) and cluster D (documentation
+   honesty lens — failure-as-published-artifact). The v1
+   instantiation, design work, and self-management cost are the
+   same. **Self-management cost: MODERATE.** Per audit#454 D2
+   dual-cast classification, this annotation cross-references
+   cluster B sub-shape 8 rather than counting as a distinct
+   cluster D substrate-design item.
+
+8. **Under-delegation as documented failure mode peer to
+   over-delegation (Cognition I-C9)** — substrate-fit PARTIAL.
+   v1 has discussion of under-delegation in journals (orchestrator
+   doing routine work that should be in tools — the core-design-
+   principle violation pattern is itself an under-delegation
+   discussion), but no structured catalog of under-delegation
+   cases peer to over-delegation. Design work: anti-pattern catalog
+   with both over- and under-delegation entries; per-entry: what
+   was over/under-delegated, what should have been the right level,
+   what the observable failure mode is. Substrate via clusters.md
+   or v2 anti-pattern catalog file (same substrate as sub-shape 9).
+   **Self-management cost: LOW.** Once documented, rarely needs
+   updating; mostly passive reference material.
+
+9. **Anti-pattern catalog with explicit non-permanence framing
+   (openclaw I-O2 "roadmap-guardrail-not-law-of-physics")** —
+   substrate-fit PARTIAL. v1's clusters.md has implicit "this is
+   current state, may evolve" framing through the cycle-N-by-cycle
+   update pattern, but no explicit non-permanence catalog framing
+   per anti-pattern. Design work: anti-pattern catalog with per-
+   entry "current state — may revise on evidence" framing
+   (versioned, revisable rather than absolute); cross-references
+   to walkback artifacts when entries are revised. Substrate via
+   clusters.md or v2 anti-pattern catalog file (same substrate as
+   sub-shape 8). **Self-management cost: LOW.** Non-permanence is
+   upfront framing not ongoing maintenance; revision-when-evidence-
+   warrants is event-driven not cycle-baseline.
+
+**Substrate-fit summary across cluster D's 9 sub-shapes:**
+- **STRONG (2):** anti-patterns as published artifact (1), walkback
+  as first-class artifact (2)
+- **PARTIAL (6):** invariants/derivations stratification (3),
+  AGENTS.md as TOC (5), structured failure-mechanism decomposition
+  (6), failure-as-first-class-artifact (7), under-delegation (8),
+  anti-pattern catalog with non-permanence (9)
+- **ABSENT (1):** migration guide with explicit deprecation
+  semantics (4)
+
+**Self-management cost summary across cluster D's 9 sub-shapes:**
+- **LOW (4):** anti-patterns published (1), walkback (2),
+  under-delegation (8), anti-pattern non-permanence (9)
+- **MODERATE (5):** invariants/derivations (3), migration guide
+  (4), AGENTS.md TOC (5), structured failure-mechanism (6),
+  failure-as-first-class-artifact (7)
+- **HIGH (0):** none
+
+**Comparison to clusters A and B:** cluster D is the MOST
+substrate-aligned of the three clusters annotated to date (2 STRONG
+/ 6 PARTIAL / 1 ABSENT vs cluster B's 1 STRONG / 6 PARTIAL / 2
+ABSENT vs cluster A's 1 STRONG / 2 PARTIAL / 6 ABSENT). The
+audit#454 statement that "v1 already does this work via the
+retrospective cadence and the journal" is empirically validated —
+cluster D has the highest STRONG count (2) and the lowest ABSENT
+count (1) of the three most-foregrounded clusters. Self-management
+cost distribution is the lowest-cost: 4 LOW + 5 MODERATE + 0 HIGH
+(vs cluster B's 3 LOW + 4 MODERATE + 2 HIGH; vs cluster A's 4 LOW
++ 5 MODERATE + 0 HIGH per cycle 88 retro). Cluster D is a strong
+candidate for Phase 2 candidate adoption with low effort.
+
+**Phase 2 evaluation use of these annotations:**
+
+- *Implementation effort* — weight by ABSENT count; cluster D's
+  1 ABSENT sub-shape (migration guide) signals limited Rust tool
+  design (migration guide is mostly format convention, not tool
+  surface). Phase 2 candidates adopting most of cluster D inherit
+  minimal implementation effort centered on declarative scaffolding
+  for PARTIAL sub-shapes.
+- *Self-management cost* — Phase 2 candidates that adopt cluster
+  D inherit LOW-or-MODERATE per-cycle cost; no HIGH-cost sub-shapes
+  to weight against. Cluster D is the lowest-cost cluster annotated
+  to date.
+- *"Free from substrate" inheritance* — anti-patterns as published
+  artifact (1) and walkback as first-class artifact (2) are
+  inherited from v1's documentation discipline rather than from
+  substrate. Phase 2 candidates that preserve documentation
+  discipline inherit these strengths; candidates that compress
+  history or suppress failure disclosure lose them. (Cross-reference
+  to M3 v1 strengths layer below.)
+- *"Maximal 9-sub-shape" combination*: cluster D max is 2 STRONG
+  + 6 PARTIAL + 1 ABSENT, with 4 LOW + 5 MODERATE + 0 HIGH
+  self-management cost. The maximal combination has limited
+  implementation surface and bounded per-cycle decision cost;
+  recommended as default-inclusion in Phase 2 candidates.
+- *"Minimal-departure-from-v1" combination*: cluster D minimum is
+  sub-shapes 1 + 2 (the two STRONG sub-shapes). With M1 annotations
+  visible: this is 2 STRONG + 0 PARTIAL + 0 ABSENT — pure
+  inheritance, no design work required. Recommended as default
+  for Phase 2 candidates that want documentation-honesty discipline
+  without additional implementation.
+- *Dual-cast with cluster B* — sub-shape 7 (failure-as-first-class-
+  recorded-artifact) is the same v1 instantiation as cluster B
+  sub-shape 8; design work and self-management cost shared.
+  Phase 2 candidates adopting either cluster B sub-shape 8 or
+  cluster D sub-shape 7 inherit this once, not twice.
+
 **Phase 2 implication**: v1 already does this work via the
 retrospective cadence and the journal. Cluster D additions for v2
-are walkback as first-class protocol, invariants/derivations
-stratification within the v2 prompt, anti-pattern catalog
-("What v2 Will Not Do" alongside "What v2 Will Do"), and
-structured failure records.
+are walkback as first-class protocol (formalizing the existing
+discipline), invariants/derivations stratification within the v2
+prompt, anti-pattern catalog ("What v2 Will Not Do" alongside
+"What v2 Will Do"), and structured failure records. The
+2-STRONG-sub-shape inheritance from v1 is the strongest argument
+for cluster D as default-inclusion in Phase 2 candidates: even a
+candidate that adopts only cluster D's STRONG sub-shapes inherits
+real v1 strengths at zero cost.
 
 ## Cluster F: tool-suite stratification (multi-axis)
 
@@ -693,6 +1115,225 @@ architectural domain. The 8 sub-axes:
    compositions (Voyager I-V10 — control_primitives + skill-library
    compose primitives + earlier skills; openclaw tool/skill
    distinction is parallel)
+
+**v1-substrate instantiation (M1, cycle 88 audit#454 absorption —
+fourth cluster after clusters A / B / D) + self-management cost
+(M2, cycle 88).** Each of the 8 sub-axes is annotated. Cluster F
+sub-axes are largely orthogonal (per "Phase 2 implication:
+stratification axes are mostly independent and combinable") so
+annotations proceed linearly. Note: cluster F is a multi-axis
+cluster — each sub-axis is its own stratification dimension, not a
+sub-mechanism within a single architectural domain. Substrate-fit
+grades reflect "how much stratification along this axis is already
+in v1."
+
+1. **Version stratification — active-version vs prior versions
+   (openclaw plugin versioning; Voyager skill versioning V2/V3 on
+   disk while vectordb keeps active version)** — substrate-fit
+   PARTIAL. v1 has git-backed versioning + redesign-mode
+   `prompts/v2/` directory alongside production prompt at
+   `.github/workflows/orchestrator-prompt.xml`. Active-version-vs-
+   prior is partial: redesign zones support versioning explicitly;
+   production code is git-only. Design work: explicit active-version
+   manifest per component (which version is loaded at session
+   start); prior-version retention policy. Substrate via filesystem
+   convention (existing) + Rust tool `version-status` listing
+   active vs prior per component. **Self-management cost: LOW.**
+   Git-backed; manifest is one-time declaration per component;
+   active-version selection happens at session start (substrate-
+   handled).
+
+2. **Task-class stratification — Playbook templates per task-class
+   with outcome + steps + postconditions + advice + forbidden
+   actions (Cognition I-C6)** — substrate-fit ABSENT. v1's prompt
+   has SECTION-by-SECTION structure (mission, authority, constraints,
+   security, etc.) but these are not Playbook templates per task-
+   class. STARTUP_CHECKLIST + COMPLETION_CHECKLIST have steps but
+   lack the outcome + postcondition + forbidden-actions structure.
+   Design work: substantial — per-task-class Playbook authoring
+   (e.g., audit-absorption, dispatch-construction, M-item
+   integration each have a Playbook). Substrate via `playbooks/`
+   directory with one Markdown file per task-class; Rust tool
+   `playbook-load` invoked at task-start. **Self-management cost:
+   HIGH.** Each task-class needs Playbook authoring; templates
+   evolve as new task-classes emerge; cross-references between
+   Playbooks add maintenance cost; per-cycle Playbook-selection
+   adds decision cost.
+
+3. **Capability-tier stratification — Tier 1 read-only / Tier 2
+   send-on-behalf / Tier 3 autonomous-with-standing-orders
+   (openclaw I-O6)** — substrate-fit PARTIAL. v1 has direct-push
+   zones (essentially Tier 3 within `prompts/v2/`, `tools/v2/`,
+   `docs/redesign/`, `docs/journal/`), workflow-change PR zones
+   (Tier 2 — orchestrator drafts, Eva merges), and forbidden zones
+   (this prompt, `.github/workflows/`, production tools — Tier 0/1
+   read-only). Design work: explicit Tier declaration per
+   filesystem region; per-Tier capability table (which actions are
+   authorized at which Tier). Substrate via filesystem layout +
+   Tier-manifest file; Rust tool `tier-check` validates path-Tier
+   intersection at write time. **Self-management cost: LOW.** Tier
+   boundaries declared once; mostly passive enforcement; cross-Tier
+   promotion (e.g., a tool moves from Tier 3 sandbox to Tier 0
+   production at cutover) is event-driven not cycle-baseline.
+
+4. **Terminology stratification — explicit different meanings per
+   term (openclaw tool / skill / plugin distinction, I-O8 — tools
+   = function calls, skills = Markdown-injected, plugins = npm
+   packages)** — substrate-fit ABSENT. v1 has informal terms (tool
+   / dispatch / question-for-eva / cycle issue / journal entry /
+   cluster sub-shape) but they're not strictly stratified into
+   formal types with declared meanings. The terms have meaning by
+   convention rather than declaration. Design work: explicit
+   terminology stratification (e.g., "Rust tool" = compiled binary,
+   "skill" = Markdown-injected procedure, "playbook" = task-class
+   template, "dispatch" = Copilot-assigned issue, etc.). Substrate
+   via terminology table in v2 prompt + cross-references in tooling
+   docs; no Rust tool needed but discipline of consistent naming
+   is required. **Self-management cost: MODERATE.** Term-introduction
+   needs ratification; cross-references between terms add cost;
+   renaming requires sweep across artifacts.
+
+5. **Role stratification — distinct named conceptual roles per
+   responsibility (Voyager 4-agent architecture I-V1 — ActionAgent
+   / CurriculumAgent / CriticAgent / SkillManager)** — substrate-fit
+   ABSENT. v1 has named external roles (orchestrator, audit-
+   orchestrator, Copilot, Eva) but no internal role stratification
+   within the orchestrator session. The orchestrator does design +
+   retrospective + dispatch + integration + housekeeping +
+   research-absorption all in one role. Design work: substantial —
+   internal role decomposition (e.g., a "designer" role for
+   design-direction work, a "retrospective-evaluator" role for
+   cold-reader work, an "absorber" role for audit critique
+   integration). Substrate via prompt structure (per-role section)
+   + per-role tool surface; potential Rust tool `role-load` shifting
+   prompt section into focus per declared role. **Self-management
+   cost: HIGH.** Internal roles require per-cycle role assignment +
+   per-role capability declaration + role-conflict resolution +
+   role-evolution discipline.
+
+6. **Cost-tier stratification — model-per-task-class within an
+   agent ecosystem (Voyager I-V2 — gpt-4 for novel reasoning,
+   gpt-3.5-turbo for cached/derivative work; v2 candidate extends
+   within Anthropic family Opus / Sonnet / Haiku per task-class)**
+   — substrate-fit ABSENT. v1 uses Opus 4.7 for orchestrator
+   across all task classes; no model-per-task-class assignment.
+   Design work: per-task-class model declaration (e.g., Opus for
+   design + retrospective + audit-absorption; Sonnet for
+   dispatch-construction + housekeeping; Haiku for routine reads +
+   integrity checks). Substrate via task-class declaration (cross-
+   cast with sub-axis 2 Playbook templates) + workflow YAML model
+   selection per task-class; potentially separate Rust tools per
+   task-class invoking different models. **Self-management cost:
+   MODERATE.** Per-task-class model assignment requires evaluation
+   as new task-classes emerge; cost-quality trade-offs need
+   calibration; model-version updates require sweep across
+   task-class declarations.
+
+7. **Autonomy-mode stratification — auto vs manual per-component
+   with explicit human-in-the-loop method paths (Voyager I-V9;
+   openclaw operator-tier-level)** — substrate-fit PARTIAL. v1
+   has implicit autonomy modes: orchestrator cycles run
+   automatically (auto); checkpoints require Eva approval (manual);
+   Copilot dispatches require Eva manual assignment (manual); audit
+   cron-triggered (auto). The pattern exists at multi-actor level
+   but not formalized as per-component autonomy mode declarations.
+   Design work: per-component autonomy mode declaration (auto /
+   manual / hybrid) + explicit human-in-the-loop method paths
+   (e.g., "checkpoint approval = Eva merges PR with
+   `cutover-approved` label"). Substrate via component-registry
+   (cross-cast with cluster B sub-shape 1) + per-component autonomy
+   field. **Self-management cost: MODERATE.** Per-component
+   declaration requires maintenance as components are added;
+   mode transitions require explicit human-in-loop method
+   definition; mode-conflict resolution.
+
+8. **Capability-layer stratification — primitives vs LLM-composed
+   compositions (Voyager I-V10 — control_primitives + skill-library
+   compose primitives + earlier skills; openclaw tool/skill
+   distinction is parallel)** — substrate-fit ABSENT. v1 has Rust
+   tools (primitives) and orchestrator (LLM-composed via prompt
+   invocation), but no formal layer stratification. The orchestrator
+   invokes tools but doesn't compose them into a stratified skill
+   library. There's no Markdown-injected "skill" tier between
+   primitives and orchestrator-level composition. Design work:
+   explicit layer stratification — primitives (Rust binaries,
+   deterministic), skills (Markdown-injected procedures invoking
+   primitives in known patterns), compositions (LLM-composed
+   sequences invoking skills + primitives, novel-decision
+   required). Substrate via filesystem convention + per-layer
+   documentation; Rust tool `skill-load` for skill-tier injection.
+   **Self-management cost: MODERATE.** Skill library evolves;
+   primitives → skills → compositions promotion path needs
+   per-skill maintenance; cross-layer references add cost.
+
+**Substrate-fit summary across cluster F's 8 sub-axes:**
+- **STRONG (0):** none
+- **PARTIAL (3):** version stratification (1), capability-tier
+  stratification (3), autonomy-mode stratification (7)
+- **ABSENT (5):** task-class Playbook templates (2), terminology
+  stratification (4), role stratification (5), cost-tier
+  stratification (6), capability-layer stratification (8)
+
+**Self-management cost summary across cluster F's 8 sub-axes:**
+- **LOW (2):** version stratification (1), capability-tier
+  stratification (3)
+- **MODERATE (4):** terminology stratification (4), cost-tier
+  stratification (6), autonomy-mode stratification (7),
+  capability-layer stratification (8)
+- **HIGH (2):** task-class Playbook templates (2), role
+  stratification (5)
+
+**Comparison to clusters A, B, D:** cluster F is the LEAST
+substrate-aligned of the four clusters annotated to date (0 STRONG
+/ 3 PARTIAL / 5 ABSENT vs cluster D's 2 STRONG / 6 PARTIAL / 1
+ABSENT vs cluster B's 1 STRONG / 6 PARTIAL / 2 ABSENT vs cluster
+A's 1 STRONG / 2 PARTIAL / 6 ABSENT). The 5 ABSENT count signals
+substantial substrate-design work for any candidate adopting most
+of cluster F. Self-management cost distribution: 2 LOW + 4 MODERATE
++ 2 HIGH — both HIGH-cost sub-axes (Playbook templates + role
+stratification) are HIGH because they impose per-cycle decision
+overhead (Playbook-selection per task; role-assignment per cycle).
+Cluster F is the only cluster among the four to have both 0 STRONG
+sub-shapes AND HIGH-cost sub-axes — the most expensive cluster
+annotated to date on both axes.
+
+**Phase 2 evaluation use of these annotations:**
+
+- *Implementation effort* — weight by ABSENT count; cluster F's
+  5 ABSENT sub-axes signal the largest substrate-design work of
+  the four clusters annotated to date. Phase 2 candidates adopting
+  most of cluster F inherit substantial implementation effort
+  across multiple Rust tools + filesystem conventions.
+- *Self-management cost* — Phase 2 candidates that adopt cluster
+  F's HIGH-cost sub-axes (Playbook templates + role stratification)
+  inherit per-cycle decision overhead. Candidates favoring LOW-cost
+  sub-axes only (version stratification + capability-tier)
+  minimize cost but also minimize stratification benefit.
+- *"Free from substrate" inheritance* — version stratification
+  (1) is the only cluster F sub-axis with substantial substrate
+  inheritance (git-backed); capability-tier (3) and autonomy-mode
+  (7) are convention-inherited (depend on declaration discipline).
+- *Subset selection is critical* — per "Phase 2 implication:
+  stratification axes are mostly independent and combinable",
+  Phase 2 candidates can adopt any subset. With M1 annotations
+  visible: the cheapest meaningful subset is sub-axes 1 + 3 + 7
+  (3 PARTIAL, 0 ABSENT, 0 HIGH) — the candidate gets multi-axis
+  stratification discipline at minimal cost. The maximally-
+  stratified subset is all 8 (3 PARTIAL + 5 ABSENT, 4 MODERATE +
+  2 HIGH) — substantial implementation and per-cycle cost for
+  full stratification.
+- *Unified-vs-decomposed question* (already named in cluster F
+  principle paragraph) — with M1 annotations visible: the case
+  for decomposing cluster F into narrower clusters is strengthened
+  by the bimodal cost distribution (2 LOW + 2 HIGH). Decomposition
+  would let Phase 2 candidates select clusters by cost rather than
+  by sub-axis. One natural decomposition (informed by M1 + M2):
+  "static stratification" (sub-axes 1 + 3 + 4 — version, tier,
+  terminology) versus "dynamic stratification" (sub-axes 2 + 5 +
+  6 — Playbook, role, cost-tier) versus "behavioral stratification"
+  (sub-axes 7 + 8 — autonomy, capability-layer). Static = LOW-cost
+  declaration; dynamic = HIGH-cost per-cycle assignment;
+  behavioral = MODERATE-cost convention-driven.
 
 **Phase 2 implication**: stratification axes are mostly independent
 and combinable — Phase 2 candidates can adopt any subset.
@@ -1855,34 +2496,51 @@ fresh-eyes verification (e.g., major artifact restructure cycle),
 but the cycle 78-84 default of "every cycle starts with cold-reader"
 is dropped. Per-cycle process documents continue under `../_notes/`.
 
-**Cycles 86-87 M-item integration arc** (first two of cycles 86-89).
-Cycle 86 implemented M1 v1-substrate instantiation for cluster A
-using cycle 85's D3 sub-cluster grouping scaffold (9 substrate
-notes: 1 STRONG + 2 PARTIAL + 6 ABSENT). Cycle 87 implements M1
-for cluster B (9 substrate notes: 1 STRONG + 6 PARTIAL + 2 ABSENT
-— substantively more substrate-aligned than cluster A as predicted
-in cycle 86 hand-off) and begins M2 self-management cost annotation
-layer (cluster B sub-shapes annotated LOW/MODERATE/HIGH; cluster
-A retro-annotation deferred to cycle 88+). Cycle 87 also documents
-the methodological observation that sub-cluster grouping helped
-cluster A (natural conceptual boundaries) but not cluster B
-(overlapping-scope storage-architecture sub-shapes don't divide
-cleanly). Cycle 88 plan: clusters D / F M1 + M2 retro for cluster
-A + M3 v1 strengths layer + M4 cycle frequency Phase 2 variable.
-Cycle 89: clusters C / E / G / H / I M1 + M2 retro for clusters
-B/D/F + M5/P6 audit-as-peer preservation pattern + P1-P6 Phase 2
-evaluation discipline integration into 2-design-framework.md.
+**Cycles 86-88 M-item integration arc** (first three of cycles
+86-89). Cycle 86 implemented M1 v1-substrate instantiation for
+cluster A using cycle 85's D3 sub-cluster grouping scaffold (9
+substrate notes: 1 STRONG + 2 PARTIAL + 6 ABSENT). Cycle 87
+implements M1 for cluster B (9 substrate notes: 1 STRONG + 6
+PARTIAL + 2 ABSENT — substantively more substrate-aligned than
+cluster A as predicted in cycle 86 hand-off) and begins M2
+self-management cost annotation layer (cluster B sub-shapes
+annotated LOW/MODERATE/HIGH; cluster A retro-annotation deferred
+to cycle 88+). Cycle 87 also documents the methodological
+observation that sub-cluster grouping helped cluster A (natural
+conceptual boundaries) but not cluster B (overlapping-scope
+storage-architecture sub-shapes don't divide cleanly). Cycle 88
+implements M1 for clusters D and F (cluster D: 2 STRONG + 6
+PARTIAL + 1 ABSENT, the most substrate-aligned cluster; cluster
+F: 0 STRONG + 3 PARTIAL + 5 ABSENT, the least substrate-aligned)
+and adds M2 retro for cluster A (4 LOW + 5 MODERATE + 0 HIGH) +
+M2 for clusters D and F + M3 v1 strengths layer (3 distinct v1
+strengths surfaced from STRONG sub-shapes: process-isolation A↔B
+dual-cast; anti-patterns published; walkback as artifact). M3
+layer begins as standalone cluster-spanning subsection between
+clusters B and D. Cycle 88 prediction: cluster D would be most
+substrate-aligned given audit#454 explicit statement "v1 already
+does this work via the retrospective cadence and the journal" —
+empirically validated (2 STRONG sub-shapes, the most of any
+cluster annotated). Cycle 88 prediction also held for cluster F:
+limited tool-suite stratification produces substantial ABSENT
+count (5 of 8 sub-axes) — empirically validated. Cycle 89 plan:
+clusters C / E / G / H / I M1 + M5/P6 audit-as-peer preservation
+pattern + P1-P6 Phase 2 evaluation discipline integration into
+2-design-framework.md (or new 2-evaluation-criteria.md if
+factoring is cleaner).
 
-Total (post cycle 87): 45 implications across 6 systems across 9
+Total (post cycle 88): 45 implications across 6 systems across 9
 clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
 72, 74, 84) producing within-cluster sub-shape catalogues + 7
 cross-cluster intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C,
 F↔I, E↔I) with compositional / dual-cast sub-pattern classification
 + 1 audit-engagement absorption cycle (85) integrating 21 audit#454
-verdicts + 2 M-item integration cycles (86 cluster A + 87 cluster
-B) producing 18 v1-substrate instantiation notes (M1 layer, 2 of
-9 clusters annotated) plus 9 self-management cost notes (M2 layer,
-1 of 9 clusters annotated; cluster B begins M2 work). Implications-mining cadence on unique deep-dive systems
+verdicts + 3 M-item integration cycles (86 cluster A + 87 cluster
+B + 88 clusters D/F + cluster A M2 retro + M3 layer) producing 35
+v1-substrate instantiation notes (M1 layer, 4 of 9 clusters
+annotated: A, B, D, F) plus 35 self-management cost notes (M2
+layer, 4 of 9 clusters annotated: A, B, D, F) plus 1 cluster-
+spanning v1 strengths layer (M3, framing + 3 strengths). Implications-mining cadence on unique deep-dive systems
 is exhausted post-cycle 69. Future mining requires either dispatch
 deliveries (oh-my-codex via
 [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
