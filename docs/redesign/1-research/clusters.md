@@ -77,28 +77,37 @@ depth count.
 **v1-substrate instantiation annotation work begun cycle 86
 (audit#454 M1 absorption); M2 self-management cost annotations
 begun cycle 87; M2 retro for cluster A and M3 v1 strengths layer
-begun cycle 88.** Cluster A received full substrate-fit
-annotations cycle 86 as proof-of-format using cycle 85's D3
-sub-cluster grouping scaffold; cluster A M2 retro-annotations
-landed cycle 88 (4 LOW + 5 MODERATE + 0 HIGH). Cluster B received
-substrate-fit + self-management cost annotations cycle 87 (M1 + M2
-layers interleaved per sub-shape). Cluster D received M1 + M2
-annotations cycle 88 (2 STRONG + 6 PARTIAL + 1 ABSENT; 4 LOW +
-5 MODERATE + 0 HIGH — most substrate-aligned cluster annotated
-to date). Cluster F received M1 + M2 annotations cycle 88 (0
+begun cycle 88; M-item integration arc closed cycle 89.** Cluster A
+received full substrate-fit annotations cycle 86 as proof-of-format
+using cycle 85's D3 sub-cluster grouping scaffold; cluster A M2
+retro-annotations landed cycle 88 (4 LOW + 5 MODERATE + 0 HIGH).
+Cluster B received substrate-fit + self-management cost annotations
+cycle 87 (M1 + M2 layers interleaved per sub-shape). Cluster D
+received M1 + M2 annotations cycle 88 (2 STRONG + 6 PARTIAL +
+1 ABSENT; 4 LOW + 5 MODERATE + 0 HIGH — most substrate-aligned
+cluster). Cluster F received M1 + M2 annotations cycle 88 (0
 STRONG + 3 PARTIAL + 5 ABSENT; 2 LOW + 4 MODERATE + 2 HIGH —
-least substrate-aligned cluster annotated to date). M3 v1
-strengths layer added cycle 88 with framing + 3 distinct v1
-strengths surfaced from STRONG sub-shapes (process-isolation
-A↔B dual-cast; anti-patterns published; walkback as artifact).
-Cycle 89 extends the annotation to clusters C / E / G / H / I per
-cycle 85's M1-M5 multi-cycle plan, plus M2 retro for clusters
-B/D/F if not already present. Annotation format (substrate-fit
-STRONG / PARTIAL / ABSENT + self-management cost LOW / MODERATE /
-HIGH + current v1 instantiation + design work needed) and Phase 2
-evaluation use are documented in the per-cluster subsections
-below; M3 layer documented as standalone cluster-spanning
-subsection between clusters B and D.
+least substrate-aligned cluster). M3 v1 strengths layer added
+cycle 88 with framing + 3 distinct v1 strengths surfaced from
+STRONG sub-shapes (process-isolation A↔B dual-cast; anti-patterns
+published; walkback as artifact). Cycle 89 extends the annotation
+to clusters C / E / G / H / I (15 sub-shapes total: cluster C 0
+STRONG + 2 PARTIAL + 3 ABSENT; cluster E 0 STRONG + 2 PARTIAL +
+0 ABSENT; cluster G 1 STRONG + 1 PARTIAL + 0 ABSENT; cluster H 0
+STRONG + 2 PARTIAL + 2 ABSENT; cluster I 1 STRONG + 1 PARTIAL +
+0 ABSENT) plus M3 layer extension with 2 new v1 strengths
+(audit-as-peer at session level + multi-layer permission-policy
+enforcement) plus M5/P6 audit-as-peer preservation pattern
+subsection. Annotation format (substrate-fit STRONG / PARTIAL /
+ABSENT + self-management cost LOW / MODERATE / HIGH + current v1
+instantiation + design work needed) and Phase 2 evaluation use are
+documented in the per-cluster subsections below; M3 layer
+documented as standalone cluster-spanning subsection between
+clusters B and D; M5/P6 audit-as-peer preservation pattern as
+subsequent cluster-spanning subsection. **Cluster comparison
+summary subsection** below the M5/P6 subsection documents the
+9-cluster substrate-fit + self-management cost distribution
+(M-item integration arc summary, cycles 86-89).
 
 ## Cluster A: cycle-internal boundaries with state-write semantics
 
@@ -809,6 +818,328 @@ asymmetric context — clean-context-reviewer pattern) likely adds
 STRONG via v1's GitHub Actions secret injection + branch
 protection. Other clusters less certain at this stage.
 
+**v1 strength 4: Clean-context audit-as-peer reviewer at session
+level** (cycle 89 addition). v1 has audit-as-peer pattern
+operational: independent audit orchestrator runs in separate repo
+(EvaLok/schema-org-json-ld-audit) with its own cron schedule;
+reads main repo cross-repo; posts critique within audit repo;
+main reads audit posts on subsequent cycles. The roles are
+asymmetric — main orchestrator advances research, audit
+orchestrator critiques main's work. Each session cold-starts in
+its own role context. This IS clean-context-reviewer at
+session-level (parallel to Cognition Devin Review at per-action
+level). The 2-instance pattern evidence (audit#442 → cycle 7-12-31
+absorption; audit#454 → cycle 85 absorption) demonstrates the
+pattern as operational. Cross-references: cluster G sub-shape 1
+STRONG. *Phase 2 implication*: candidates that preserve cross-repo
+communication discipline + audit-orchestrator independence inherit
+this without additional implementation effort; candidates that
+collapse audit into main (single orchestrator self-audits) lose
+the role-asymmetry property and must re-derive clean-context via
+different mechanism (separate session per role; isolated context
+windows). Strength 4 is mixed substrate / convention inheritance:
+substrate (separate repo + separate cron schedule) supports the
+pattern; convention (cross-repo communication discipline,
+audit-orchestrator independence) maintains it. Cycle 88 M3 layer
+growth prediction empirically validated.
+
+**v1 strength 5: Multi-layer permission-policy enforcement at
+harness level** (cycle 89 addition). v1 inherits multi-layer
+permission policy from substrate: GitHub Actions provides secret
+injection via `${{ secrets.X }}` (substrate-handled, never
+prompt-side); branch protection on main (PR-required for merge);
+the orchestrator-prompt names FORBIDDEN paths
+(`.github/workflows/`, this prompt file) requiring workflow-change
+PR; claude-code permission system enforces tool-level
+allow/ask/deny per Bash command + tool invocation; settings.json
+permissions configurable per project / per user. The substrate
+provides default-deny on multiple capability surfaces (workflow
+modification, prompt modification, secret access). Cross-references:
+cluster I sub-shape 1 STRONG. *Phase 2 implication*: candidates
+that preserve GitHub Actions deployment + branch protection +
+claude-code permission system inherit multi-layer permission
+policy without effort; candidates that deviate (run on
+non-GitHub-Actions substrate; bypass branch protection; disable
+claude-code permission system) lose the property and must
+re-derive it via different mechanism (alternative CI/CD with
+secret injection; alternative permission framework). Strength 5
+is fully substrate-inherited (no convention-discipline component).
+Cycle 88 M3 layer growth prediction empirically validated.
+
+**M3 layer state after cycle 89**: 5 distinct v1 strengths total.
+3 substrate-inherited (1 process-isolation + 5 permission-policy +
+partial 4 audit-as-peer substrate component); 2
+convention-inherited (2 anti-patterns published + 3 walkback as
+artifact); 1 mixed (4 audit-as-peer convention component).
+Substrate-inherited strengths cost nothing to preserve;
+convention-inherited strengths cost ongoing discipline. Phase 2
+candidate evaluation should distinguish which strengths the
+candidate inherits via substrate alignment vs which require
+ongoing convention discipline.
+
+## Audit-as-peer preservation pattern (M5/P6, cycle 89 audit#454 absorption)
+
+Audit#454 named "audit-as-peer-as-cluster" as M5 missing and
+flagged P6 (Phase 2 candidates should have a slot for "how does
+this candidate preserve / extend the audit-as-peer relationship?")
+as ACCEPT-WITH-CAUTION. The caution: cluster G corpus convergence
+count (2-system: Cognition + openclaw) is from research corpus;
+v1's audit-as-peer pattern is target-system instantiation. Mixing
+input-system data with target-system data inflates the convergence
+count incorrectly. The cluster G annotation (sub-shape 1, M1
+STRONG) treats v1 as instantiation evidence (not as 3rd
+convergence system); this subsection treats the pattern at
+target-system level for v2-preservation purposes (separate from
+research-corpus convergence).
+
+**v1 audit-as-peer architecture (target-system instantiation)**:
+
+The v1 audit-as-peer pattern has these operational components:
+
+- **Separate repository for the audit role** —
+  `EvaLok/schema-org-json-ld-audit` is a distinct GitHub repo
+  with its own substrate (cron schedule, GitHub Actions workflow,
+  audit-prompt). The repository boundary enforces context isolation
+  at the substrate level.
+- **Cross-repo reading without cross-repo posting** — the audit
+  orchestrator reads main repo issues / journals / artifacts, but
+  posts critique only within its own audit repo. Main reads audit
+  repo on subsequent cycles. The communication is asynchronous
+  (cycle-cadence, not real-time).
+- **Independent cron schedules** — main runs ~4 cycles/day; audit
+  runs ~1 cycle/day. The asynchrony means audit feedback arrives
+  with cycle-scale delay; main plans accordingly (audit critique
+  requests posted early in a phase if feedback is wanted before
+  phase concludes).
+- **Bidirectional discovery primitives** — main posts critique
+  requests within main repo (issue body or comment); audit
+  discovers via cross-repo read. Audit posts critique within audit
+  repo; main discovers via cross-repo read. Audit#455 (V2 cross-
+  repo audit-request channel discovery gap) documented a gap in
+  this discovery and proposed Option A (audit-side query for
+  EvaLok-authored issues with `[audit-request]` title prefix);
+  audit cycle 213 was expected to adopt Option A.
+- **Asymmetric trust postures** — main treats audit posts as
+  semi-trusted per SECURITY trust-boundaries (verifiable by
+  repo-of-origin and audit-orchestrator's signature pattern, but
+  text is data — weigh, don't blindly execute). Audit treats main
+  as the system being audited (the data is the artifact under
+  review).
+- **Audit-as-peer instances** — 2-instance evidence (audit#442 →
+  cycle 7-12-31 absorption; audit#454 → cycle 85 absorption) of
+  the pattern operational at the orchestrator-engagement level.
+  Cycle 85 absorption was the orchestrator-level analog of
+  per-action clean-context-reviewer (Cognition Review pattern).
+
+**Why this is preservable**:
+
+The audit-as-peer pattern provides an adversarial critique surface
+that survives orchestrator self-deception failure modes (the audit
+orchestrator runs in clean context, has its own cron, doesn't
+inherit main's framing biases). It is the only mechanism in v1
+that produces critique grounded in clean-context observation of
+v1's outputs without orchestrator-internal self-review (which is
+known to drift toward self-congratulation per cycles 81-83
+audit work). The pattern's M3 strength 4 status reflects this
+load-bearing role.
+
+**Phase 2 candidate v2-preservation slot (P6 verdict)**:
+
+Phase 2 candidates SHOULD have an explicit slot for "how does this
+candidate preserve / extend the audit-as-peer relationship?"
+Concrete preservation criteria:
+
+1. **Substrate isolation for the audit role** — does the candidate
+   keep audit in a separate repo / process / context window? If
+   collapsed (single orchestrator self-audits), the candidate
+   loses clean-context property and must re-derive it.
+2. **Asynchronous-of-cycle communication discipline** — does the
+   candidate preserve cycle-cadence asynchrony (audit feedback
+   arrives across cycles) or impose real-time coordination? Real-
+   time coordination violates the role-asymmetry by entangling
+   main and audit cycles.
+3. **Cross-repo reading discipline** — does the candidate preserve
+   read-only cross-repo access (audit reads main, main reads audit;
+   neither posts in the other's repo) or allow cross-repo posting?
+   Cross-repo posting confounds authorship attribution.
+4. **Discovery primitive completeness** — does the candidate
+   address the discovery gap audit#455 surfaced? `audit-request`
+   label or `[audit-request]` title prefix or alternative
+   convention. Gap-leaving designs inherit the cycle 211
+   discovery-failure mode.
+5. **Audit-as-peer evolvability** — does the candidate allow
+   audit to evolve its own protocol (audit #455-style proposals)
+   without main-side approval gates? Audit autonomy on its own
+   methodology is part of the pattern's clean-context property.
+
+Candidates that adopt all 5 preservation criteria inherit v1's
+audit-as-peer pattern fully. Candidates that selectively adopt
+inherit partially; candidates that adopt none lose the pattern
+entirely and have no clean-context adversarial critique mechanism.
+
+**Audit-as-peer pattern vs cluster G role-asymmetric context**:
+
+Cluster G (role-asymmetric context) names role-asymmetry as a
+research-corpus pattern at 2-system convergence (Cognition +
+openclaw). Audit-as-peer is v1's instantiation of role-asymmetry
+at orchestrator-session level. The relationship:
+
+- Cluster G sub-shape 1 (clean-context-reviewer) is the abstract
+  pattern; v1 audit-as-peer is the target-system instantiation
+- v1 instantiation does NOT update cluster G corpus convergence
+  count (per audit#454 caution); cluster G stays [2-system
+  convergent]
+- Phase 2 candidates may inherit role-asymmetry via cluster G
+  pattern (any role-asymmetric mechanism) OR via audit-as-peer
+  preservation (specifically the cross-repo audit relationship);
+  the two are distinct evaluation axes
+- Audit-as-peer preservation is a stricter criterion than cluster G
+  role-asymmetric: a candidate may have role-asymmetry within a
+  single repo (e.g., reviewer subagent) without preserving v1's
+  cross-repo audit relationship
+
+**M5/P6 cross-references**:
+
+- Cluster G sub-shape 1 M1 annotation (STRONG) — v1-substrate
+  instantiation at session level
+- M3 v1 strength 4 (Clean-context audit-as-peer reviewer at
+  session level) — synthesis of cluster G STRONG into v1 strengths
+  layer
+- This subsection (M5/P6) — preservation pattern with explicit
+  Phase 2 evaluation slot
+
+The triple cross-reference is intentional: M1 is per-cluster
+substrate-fit annotation; M3 is cluster-spanning v1 strengths
+synthesis; M5/P6 is Phase 2 preservation criteria. Each layer
+serves a different Phase 2 evaluation purpose.
+
+## Cluster comparison summary (M-item integration arc, cycles 86-89)
+
+The M-item integration arc closes cycle 89 with all 9 clusters
+M1-annotated (substrate-fit) + M2-annotated (self-management cost),
+plus M3 v1 strengths layer (5 distinct strengths) and M5/P6 audit-
+as-peer preservation pattern. Aggregate distribution:
+
+| Cluster | Sub-shapes | M1 STRONG | M1 PARTIAL | M1 ABSENT | M2 LOW | M2 MODERATE | M2 HIGH |
+|---------|------------|-----------|------------|-----------|--------|-------------|---------|
+| A — cycle-internal boundaries | 9 | 1 | 2 | 6 | 4 | 5 | 0 |
+| B — cross-cycle artifact organization | 9 | 1 | 6 | 2 | 3 | 4 | 2 |
+| C — lifecycle operations beyond resume | 5 | 0 | 2 | 3 | 1 | 3 | 1 |
+| D — documentation honesty | 9 | 2 | 6 | 1 | 4 | 5 | 0 |
+| E — typed boundary semantics | 2 | 0 | 2 | 0 | 0 | 2 | 0 |
+| F — tool-suite stratification | 8 | 0 | 3 | 5 | 2 | 4 | 2 |
+| G — role-asymmetric context | 2 | 1 | 1 | 0 | 1 | 1 | 0 |
+| H — post-session feedback | 4 | 0 | 2 | 2 | 0 | 2 | 2 |
+| I — harness-enforced policy | 2 | 1 | 1 | 0 | 1 | 1 | 0 |
+| **Total (9 clusters, 50 sub-shapes/sub-axes)** | **50** | **6** | **25** | **19** | **16** | **27** | **7** |
+
+**Substrate-fit distribution (M1 layer)**: 6 STRONG (12%) + 25
+PARTIAL (50%) + 19 ABSENT (38%). The PARTIAL plurality reflects v1's
+substrate providing structural foundation for many sub-shapes that
+require formalization (declarative scaffolding, registry tools)
+rather than substrate-design from scratch. The 19 ABSENT sub-shapes
+constitute the bulk of Phase 2 substrate-design work; the 6 STRONG
+sub-shapes are inherited free from substrate.
+
+**Self-management cost distribution (M2 layer)**: 16 LOW (32%) +
+27 MODERATE (54%) + 7 HIGH (14%). The MODERATE plurality reflects
+formalization-cost: most sub-shapes require ongoing schema /
+registry / convention discipline at moderate per-cycle decision
+overhead. The 7 HIGH-cost sub-shapes (cluster B sub-shapes 3 + 7;
+cluster F sub-shapes 2 + 5; cluster C sub-shape 3; cluster H
+sub-shapes 2 + 3) cluster on continuous-evaluation mechanisms
+(top-k semantic-retrieval, dynamic stratification, parallel
+branches, score-gated consolidation, continuous gardening) that
+require ongoing per-cycle threshold / rubric calibration. Phase 2
+candidates that include all HIGH-cost sub-shapes inherit substantial
+self-management cost; candidates that exclude them minimize it.
+
+**Substrate-alignment ranking** (most-aligned to least-aligned):
+
+1. Cluster D (2 STRONG + 6 PARTIAL + 1 ABSENT) — most aligned
+2. Cluster B (1 STRONG + 6 PARTIAL + 2 ABSENT)
+3. Cluster G (1 STRONG + 1 PARTIAL + 0 ABSENT) — tied
+4. Cluster I (1 STRONG + 1 PARTIAL + 0 ABSENT) — tied
+5. Cluster E (0 STRONG + 2 PARTIAL + 0 ABSENT) — all-PARTIAL
+6. Cluster A (1 STRONG + 2 PARTIAL + 6 ABSENT)
+7. Cluster H (0 STRONG + 2 PARTIAL + 2 ABSENT)
+8. Cluster C (0 STRONG + 2 PARTIAL + 3 ABSENT)
+9. Cluster F (0 STRONG + 3 PARTIAL + 5 ABSENT) — least aligned
+
+Cluster D is most substrate-aligned because v1's documentation
+honesty (0-retrospective.md, journal entries, walkback artifacts,
+v1-failure-mode mapping) is already substantive. Cluster F is
+least substrate-aligned because v1 has minimal tool-suite
+stratification across the 8 sub-axes. The middle tier (clusters G,
+I, E, A, H, C) ranges from substrate-aligned-but-formalization-
+needed to substrate-design-needed. Cluster G and cluster I tie
+at 3rd because both have STRONG audit-as-peer / permission-policy
+substrate inheritance with only 1 PARTIAL formalization sub-shape
+each.
+
+**Self-management cost ranking** (lowest to highest per-cycle
+decision overhead, by HIGH-count then MODERATE-count):
+
+1. Cluster D (4 LOW + 5 MODERATE + 0 HIGH) — tied lowest
+2. Cluster A (4 LOW + 5 MODERATE + 0 HIGH) — tied lowest
+3. Cluster G (1 LOW + 1 MODERATE + 0 HIGH)
+4. Cluster I (1 LOW + 1 MODERATE + 0 HIGH)
+5. Cluster E (0 LOW + 2 MODERATE + 0 HIGH)
+6. Cluster B (3 LOW + 4 MODERATE + 2 HIGH)
+7. Cluster C (1 LOW + 3 MODERATE + 1 HIGH)
+8. Cluster F (2 LOW + 4 MODERATE + 2 HIGH)
+9. Cluster H (0 LOW + 2 MODERATE + 2 HIGH) — highest
+
+The cost-ranking does NOT match the substrate-fit-ranking exactly:
+cluster D is best on both axes (most substrate-aligned + lowest
+cost — best overall), but cluster B is 2nd substrate-aligned yet
+6th in cost (HIGH-cost from continuous-evaluation sub-shapes).
+Cluster H is 7th substrate-aligned yet 9th (highest) in cost
+(HIGH-cost from cross-session-learning continuous-evaluation
+mechanisms). Phase 2 candidates can use both rankings as
+independent evaluation axes: high-substrate-fit-low-cost candidates
+adopt cluster D + A heavily; low-substrate-fit candidates inherit
+substantial design work; high-cost-cluster adoption increases per-
+cycle decision overhead independent of substrate fit.
+
+**M3 v1 strengths layer summary**: 5 distinct v1 strengths after
+de-duplication of dual-cast substrate properties (cycles 88 + 89):
+
+1. Process-isolation via ephemeral worktrees (A↔B dual-cast,
+   substrate-inherited)
+2. Anti-patterns as published artifact (cluster D, convention-
+   inherited)
+3. Walkback as first-class artifact (cluster D, convention-
+   inherited)
+4. Clean-context audit-as-peer reviewer at session level (cluster
+   G, mixed substrate / convention inheritance)
+5. Multi-layer permission-policy enforcement at harness level
+   (cluster I, fully substrate-inherited)
+
+3 substrate-inherited strengths cost nothing to preserve; 2
+convention-inherited strengths require ongoing discipline; 1 mixed
+strength requires both.
+
+**Cycle 89 closes the M-item integration arc**:
+
+- M1 v1-substrate instantiation: 9 of 9 clusters annotated (50
+  sub-shape annotations)
+- M2 self-management cost: 9 of 9 clusters annotated (50 cost
+  annotations)
+- M3 v1 strengths layer: 5 distinct v1 strengths surfaced
+- M5/P6 audit-as-peer preservation pattern: subsection added with
+  v2-preservation criteria
+
+M4 (cycle frequency Phase 2 variable) was named as a Phase 2
+variable in audit#454 absorption but not as a per-cluster
+annotation; M4 is integrated into the Phase 2 design framework
+candidate template (axis-level variable, not cluster annotation).
+Cycle 89 also integrates audit#454 P1-P6 Phase 2 evaluation
+discipline into 2-design-framework.md (separate file).
+
+The arc closes; cycle 90 begins Phase 2 candidate authoring
+against the augmented synthesis surface per audit#454 P5 toggle.
+
 ## Cluster D: documentation honesty
 
 `[5-system clean + Voyager partial]` AutoGen + LangGraph + Cognition
@@ -1378,57 +1709,580 @@ v2 commitment is at least one cluster H mechanism (else no
 cross-session learning); the maximal commitment is all four
 (substantial implementation effort, rich learning surface).
 
-## Other clusters (C, E, G, I) — brief
+**M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
 
-**Cluster C — lifecycle operations beyond resume `[4-system clean]`.**
-AutoGen + LangGraph + Cognition + openclaw. Lifecycle vocabulary
-extends beyond `resume`: terminate, reset, fork, replay, event-
-trigger / reactive-bot-comment-pickup, stuck-watchdog with stale-
-lane release. Sub-shapes (5). v1's only lifecycle operation is
-`resume`; cluster C surfaces 4-7 additional operations Phase 2
-candidates may adopt selectively.
+1. **Tight-cycle meta-feedback (Cognition Session Insights I-C7)** —
+   substrate-fit PARTIAL. v1 has per-cycle journal entries that serve
+   as post-session reflective capsule for the next session — the
+   orchestrator reads recent journal entries at session start as part
+   of orientation. The journal acts as an unstructured prose capsule.
+   v1 lacks the machine-readable manifest aspect (structured per-cycle
+   outcomes that next-session cold-start reads first); journal-entry
+   format is freeform prose per the journal primitive. Design work:
+   Rust tool `session-insights-extract` parses recent journal entries,
+   extracts structured per-cycle outcomes (lessons learned, named
+   patterns, hypothesis updates) into machine-readable manifest;
+   orchestrator reads manifest at session start before reading prose
+   journals. **Self-management cost: MODERATE.** Manifest schema design
+   needs ongoing evolution (what counts as a per-cycle outcome
+   structurally); per-cycle insight extraction discipline (orchestrator
+   tags structured insights at session end). Tool runs deterministically
+   but the structured-tagging discipline is per-cycle decision overhead.
 
-**Cluster E — typed boundary semantics `[3-system convergent]`.**
-LangGraph + AutoGen + openclaw via TypeBox. Typed contracts on
-data-shape at boundaries. Two sub-shapes: schema-discipline at
-process-boundaries (TypeBox single-source-of-truth produces
-validators in TypeScript / Swift / JSON-Schema) vs typed-channel-
-merger-rules at within-process boundaries (LangGraph per-key
-reducers). Voyager doesn't add cleanly: structured CriticAgent
-output `{success: bool, critique: str}` is parallel to cluster E
-patterns but isn't foregrounded as architectural axiom — it's a
-JSON contract between two agents, not boundary discipline.
+2. **Score-gated consolidation (openclaw dreaming I-O9)** —
+   substrate-fit ABSENT. v1 has no automatic short-term-to-long-term
+   consolidation mechanism. The cycles 76-77 audit-engagement
+   absorption + cluster-restructure work was manually orchestrator-
+   driven, not score-gated; cycle 86-89 M-item integration is similarly
+   orchestrator-driven. v1 has no recall-frequency or query-diversity
+   metrics. Design work: Rust tool `consolidate-with-score-gate` running
+   on separate cron schedule; tracks recall counts and query diversity
+   per cluster section / sub-shape annotation; promotes from short-term
+   (journal entries, _notes/) to long-term (clusters.md, design-
+   framework.md) when thresholds exceeded. **Self-management cost:
+   HIGH.** Score thresholds need calibration per content type
+   (sub-shape annotations vs methodological observations vs
+   pattern-tracking entries have different consolidation criteria);
+   consolidation produces edits to load-bearing artifacts requiring
+   per-cycle review; cron schedule design (frequency, sweep scope)
+   adds substrate complexity.
 
-**Cluster G — role-asymmetric context `[2-system convergent]`.**
-Cognition + openclaw. Two sub-shapes: (1) clean-context-reviewer
-(Cognition Devin Review, I-C4) — different roles get different
-trust/context semantics, reviewer role inverts share-full-traces
-default; (2) untrusted-prefix sub-agent injection (openclaw
-active-memory I-O7) — sub-agent output enters the main context as
-untrusted prefix, cannot instruct main agent. Voyager's CriticAgent
-↔ ActionAgent has role asymmetry but at per-action retry granularity
-(landed in cluster A as bounded-retry-with-feedback) rather than
-per-session role-context-shape (cluster G). The boundary between
-cluster A bounded-retry and cluster G role-asymmetric is thin in
-some cases; see "Open structural questions" below.
+3. **Continuous-background gardening (OpenAI harness doc-gardening
+   I-OH6)** — substrate-fit ABSENT. v1 has episodic gardening via
+   cycle-driven work: cycles 60-61 stale-reference cleanup;
+   cycle 33 housekeeping observation; per-cycle bounded-mechanical
+   sweeps. The housekeeping primitive in this orchestrator prompt is
+   episodic-as-needed, not continuous-background. Design work: Rust
+   tool `gardening-sweep` running on separate cron schedule;
+   quality-grades cluster sections / sub-shape annotations / journal
+   entries against named rubrics (currency, density, cross-reference
+   completeness); flags low-quality sections for orchestrator review.
+   **Self-management cost: HIGH.** Quality-grading rubrics need
+   ongoing calibration (per-section-type grading criteria); flagged
+   sections require orchestrator decision; cron schedule design
+   (gardening frequency, scope per sweep) adds substrate complexity.
+   Bimodal with sub-shape 2 — both M2 HIGH from continuous-background
+   nature.
 
-**Cluster I — harness-enforced security/policy boundaries
-`[2-system convergent, substrate-correlated]`.** openclaw + OpenAI
+4. **Capability-accumulation (Voyager skill-library
+   I-V5/V6/V10)** — substrate-fit PARTIAL. v1 accumulates Rust tools
+   as skills (write-entry, check-eva-responses, dispatch-with-retry,
+   detect-abandoned-cycles, cycle-runner harness, named tools across
+   cluster A/B/D/F/H sub-shape annotations). Each successful cycle
+   CAN add a new tool. But there's no formal capability registry,
+   capability indexing, or successful-cycle → reusable-capability
+   pipeline; the addition is orchestrator-driven and informal. Design
+   work: Rust tool `capability-index` enumerates available Rust tools
+   with usage statistics (invocation count per cycle, success rate);
+   structured capability metadata (input schema, output schema,
+   pre/post conditions); orchestrator reads capability index at
+   session start to inherit "what to do" from indexed capabilities,
+   not just "what to think about" from journals. **Self-management
+   cost: MODERATE.** Capability schema design (input/output/pre/post
+   metadata format); per-tool documentation discipline (each tool
+   self-describes); index maintenance (tools added/deprecated tracked).
+
+**Substrate-fit summary across cluster H's 4 sub-shapes:**
+- **STRONG (0):** none
+- **PARTIAL (2):** tight-cycle meta-feedback (1),
+  capability-accumulation (4)
+- **ABSENT (2):** score-gated consolidation (2),
+  continuous-background gardening (3)
+
+The 2 ABSENT sub-shapes (consolidation + gardening) are the
+substantial substrate-design work for Phase 2 candidates adopting
+cluster H. The 2 PARTIAL sub-shapes (meta-feedback + capability-
+accumulation) build on existing v1 patterns (prose journal,
+informal Rust tool accumulation) requiring formalization. Cluster H
+adds 0 STRONG sub-shapes to M3 v1 strengths layer.
+
+**Self-management cost summary across cluster H's 4 sub-shapes:**
+- **LOW (0):** none
+- **MODERATE (2):** tight-cycle meta-feedback (1),
+  capability-accumulation (4)
+- **HIGH (2):** score-gated consolidation (2),
+  continuous-background gardening (3)
+
+Cluster H is the second cluster with HIGH-cost sub-shapes (after
+cluster B and cluster F). HIGH cost concentrates on continuous-
+background mechanisms (consolidation + gardening) that require
+ongoing per-cycle threshold/rubric calibration. The MODERATE-cost
+sub-shapes (meta-feedback + capability-accumulation) require
+per-cycle structured-tagging discipline but lower threshold
+calibration overhead.
+
+**Phase 2 evaluation use of cluster H annotations:**
+
+- *Continuous-background commitment* — 2 of 4 sub-shapes (sub-shape
+  2 + 3) are HIGH cost and require continuous-background substrate.
+  Phase 2 candidates that adopt these inherit a separate cron
+  schedule for the consolidation/gardening process; candidates
+  that omit them lose cross-session learning beyond per-cycle
+  reflection.
+- *Minimum vs maximum cluster H commitment* — minimum (1
+  PARTIAL sub-shape, e.g., formalize meta-feedback via structured
+  manifest) inherits MODERATE cost only; maximum (all 4 sub-shapes)
+  inherits 2 HIGH + 2 MODERATE cost.
+- *Capability-accumulation as Phase 2 candidate variable* — sub-shape
+  4 (capability-accumulation) is the cluster H mechanism most aligned
+  with the redesign mission ("system can study its own weaknesses,
+  redesign its own infrastructure"). Phase 2 candidates that
+  formalize capability-accumulation receive higher weight for
+  redesign-mission alignment.
+
+## Cluster C: lifecycle operations beyond resume
+
+`[4-system clean]` AutoGen + LangGraph + Cognition + openclaw.
+Lifecycle vocabulary extends beyond `resume`: terminate, reset,
+fork, replay, event-trigger / reactive-bot-comment-pickup. Five
+sub-shapes (stuck-watchdog with stale-lane release lives in the
+A↔C intersection per cycle 72/74 synthesis, not as a sixth
+cluster-C sub-shape).
+
+v1's only formalized lifecycle operation is `resume` (cron-
+triggered cycle-runner picks up open `orchestrator-run` issue).
+Cluster C surfaces 4-5 additional operations Phase 2 candidates may
+adopt selectively. Cycle 89 audit#454 P4 promotes A↔C and B↔C
+intersection coverage from "Phase 2 implication" to "discriminator
+gate" for cluster C lifecycle vocabulary.
+
+**M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
+
+1. **terminate** (explicit termination operation, separate from
+   natural cycle end) — substrate-fit ABSENT. v1's cycle issue
+   closure is the de-facto termination signal but it conflates
+   "natural cycle end" with "deliberately-terminated cycle";
+   there's no separate "terminate this cycle's work mid-flight"
+   operation distinct from session timeout. Design work: Rust
+   tool `terminate-cycle` marks a cycle as deliberately-terminated
+   (vs naturally-ended) with structured rationale; cycle-runner
+   harness reads the marker to skip subsequent processing.
+   **Self-management cost: LOW.** Explicit termination is rare
+   (per-cycle decision is "do I terminate now"); one-time decision
+   per termination event; no per-cycle baseline overhead.
+
+2. **reset** (reset to known-good state for a subsystem or scope)
+   — substrate-fit PARTIAL. v1's ephemeral-worktree substrate
+   provides cycle-level reset for free (each cycle starts from
+   clean clone). v1 lacks targeted "reset specific subsystem"
+   operations: reset clusters.md to a checkpointed commit; reset
+   journal section to a checkpoint; reset state of an in-flight
+   dispatch. Design work: Rust tool `reset-subsystem` accepts a
+   target name (clusters-section, journal-section, dispatch-state)
+   and a checkpoint reference (commit SHA, named anchor); produces
+   a structured reset-plan before executing. **Self-management cost:
+   MODERATE.** Reset semantics need careful boundary definition (what's
+   resettable vs what's not); checkpoint maintenance discipline (named
+   anchors per resettable scope); per-cycle decision overhead at reset
+   invocation (which scope, which checkpoint).
+
+3. **fork** (branch into parallel exploration) — substrate-fit
+   ABSENT. v1's substrate has git branches but v1 doesn't use them
+   for parallel cycle exploration; cycles are serial single-branch
+   work. Design work: Rust tool `fork-cycle` spawns parallel
+   exploration branch with independent journal section + cycle
+   issue; merge logic for cycle outputs (which branch's output
+   wins, conflict detection on shared artifact edits, decision-which-
+   to-promote criteria). **Self-management cost: HIGH.** Parallel
+   branches require merge logic per artifact; conflict detection
+   per shared edit; promotion-decision criteria; ongoing
+   maintenance of fork-merge protocol. Per-cycle decision cost
+   includes "which branch is canonical" judgment per shared artifact.
+
+4. **replay** (replay prior cycle with parameter modifications) —
+   substrate-fit ABSENT. v1 has git history preserving prior cycle
+   state but no replay mechanism (re-execute prior cycle's work
+   from a checkpoint with parameters changed). Design work: Rust
+   tool `replay-cycle` accepts a prior cycle reference + parameter
+   delta; re-executes from a deterministic checkpoint with
+   modifications applied; emits comparative output (what changed
+   vs original cycle). **Self-management cost: MODERATE.** Replay
+   semantics distinguish deterministic ops (Rust tool invocations
+   with fixed seeds) from non-deterministic ops (LLM calls,
+   external API responses); parameter-substitution discipline;
+   per-cycle replay-validity checks (is the prior cycle's
+   checkpoint still compatible with current substrate).
+
+5. **event-trigger / reactive-bot-comment-pickup** — substrate-fit
+   PARTIAL. v1's cycle-runner triggers on cron + reads cycle issue
+   bodies (orchestrator-run label is the implicit subscription).
+   v1 partially supports event-trigger: cron is one event type,
+   bot-comment pickup is via label discovery. v1 lacks generalized
+   event-subscription registry (other event types: issue creation
+   matching pattern, PR merge, comment reactions, audit-repo
+   posts). Design work: Rust tool `event-trigger-list` enumerates
+   active event subscriptions; cycle-runner extension supports
+   additional event types; deduplication of overlapping triggers
+   (cron + event-trigger firing same work). **Self-management cost:
+   MODERATE.** Event-type proliferation (subscription management);
+   deduplication logic per overlap class; per-cycle decision
+   overhead at trigger evaluation (which event triggered me,
+   which subscription matches).
+
+**Substrate-fit summary across cluster C's 5 sub-shapes:**
+- **STRONG (0):** none
+- **PARTIAL (2):** reset (2), event-trigger (5)
+- **ABSENT (3):** terminate (1), fork (3), replay (4)
+
+The 3 ABSENT sub-shapes (terminate + fork + replay) are
+substantive substrate-design work for Phase 2 candidates
+adopting cluster C beyond resume. The 2 PARTIAL sub-shapes
+(reset + event-trigger) build on existing substrate properties
+(ephemeral worktree, cron + label discovery) requiring
+formalization. Cluster C adds 0 STRONG sub-shapes to M3 v1
+strengths layer.
+
+**Self-management cost summary across cluster C's 5 sub-shapes:**
+- **LOW (1):** terminate (1)
+- **MODERATE (3):** reset (2), replay (4), event-trigger (5)
+- **HIGH (1):** fork (3)
+
+Cluster C cost distribution (1 LOW + 3 MODERATE + 1 HIGH) is
+broad: substrate-handled simple ops cluster at LOW, formalization
+ops cluster at MODERATE, parallel-branch ops cluster at HIGH.
+Fork (3) is the single HIGH-cost sub-shape because parallel-branch
+discipline requires per-cycle merge-decision overhead. Phase 2
+candidates excluding fork (selecting only sub-shapes 1, 2, 4, 5)
+inherit 1 LOW + 3 MODERATE only.
+
+**Phase 2 evaluation use of cluster C annotations:**
+
+- *Lifecycle-vocabulary completeness with intersection-coverage
+  gate (audit#454 P4)* — candidates that adopt cluster C lifecycle
+  ops without the A↔C intersection (each op naming its cluster A
+  boundary) and without the B↔C intersection (each op declaring
+  its cluster B effect) produce ad-hoc execution semantics.
+  Intersection coverage on cluster C is the discriminator, not
+  lifecycle-op count. Reference: cycles 72/74 A↔C and B↔C
+  intersection annotations.
+- *Sub-shape selection by cost mode* — Phase 2 candidates may
+  selectively adopt LOW + MODERATE sub-shapes (1, 2, 4, 5) for a
+  4-op cluster C inheritance without HIGH cost; or include fork (3)
+  for complete cluster C inheritance with HIGH cost. The choice is
+  Phase 2 candidate-discriminator.
+- *Resume-only candidates* — Phase 2 candidates that adopt only
+  v1's resume operation (no cluster C extension) inherit cluster C's
+  v1-equivalent lifecycle vocabulary; this is acceptable per
+  audit#454 D5 (diminishing returns visible) but the candidate
+  loses cluster C as failure-mode coverage axis.
+
+## Cluster E: typed boundary semantics
+
+`[3-system convergent]` LangGraph + AutoGen + openclaw via TypeBox.
+Typed contracts on data-shape at boundaries. Two sub-shapes:
+schema-discipline at process-boundaries (TypeBox single-source-of-
+truth produces validators in TypeScript / Swift / JSON-Schema) vs
+typed-channel merger-rules at within-process boundaries (LangGraph
+per-key reducers).
+
+Voyager doesn't add cleanly: structured CriticAgent output
+`{success: bool, critique: str}` is parallel to cluster E patterns
+but isn't foregrounded as architectural axiom — it's a JSON
+contract between two agents, not boundary discipline.
+
+**M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
+
+1. **Schema-discipline at process-boundaries (TypeBox SSOT,
+   openclaw I-O5 / LangGraph / AutoGen)** — substrate-fit PARTIAL.
+   v1 has implicit schemas via convention: GitHub issue body
+   conventions (Markdown templates, expected sections), YAML labels
+   acting as discriminator-tags (`orchestrator-run`,
+   `input-from-eva`, `agent-task`, `research-only`,
+   `feedback-only`), GitHub Actions workflow inputs typed via YAML
+   schema. v1 lacks a single-source-of-truth schema generator that
+   produces validators across multiple representations. Design work:
+   Rust tool `schema-validate-boundary` validates issue bodies,
+   comment formats, dispatch payloads against TypeBox-style SSOT;
+   multi-language schema generation (Rust validators + JSON-Schema
+   for issue templates + YAML schema for workflow inputs).
+   **Self-management cost: MODERATE.** Schema versioning per
+   boundary (issue body v1, v2 as conventions evolve); schema
+   evolution discipline (deprecation periods for old schemas);
+   per-boundary schema definition (each process-boundary needs
+   schema work).
+
+2. **Typed-channel merger-rules at within-process boundaries
+   (LangGraph per-key reducers)** — substrate-fit PARTIAL (dual-cast
+   with cluster A sub-shape 4 per audit#454 D2 dual-cast
+   classification). v1's clusters.md has implicit per-section
+   reducer behavior: cycle X edits cluster A section, cycle Y edits
+   cluster B section; conflicts at section-level rare due to
+   filesystem-level boundary. The cluster A sub-shape 4
+   annotation already documented this PARTIAL substrate-fit. The
+   cluster E lens differs: cluster A names this as cycle-internal-
+   boundary mechanism; cluster E names this as typed-channel-
+   discipline mechanism. Design work: Rust tool `reducer-registry-
+   check` validates per-channel reducer rules (which cycles can
+   write to which sections, which channel reducers compose);
+   shared with cluster A annotation. **Self-management cost:
+   MODERATE.** Reducer registry maintenance (reducer rules per
+   channel kept in sync with section structure); conflict
+   resolution per channel (when cycle X and cycle Y both want to
+   edit cluster A, what's the merge rule); shared cost with
+   cluster A sub-shape 4 (single Rust tool serves both lenses).
+
+**Substrate-fit summary across cluster E's 2 sub-shapes:**
+- **STRONG (0):** none
+- **PARTIAL (2):** schema-discipline at process-boundaries (1),
+  typed-channel merger-rules (2 — dual-cast with cluster A sub-shape 4)
+- **ABSENT (0):** none
+
+Cluster E is the second cluster annotated with all-PARTIAL
+distribution (after no prior all-PARTIAL cluster). All sub-shapes
+have v1 substrate (implicit schemas via convention; implicit
+per-section reducers) requiring formalization. Cluster E adds 0
+STRONG sub-shapes to M3 v1 strengths layer.
+
+**Self-management cost summary across cluster E's 2 sub-shapes:**
+- **LOW (0):** none
+- **MODERATE (2):** schema-discipline (1), typed-channel reducers (2)
+- **HIGH (0):** none
+
+Cluster E cost distribution (0 LOW + 2 MODERATE + 0 HIGH) is
+unimodal MODERATE: both sub-shapes require formalization and
+ongoing schema-evolution / registry-maintenance discipline.
+Cluster E is the cluster with most consistent cost mode (no LOW
+or HIGH outliers).
+
+**Phase 2 evaluation use of cluster E annotations:**
+
+- *E↔I intersection (cycle 74)* — cluster E sub-shape 1 (schema-
+  discipline at process-boundaries) intersects with cluster I
+  sub-shape 2 (quality-policy enforcement via mechanical linters)
+  in dual-cast: a TypeBox SSOT can be a schema validator (cluster
+  E) and a quality linter (cluster I). Per audit#454 D2 dual-cast
+  classification: this is a single mechanism cast under both
+  cluster lenses, not a compositional intersection.
+- *Cluster E + cluster A sub-shape 4 dual-cast* — cluster E
+  sub-shape 2 (typed-channel reducers) IS cluster A sub-shape 4
+  (per-key reducers); annotated under both cluster lenses
+  (cycle A annotation cycle 86; cluster E annotation cycle 89).
+  Phase 2 candidates inheriting per-key reducers inherit both
+  cluster A boundary and cluster E typed-channel coverage.
+- *Schema-evolution as Phase 2 candidate variable* — sub-shape 1
+  (schema-discipline) requires schema-evolution discipline;
+  candidates that omit schema versioning at boundaries inherit
+  technical debt as boundaries change. Phase 2 candidate
+  evaluation should examine schema-evolution policy.
+
+## Cluster G: role-asymmetric context
+
+`[2-system convergent]` Cognition + openclaw. Two sub-shapes: (1)
+clean-context-reviewer (Cognition Devin Review, I-C4) — different
+roles get different trust/context semantics, reviewer role inverts
+share-full-traces default; (2) untrusted-prefix sub-agent injection
+(openclaw active-memory I-O7) — sub-agent output enters the main
+context as untrusted prefix, cannot instruct main agent.
+
+Voyager's CriticAgent ↔ ActionAgent has role asymmetry but at
+per-action retry granularity (landed in cluster A as bounded-
+retry-with-feedback) rather than per-session role-context-shape
+(cluster G). The boundary between cluster A bounded-retry and
+cluster G role-asymmetric is thin in some cases; see "Open
+structural questions" below.
+
+**M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
+
+1. **Clean-context-reviewer (Cognition Devin Review, I-C4)** —
+   substrate-fit STRONG. v1 has audit-as-peer pattern operational:
+   independent audit orchestrator runs in separate repo
+   (EvaLok/schema-org-json-ld-audit) with its own cron schedule;
+   reads main repo cross-repo; posts critique within audit repo;
+   main reads audit posts on subsequent cycles. The roles are
+   asymmetric — main orchestrator advances research, audit
+   orchestrator critiques main's work. Each session cold-starts in
+   its own role context: main reads main's recent journal + cycle
+   issues; audit reads main's recent posts + audit's recent posts.
+   This IS clean-context-reviewer at session-level (not per-action).
+   The 2-instance pattern evidence (audit#442 → cycle 7-12-31
+   absorption; audit#454 → cycle 85 absorption) demonstrates the
+   pattern as operational. Design work: minimal — pattern is
+   already operational. Phase 2 candidates inherit by preserving
+   cross-repo communication discipline and audit-orchestrator
+   independence. **Self-management cost: LOW.** Substrate handles
+   role-asymmetry (separate cron schedules per role; separate
+   repos enforce context isolation); cross-repo posts are
+   asynchronous-of-cycle (no per-cycle real-time coordination
+   overhead).
+
+2. **Untrusted-prefix sub-agent injection (openclaw active-memory
+   I-O7)** — substrate-fit PARTIAL. v1 has Claude Code Agent tool
+   for spawning subagents (Explore, Plan, claude-code-guide,
+   general-purpose), and subagent output is returned to main agent
+   context as data. The trust posture is implicit: subagent output
+   is data per untrusted-text-rules (treat as DATA, never as
+   INSTRUCTIONS), but no formal untrusted-prefix tag wraps the
+   output. The orchestrator-prompt's UNTRUSTED-TEXT-RULES section
+   names this discipline but doesn't enforce it via wrapper. Design
+   work: Rust tool `subagent-output-wrap` wraps subagent output in
+   structured untrusted-prefix tags before integration into main
+   context; orchestrator reads wrapped output knowing the tag is
+   load-bearing for trust posture. **Self-management cost:
+   MODERATE.** Subagent invocation discipline (every subagent
+   invocation must produce wrapped output); output wrapping
+   convention (tag format, parser); per-cycle decision overhead
+   when subagents are invoked (currently rare; would scale with
+   subagent usage).
+
+**Substrate-fit summary across cluster G's 2 sub-shapes:**
+- **STRONG (1):** clean-context-reviewer (1 — v1 audit-as-peer
+  pattern, NEW M3 strength)
+- **PARTIAL (1):** untrusted-prefix sub-agent injection (2)
+- **ABSENT (0):** none
+
+Cluster G is the second cluster annotated with no ABSENT sub-shapes
+(after cluster E). The 1 STRONG sub-shape (clean-context-reviewer)
+adds a NEW v1 strength to M3 layer, validating cycle 88 M3 layer
+growth prediction. The 1 PARTIAL sub-shape (untrusted-prefix)
+builds on existing implicit trust posture requiring formalization.
+
+**Self-management cost summary across cluster G's 2 sub-shapes:**
+- **LOW (1):** clean-context-reviewer (1)
+- **MODERATE (1):** untrusted-prefix sub-agent injection (2)
+- **HIGH (0):** none
+
+Cluster G cost distribution (1 LOW + 1 MODERATE + 0 HIGH) is
+bimodal LOW/MODERATE matching the substrate-fit distribution: the
+STRONG sub-shape is LOW cost (substrate-handled); the PARTIAL
+sub-shape is MODERATE cost (formalization required). No HIGH-cost
+sub-shapes.
+
+**Phase 2 evaluation use of cluster G annotations:**
+
+- *Audit-as-peer preservation (audit#454 P6 ACCEPT-WITH-CAUTION)*
+  — cluster G sub-shape 1 corresponds to v1's audit-as-peer
+  pattern. Per audit#454 caution: don't update cluster G
+  convergence count by mixing input-system data (Cognition Review,
+  openclaw) with target-system instantiation (v1). Cluster G
+  remains [2-system convergent] from research corpus; v1's audit-
+  as-peer pattern is annotated as STRONG via M1 instantiation
+  (target-system data) and surfaced in M5 audit-as-peer
+  preservation pattern (separate subsection). See M5 subsection
+  below for the v2-preservation framing.
+- *Sub-shape boundary with cluster A (open structural question)* —
+  cluster G sub-shape 1 (clean-context-reviewer) and cluster A
+  sub-shape 7 (bounded-retries-with-critic-feedback) both involve
+  role-asymmetric mechanisms; cluster G is per-session, cluster A
+  is per-action. Phase 2 candidates that adopt both inherit both
+  granularities; candidates that adopt only cluster A inherit
+  per-action role-asymmetry but lose per-session role-asymmetry.
+- *Subagent discipline as Phase 2 candidate variable* — sub-shape 2
+  (untrusted-prefix injection) becomes load-bearing if Phase 2
+  candidates use subagents extensively. Candidates with rare
+  subagent usage may treat sub-shape 2 as deferrable; candidates
+  with frequent subagent usage must formalize the wrapping.
+
+## Cluster I: harness-enforced security/policy boundaries
+
+`[2-system convergent, substrate-correlated]` openclaw + OpenAI
 harness. Two sub-shapes: permission-policy enforcement at the
 harness level decoupled from prompt-level rules (openclaw I-O1 —
 default-deny on multiple capability surfaces, before_tool_call.
 block-true terminal enforcement, plugin discovery/promotion gated
 by ClawHub security review) + quality-policy enforcement via
 mechanical linters with agent-readable error messages (OpenAI
-harness — golden principles mechanically checked). Substrate
-observation: cluster I is *absent in research-artifact substrates*
-(Voyager runs locally with full environment access; no need for
-harness-enforced policy). Cluster I is correlated with
+harness — golden principles mechanically checked).
+
+Substrate observation: cluster I is *absent in research-artifact
+substrates* (Voyager runs locally with full environment access; no
+need for harness-enforced policy). Cluster I is correlated with
 cloud-anchored multi-actor environments. v1's substrate
 (GitHub-Actions-anchored multi-actor with audit) places it CLOSE
 to the cluster I correlation; Phase 2 candidates SHOULD weight
 cluster I patterns highly even at 2-system convergence depth,
-because the substrate alignment is strong.
+because the substrate alignment is strong (per audit#454 D1 / P2
+substrate-fit weighting).
+
+**M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
+
+1. **Permission-policy enforcement at harness level (openclaw
+   I-O1)** — substrate-fit STRONG. v1 has multi-layer permission
+   policy decoupled from prompt-level rules: GitHub Actions provides
+   secret injection via `${{ secrets.X }}` (substrate-handled,
+   never prompt-side); branch protection on main (PR-required for
+   merge); the orchestrator-prompt names FORBIDDEN paths
+   (`.github/workflows/`, this prompt file) requiring workflow-
+   change PR; claude-code permission system enforces tool-level
+   allow/ask/deny per Bash command + tool invocation; settings.json
+   permissions configurable per project / per user. The substrate
+   provides default-deny on multiple capability surfaces (workflow
+   modification, prompt modification, secret access). Design work:
+   minimal — substrate handles enforcement. Optional Rust tool
+   `permission-policy-status` enumerates active policies for
+   visibility. **Self-management cost: LOW.** Substrate handles
+   per-cycle enforcement; orchestrator pays no per-cycle cost
+   beyond writing prompt instructions and respecting boundaries.
+   Permission policy evolves slowly (workflow modifications via
+   PR; settings updates via update-config skill).
+
+2. **Quality-policy enforcement via mechanical linters with
+   agent-readable error messages (OpenAI harness)** — substrate-fit
+   PARTIAL. v1 has cargo tests + clippy lint, run by CI on PRs;
+   error messages are default cargo output (developer-friendly but
+   not specifically optimized for orchestrator parsing). v1's
+   prompt has GOLDEN PRINCIPLES (no destructive ops without
+   confirmation; UNTRUSTED-TEXT-RULES; SECRETS) but enforcement
+   is via prompt-level discipline + per-action confirmation, not
+   mechanical linter. Design work: Rust tool `quality-lint-
+   orchestrator-friendly` wraps cargo + clippy + custom lint rules
+   with structured error format optimized for orchestrator parsing
+   (machine-readable diagnostics, named lint categories,
+   remediation hints). **Self-management cost: MODERATE.** Lint
+   rule design (each golden principle needs mechanical lint rule
+   if formalized); error message format evolution (rules added
+   over time); per-cycle decision overhead at lint failure
+   (orchestrator decides remediation per error category).
+
+**Substrate-fit summary across cluster I's 2 sub-shapes:**
+- **STRONG (1):** permission-policy enforcement (1 — substrate-
+  inherited from GitHub Actions + branch protection + claude-code
+  permission system, NEW M3 strength)
+- **PARTIAL (1):** quality-policy enforcement via mechanical
+  linters (2)
+- **ABSENT (0):** none
+
+Cluster I is the third cluster annotated with no ABSENT sub-shapes
+(after cluster E and cluster G). The 1 STRONG sub-shape
+(permission-policy) adds a NEW v1 strength to M3 layer, validating
+cycle 88 M3 layer growth prediction. The 1 PARTIAL sub-shape
+(quality-policy linters) builds on existing cargo + clippy
+infrastructure requiring orchestrator-friendly error format.
+
+**Self-management cost summary across cluster I's 2 sub-shapes:**
+- **LOW (1):** permission-policy enforcement (1)
+- **MODERATE (1):** quality-policy enforcement (2)
+- **HIGH (0):** none
+
+Cluster I cost distribution (1 LOW + 1 MODERATE + 0 HIGH) matches
+cluster G's distribution shape: STRONG sub-shape at LOW cost
+(substrate-handled), PARTIAL sub-shape at MODERATE cost
+(formalization required). No HIGH-cost sub-shapes.
+
+**Phase 2 evaluation use of cluster I annotations:**
+
+- *Substrate-fit weighting (audit#454 P2 ACCEPT)* — cluster I is
+  weighted for substrate-fit, not corpus-depth. v1's substrate
+  (GitHub-Actions-anchored, public repo, multi-actor with audit) is
+  substrate-aligned with cluster I patterns even at 2-system
+  research-corpus depth. Phase 2 candidates SHOULD weight cluster I
+  highly (substrate-fit overrides corpus-depth weighting per P2).
+- *Both sub-shapes are required* — cluster I sub-shape 1
+  (permission-policy) and sub-shape 2 (quality-policy) are
+  complementary: sub-shape 1 prevents capability misuse;
+  sub-shape 2 prevents quality drift. Phase 2 candidates that
+  adopt only one inherit half-cluster-I coverage.
+- *D↔I intersection (cycle 74)* — cluster I sub-shape 2 (quality-
+  policy mechanical linters) intersects cluster D sub-shape 1
+  (anti-patterns published) in compositional intersection: quality
+  linters can mechanically detect anti-pattern occurrences in
+  artifacts, providing automated reinforcement of cluster D's
+  documentation-honesty discipline. Phase 2 candidates that adopt
+  both inherit the intersection.
+- *E↔I intersection (cycle 74)* — cluster I sub-shape 2 (mechanical
+  linters with agent-readable error messages) intersects cluster E
+  sub-shape 1 (schema-discipline at process-boundaries) in
+  dual-cast: a TypeBox SSOT can be a schema validator (cluster E)
+  AND a quality linter (cluster I). Per audit#454 D2 dual-cast.
 
 ## Phase 2 design-input from clusters
 
@@ -2523,26 +3377,39 @@ does this work via the retrospective cadence and the journal" —
 empirically validated (2 STRONG sub-shapes, the most of any
 cluster annotated). Cycle 88 prediction also held for cluster F:
 limited tool-suite stratification produces substantial ABSENT
-count (5 of 8 sub-axes) — empirically validated. Cycle 89 plan:
-clusters C / E / G / H / I M1 + M5/P6 audit-as-peer preservation
-pattern + P1-P6 Phase 2 evaluation discipline integration into
-2-design-framework.md (or new 2-evaluation-criteria.md if
-factoring is cleaner).
+count (5 of 8 sub-axes) — empirically validated. Cycle 89
+implements clusters C / E / G / H / I M1 + M2 (15 sub-shape
+annotations: 2 STRONG + 8 PARTIAL + 5 ABSENT for M1; 3 LOW + 9
+MODERATE + 3 HIGH for M2) + M3 v1 strengths layer extension (2 new
+strengths added: clean-context audit-as-peer reviewer at session
+level + multi-layer permission-policy enforcement at harness level)
++ M5/P6 audit-as-peer preservation pattern subsection (target-
+system instantiation framing with v2-preservation criteria) +
+9-cluster comparison summary subsection (substrate-fit + self-
+management cost rankings, M-item integration arc summary). Cycle 89
+also integrates audit#454 P1-P6 Phase 2 evaluation discipline into
+2-design-framework.md (separate file). The M-item integration arc
+closes cycle 89; cycle 90 begins Phase 2 candidate authoring per
+audit#454 P5 toggle.
 
-Total (post cycle 88): 45 implications across 6 systems across 9
+Total (post cycle 89): 45 implications across 6 systems across 9
 clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
 72, 74, 84) producing within-cluster sub-shape catalogues + 7
 cross-cluster intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C,
 F↔I, E↔I) with compositional / dual-cast sub-pattern classification
 + 1 audit-engagement absorption cycle (85) integrating 21 audit#454
-verdicts + 3 M-item integration cycles (86 cluster A + 87 cluster
-B + 88 clusters D/F + cluster A M2 retro + M3 layer) producing 35
-v1-substrate instantiation notes (M1 layer, 4 of 9 clusters
-annotated: A, B, D, F) plus 35 self-management cost notes (M2
-layer, 4 of 9 clusters annotated: A, B, D, F) plus 1 cluster-
-spanning v1 strengths layer (M3, framing + 3 strengths). Implications-mining cadence on unique deep-dive systems
-is exhausted post-cycle 69. Future mining requires either dispatch
-deliveries (oh-my-codex via
+verdicts + 4 M-item integration cycles (86 cluster A + 87 cluster
+B + 88 clusters D/F + cluster A M2 retro + M3 layer + 89 clusters
+C/E/G/H/I + M3 extension + M5/P6 + 9-cluster summary) producing 50
+v1-substrate instantiation notes (M1 layer, 9 of 9 clusters
+annotated: A, B, C, D, E, F, G, H, I) plus 50 self-management cost
+notes (M2 layer, 9 of 9 clusters annotated) plus 1 cluster-
+spanning v1 strengths layer (M3, framing + 5 strengths) plus 1
+audit-as-peer preservation pattern subsection (M5/P6) plus 1
+9-cluster comparison summary subsection. Implications-mining
+cadence on unique deep-dive systems is exhausted post-cycle 69.
+Future mining requires either dispatch deliveries (oh-my-codex
+via
 [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
 still in flight, PAI via
 [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)

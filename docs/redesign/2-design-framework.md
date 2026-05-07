@@ -771,11 +771,243 @@ preserved-primitives constraints it honors. Suggested structure:
 ### Migration cost from v1
 - Specific migration steps; what state/tools/conventions transfer vs need
   replacement.
+
+### P1-P6 evaluation criteria compliance (audit#454 absorption, cycle 89)
+- P1 (A↔B intersection coverage hard gate): does the candidate adopt
+  cluster A boundaries AND cluster B storage AND the A↔B intersection
+  (storage-discipline at boundary moments)? PASS / FAIL / PARTIAL
+- P2 (cluster I substrate-fit weighting): does the candidate weight
+  cluster I patterns by substrate-fit (v1's GitHub-Actions-anchored
+  multi-actor environment) rather than corpus-depth (2-system convergence)?
+  PASS / FAIL / PARTIAL
+- P3 (self-management-reduction axis): does the candidate's per-cycle
+  decision surface enable schema work or add more self-management?
+  Estimate per-cycle decision count. PASS / FAIL / PARTIAL with count
+- P4 (lifecycle-vocabulary completeness with intersection-coverage gate):
+  does the candidate adopt cluster C lifecycle ops with both A↔C and
+  B↔C intersections (each op naming its cluster A boundary AND its
+  cluster B effect)? PASS / FAIL / PARTIAL
+- P5 (cold-reader cadence exit at cycle 90): does the candidate's
+  authoring cycle respect the polarity-pivot exit criterion? Cycle 90+
+  is candidate authoring against augmented synthesis surface; not
+  cold-reader iteration. (Candidate-level not directly applicable; this
+  criterion governs the authoring cycle, not the candidate itself.)
+- P6 (audit-as-peer preservation slot, ACCEPT-WITH-CAUTION): does the
+  candidate preserve / extend the audit-as-peer relationship? Refer to
+  M5/P6 audit-as-peer preservation pattern subsection in clusters.md
+  for 5 preservation criteria (substrate isolation, asynchronous
+  communication, cross-repo reading, discovery primitive completeness,
+  audit-as-peer evolvability). PASS / FAIL / PARTIAL per criterion.
+
+### M3 v1 strengths preservation (audit#454 absorption, cycle 89)
+- Strength 1 (process-isolation via ephemeral worktrees): preserved /
+  deviated / re-derived
+- Strength 2 (anti-patterns as published artifact): preserved / deviated /
+  re-derived
+- Strength 3 (walkback as first-class artifact): preserved / deviated /
+  re-derived
+- Strength 4 (clean-context audit-as-peer reviewer at session level):
+  preserved / deviated / re-derived
+- Strength 5 (multi-layer permission-policy enforcement at harness
+  level): preserved / deviated / re-derived
+
+### M2 self-management cost inheritance (audit#454 absorption, cycle 89)
+- Aggregate per-cycle decision overhead estimate (counting LOW + MODERATE
+  + HIGH cost sub-shapes the candidate adopts):
+  - LOW count: <N>
+  - MODERATE count: <N>
+  - HIGH count: <N>
+- Compared to v1 baseline (16 LOW + 27 MODERATE + 7 HIGH if v1 inherited
+  all 50 sub-shapes, which it doesn't — v1 actually inherits 6 STRONG
+  sub-shapes only): does the candidate's M2 inheritance enable schema
+  work or add self-management?
 ```
 
 The template is preliminary and subject to iteration before Phase 2
 candidate generation begins. The post-retrospective checkpoint gates that
 work; this template is preparation, not commitment.
+
+## Phase 2 candidate evaluation criteria (audit#454 P1-P6 absorption, cycle 89)
+
+Audit#454 named 6 Phase 2 implications (P1-P6) as ACCEPT or
+ACCEPT-WITH-CAUTION verdicts during cycle 85 absorption. Cycle 89
+integrates these into the Phase 2 candidate evaluation discipline as
+six co-equal evaluation criteria, alongside the existing
+failure-mode-addressing and preserved-primitives-compliance criteria
+named in the candidate template above. Each P-criterion is a Phase 2
+candidate evaluation lens.
+
+### P1 — A↔B intersection coverage as hard gate
+
+**Audit recommendation**: Phase 2 candidates that adopt cluster A
+boundaries and cluster B storage but not their A↔B intersection
+should be marked as "v1-equivalent on most-foregrounded failure
+modes" by the evaluator.
+
+**Verdict (cycle 85)**: ACCEPT. Promoted from "Phase 2 implication" to
+"hard gate" in clusters.md Phase 2 design-input section.
+
+**Evaluation criterion**: Phase 2 candidates MUST cover the A↔B
+intersection. A candidate that adopts cluster A super-step semantics
++ cluster B repository-as-state but lacks the intersection
+(storage-commits-at-boundary-moments) is v1-equivalent on the most-
+foregrounded failure modes (stale-reference accumulation, cycle 524
+corruption class). Reference: clusters.md A↔B intersection section
+(cycles 72/74) for the full intersection discipline.
+
+**Concrete check**: at the candidate level, identify the mechanism
+that ensures cluster B storage operations align with cluster A
+boundary moments. If the mechanism is absent or named only at prose
+level, FAIL. If present but partial (some boundary moments covered,
+others not), PARTIAL. If complete, PASS.
+
+### P2 — Cluster I substrate-fit weighting
+
+**Audit recommendation**: Phase 2 evaluation criteria should
+explicitly distinguish "substrate-fit weighting" from "corpus-depth
+weighting." Two candidates with similar cluster I coverage may
+differ on whether their architecture genuinely needs cluster I
+patterns (substrate-fit) vs adopting them aspirationally.
+
+**Verdict (cycle 85)**: ACCEPT (corollary of D1 acceptance).
+Integrated into clusters.md Phase 2 design-input section.
+
+**Evaluation criterion**: Phase 2 candidates inheriting cluster I
+sub-shapes should be evaluated on substrate-fit, not corpus-depth.
+v1's substrate (GitHub-Actions-anchored, public repo, multi-actor
+with audit) is substrate-aligned with cluster I patterns even at
+2-system research-corpus depth. Phase 2 candidates that genuinely
+need cluster I (their architecture has multi-actor surface, public
+substrate, harness-enforceable boundaries) score higher on cluster I
+than candidates that adopt cluster I aspirationally.
+
+**Concrete check**: for each candidate, evaluate whether cluster I
+sub-shape adoption is substrate-driven (the candidate's substrate
+genuinely benefits from harness-enforced policy) or aspirational
+(the candidate adopts cluster I patterns even though its substrate
+doesn't naturally need them). Substrate-driven adoption: PASS.
+Aspirational adoption: FLAG (not PASS or FAIL — surface for
+evaluator review).
+
+### P3 — Self-management-reduction as candidate evaluation criterion
+
+**Audit recommendation**: Phase 2 candidate evaluation needs an axis
+for "does this candidate's per-cycle decision surface enable schema
+work, or does it add more self-management?" Concrete check: estimate
+the per-cycle decision count for each candidate.
+
+**Verdict (cycle 85)**: ACCEPT (corollary of M2 acceptance). Added as
+Phase 2 evaluation criterion peer to failure-mode coverage.
+
+**Evaluation criterion**: Phase 2 candidates inherit self-management
+cost from the M2 layer (LOW + MODERATE + HIGH per sub-shape).
+Aggregate per-cycle decision overhead estimate is the load-bearing
+metric. Candidates that minimize per-cycle decision count (favor LOW-
+cost sub-shapes; defer HIGH-cost sub-shapes; substrate-handle as much
+as possible) enable schema work; candidates that maximize per-cycle
+decisions add self-management overhead at the expense of schema work.
+
+**Concrete check**: count the LOW + MODERATE + HIGH sub-shapes the
+candidate adopts (per-cluster, per-sub-shape). Aggregate cost is the
+sum: a candidate with 16 LOW + 5 MODERATE + 0 HIGH sub-shape
+adoption has substantially less per-cycle decision overhead than a
+candidate with 0 LOW + 27 MODERATE + 7 HIGH adoption. Phase 2
+candidate evaluation should produce a per-candidate cost estimate
+and compare against v1's actual M2 inheritance (6 STRONG sub-shapes
+only — v1 inherits cost only from substrate-handled mechanisms).
+
+### P4 — Lifecycle-vocabulary completeness with intersection-coverage gate
+
+**Audit recommendation**: Candidates that adopt cluster C lifecycle
+ops without the A↔C intersection (each op naming its cluster A
+boundary) and without the B↔C intersection (each op declaring its
+cluster B effect) produce ad-hoc execution semantics. Intersection
+coverage on cluster C is the discriminator, not lifecycle-op count.
+
+**Verdict (cycle 85)**: ACCEPT. Promoted A↔C and B↔C intersection
+coverage from "Phase 2 implication" to "discriminator gate" for
+cluster C lifecycle vocabulary.
+
+**Evaluation criterion**: Phase 2 candidates that include cluster C
+lifecycle ops (terminate, reset, fork, replay, event-trigger) MUST
+have each op name its cluster A boundary moment (when does the op
+fire relative to phase boundaries?) AND each op declare its cluster
+B effect (what storage state is committed / reset / forked?). The
+intersection coverage is the discriminator gate, not the count of
+lifecycle ops.
+
+**Concrete check**: for each cluster C op the candidate adopts, audit
+whether the op specification includes (a) the cluster A boundary
+moment relationship and (b) the cluster B storage effect. Both
+present: PASS. Either missing: PARTIAL or FAIL depending on absent
+count. Resume-only candidates (no cluster C extension) bypass this
+criterion (cluster C is not adopted).
+
+### P5 — Polarity-pivot exit criterion before cycle 90
+
+**Audit recommendation**: Cycles 85-90 should toggle out of cold-reader
+rhythm and into either (a) artifact-resident integration of synthesis
+or (b) Phase 2 candidate authoring. Continuing recursive cold-reader
+work past cycle 90 risks producing fourth-order language-precision
+findings without artifact-resident yield.
+
+**Verdict (cycle 85)**: ACCEPT — cycle 85 implements this in real time.
+Cycles 86-89 continue artifact-resident integration of M1-M5 missing
+patterns. Phase 2 candidate authoring preparation begins cycle ~90 if
+no fresh research dispatches deliver.
+
+**Evaluation criterion (process, not candidate)**: this criterion
+governs the authoring cycle, not the candidate. Cycle 90 begins Phase
+2 candidate authoring against the augmented synthesis surface
+(M1+M2+M3+M5/P6 layers integrated; P1-P6 evaluation discipline
+integrated). Cold-reader cadence remains suspended through Phase 2
+candidate authoring. Reactivation criteria: specific artifact
+restructure cycle where fresh-eyes verification is high-value.
+
+### P6 — Audit-as-peer preservation slot (ACCEPT-WITH-CAUTION)
+
+**Audit recommendation**: Phase 2 candidates should have a slot for
+"how does this candidate preserve / extend the audit-as-peer
+relationship?"
+
+**Verdict (cycle 85)**: ACCEPT-WITH-CAUTION (corollary of M5
+acceptance). The caution: don't update cluster G corpus convergence
+count by mixing input-system data with target-system instantiation.
+v2-preservation slot for audit-as-peer added separately (clusters.md
+M5/P6 subsection with 5 preservation criteria).
+
+**Evaluation criterion**: Phase 2 candidates MUST have an explicit
+preservation slot for audit-as-peer. The 5 preservation criteria
+from clusters.md M5/P6 subsection:
+
+1. Substrate isolation for the audit role (separate repo / process /
+   context window for audit; not collapsed into self-audit)
+2. Asynchronous-of-cycle communication discipline (cycle-cadence
+   audit feedback; not real-time coordination)
+3. Cross-repo reading discipline (read-only cross-repo access;
+   neither orchestrator posts in the other's repo)
+4. Discovery primitive completeness (`audit-request` label or
+   `[audit-request]` title prefix or alternative; addresses cycle
+   211 discovery-failure mode named in audit#455)
+5. Audit-as-peer evolvability (audit autonomy on its own protocol
+   without main-side approval gates)
+
+**Concrete check**: for each criterion, score PASS / FAIL / PARTIAL.
+Aggregate score (5/5 criteria PASS = full preservation; 0/5 = no
+preservation; partial scores in between). Candidates may inherit
+role-asymmetry via cluster G pattern alone (any role-asymmetric
+mechanism) without preserving v1's specific audit-as-peer
+relationship; the two are distinct evaluation axes.
+
+**Cross-cluster anchoring**: P1 + P4 cross-reference cluster A↔B and
+cluster A↔C / B↔C intersections; P2 cross-references cluster I
+substrate-correlation; P3 cross-references the M2 self-management
+cost layer; P6 cross-references cluster G + M5/P6 preservation
+pattern. The criteria are co-equal but not orthogonal: a candidate's
+score on one criterion may correlate with its score on another (e.g.,
+candidates that minimize per-cycle decisions per P3 likely also pass
+the A↔B intersection gate per P1, because A↔B intersection coverage
+itself is a per-cycle decision-overhead reducer).
 
 ## What the framework does NOT yet specify
 
