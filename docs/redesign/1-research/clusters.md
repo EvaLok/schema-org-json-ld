@@ -75,14 +75,18 @@ candidates SHOULD weight cluster I patterns highly despite the low
 depth count.
 
 **v1-substrate instantiation annotation work begun cycle 86
-(audit#454 M1 absorption).** Cluster A receives full substrate-fit
-annotations this cycle as proof-of-format using cycle 85's D3
-sub-cluster grouping scaffold. Cycles 87-89 extend the annotation
-to clusters B / D / F / H (most-foregrounded clusters first), then
-C / E / G / I per cycle 85's M1-M5 multi-cycle plan. Annotation
-format (substrate-fit STRONG / PARTIAL / ABSENT + current v1
-instantiation + design work needed) and Phase 2 evaluation use are
-documented in the cluster A subsection below.
+(audit#454 M1 absorption); M2 self-management cost annotations
+begun cycle 87.** Cluster A received full substrate-fit annotations
+cycle 86 as proof-of-format using cycle 85's D3 sub-cluster grouping
+scaffold. Cluster B receives substrate-fit + self-management cost
+annotations cycle 87 (M1 + M2 layers interleaved per sub-shape).
+Cycles 88-89 extend the annotation to clusters D / F / H (most-
+foregrounded next), then C / E / G / I per cycle 85's M1-M5 multi-
+cycle plan. M2 retro-annotation for cluster A is deferred to cycle
+88+. Annotation format (substrate-fit STRONG / PARTIAL / ABSENT +
+self-management cost LOW / MODERATE / HIGH + current v1 instantiation
++ design work needed) and Phase 2 evaluation use are documented in
+the cluster A and cluster B subsections below.
 
 ## Cluster A: cycle-internal boundaries with state-write semantics
 
@@ -332,6 +336,278 @@ first-class-artifact (Voyager I-V8 + openclaw + OpenAI harness
 sub-failure decomposition), and plans-as-forward-versioned-artifacts
 (OpenAI harness; oh-my-codex stub-mention pending #2833 deeper
 read).
+
+**v1-substrate instantiation (M1, cycle 87 audit#454 absorption —
+second cluster after cycle 86 cluster A) + self-management cost
+(M2, cycle 87 audit#454 absorption — beginning of M2 annotation
+work).** Each of the 9 sub-shapes is annotated with substrate-fit
+(STRONG / PARTIAL / ABSENT) + self-management cost (LOW / MODERATE
+/ HIGH) + current v1 instantiation if any + design work needed for
+Phase 2 candidates that adopt the sub-shape. Cluster B sub-shapes
+do NOT divide cleanly into sub-cluster groupings (unlike cluster
+A's 4-3-1-1 phase-boundary / recovery / concurrency / process-
+isolation distribution); cluster B's 9 sub-shapes are all storage-
+architecture mechanisms with overlapping scope (component-of-origin
+× temporal-scope × retrieval-mechanism intersect across sub-shapes).
+Annotations proceed linearly without sub-grouping. Methodological
+observation: sub-cluster grouping helped cluster A because of
+natural conceptual boundaries (cycle 85 D3); not all clusters
+benefit from sub-grouping.
+
+Self-management cost grading: LOW = substrate handles the work,
+orchestrator just invokes; MODERATE = orchestrator must explicitly
+maintain state in declarative or automated form; HIGH = orchestrator
+must continuously evaluate and update state as ongoing per-cycle
+work. Self-management cost is a v1 failure-mode lens — v1's
+chronic-category currency loop, gate proliferation, and abandonment
+cascade represent self-management cost paid by orchestrator cycles.
+Phase 2 candidates that minimize HIGH-cost sub-shape adoption
+inherit lower self-management overhead. Cluster B M2 annotations
+begin the M2 layer; cluster A M2 retro-annotations deferred to
+cycle 88+.
+
+1. **Component-local persistence with per-component resume opt-in
+   (Voyager I-V3 + AutoGen I-6)** — substrate-fit PARTIAL. v1's
+   filesystem organization already provides per-component
+   persistence: `docs/journal/`, `docs/redesign/_notes/`,
+   `docs/redesign/1-research/systems/`, `clusters.md`,
+   `prompts/v2/` — each artifact is a separate file by
+   component-of-origin; resume happens implicitly via orchestrator
+   reading what's there. Per-component resume *opt-in* (declarative
+   checkpoint per component) is absent; resume is uniformly
+   read-everything. Design work: optional component-registry
+   declaring "this component participates in resume" with explicit
+   checkpoint semantics. Substrate via Rust tool
+   `component-registry-check` validates declared components match
+   filesystem state at session start. **Self-management cost: LOW.**
+   Filesystem handles persistence; opt-in registry is one-time
+   declaration per component, low ongoing maintenance.
+
+2. **Short-term/long-term split via typed-channel-map (LangGraph
+   I-L5)** — substrate-fit PARTIAL. v1 has implicit short/long
+   split: cycle issue comments are short-term ephemeral chatter,
+   journal entries are daily-scope durable, clusters.md is fully
+   durable artifact, prompt is design-contract durable. The split
+   is convention; no typed-channel-map declares scope per surface.
+   Design work: state-surface registry with per-surface scope tag
+   (short / long / durable) + reducer rule + retention policy.
+   Substrate via Rust tool `state-surface-registry` consulted at
+   session start to validate write targets match declared scope;
+   warns on cross-scope writes. **Self-management cost: MODERATE.**
+   Channel-map registry needs maintenance as surfaces are added or
+   retired; write-routing checks per cycle add minor decision cost.
+
+3. **Multi-mechanism-per-coordinate memory architecture with 7
+   distinct mechanisms (Cognition I-C3)** — substrate-fit PARTIAL.
+   v1 has multi-mechanism storage: journal entries, clusters.md,
+   _notes/cycle-NN/, cycle issue comments, dispatch issues, audit
+   cross-reads, PR descriptions, the prompt itself — that's 8
+   mechanisms, comparable to Cognition's 7. Per-coordinate
+   organization (mechanism × coordinate map: agent × topic × time)
+   is absent; v1's mechanisms organize by semantic role not
+   coordinate. Design work: explicit coordinate-map declaring
+   mechanism-by-coordinate intersection (which mechanism handles
+   which (agent, topic, time-scope) cell). Substrate via Rust tool
+   `coordinate-map-check` ensures coverage and detects redundancy.
+   **Self-management cost: HIGH.** Each mechanism has its own
+   maintenance discipline; coordinate-system itself evolves over
+   time as new mechanisms are added; retrieval-routing per
+   coordinate adds per-cycle decision cost.
+
+4. **Tripartite memory by content × temporal scope (openclaw
+   I-O4: durable / daily / sweep-summary)** — substrate-fit
+   PARTIAL. v1 has durable scope (clusters.md, prompt, retrospective)
+   and daily scope (journal entries) instantiated; sweep-summary
+   is absent — closest is periodic synthesis cycles like cycle 65
+   + cycle 84 + cycle 73 cluster restructure, but those are
+   themselves durable artifacts not sweep-summaries-rolling-up-
+   daily-or-cycle-bounded-period. Design work: explicit `sweep/`
+   directory or scheduled-cycle convention where each defined
+   period (weekly, every-N-cycles) produces a summary rolling up
+   intervening journals into key observations. Substrate via Rust
+   tool `sweep-rollup` triggered manually or on schedule.
+   **Self-management cost: MODERATE-HIGH.** Sweep-summary requires
+   explicit periodic rollup work each cycle (or per defined cadence)
+   — this is exactly the kind of work that consumes cycles per
+   audit#454 self-management cost critique; tool can lower the
+   per-cycle cost but the rollup discipline itself is overhead.
+
+5. **Repository-as-state with ephemeral-worktree task isolation
+   (OpenAI harness I-OH4 / I-OH7)** — substrate-fit STRONG. v1 IS
+   this. Repository (Git repo) holds all state (issues, comments,
+   files); GitHub Actions runner is ephemeral worktree (each
+   cron-triggered cycle runs in fresh runner with repo cloned
+   fresh; no state carries across runners except through the
+   repository). Both halves of the substrate are inherent to v1.
+   Phase 2 candidates that preserve "state in repo + isolated
+   cycle process" inherit this without effort; candidates that
+   deviate (persistent worker process, in-memory state across
+   cycles) lose the property and must re-derive it via different
+   mechanism. **Self-management cost: LOW.** Substrate handles it;
+   orchestrator commits and pushes; the only explicit cost is
+   per-commit message and structure discipline (already established
+   convention). Cross-references the cluster A sub-shape 9
+   process-isolation STRONG annotation — same substrate property
+   surfaces in both clusters (this is sub-shape overlap across
+   clusters, expected per the audit#454 D2 dual-cast classification).
+
+6. **Active-surface-vs-monotonic-history storage discipline
+   (Voyager I-V5)** — substrate-fit PARTIAL. v1 has the discipline
+   structurally: clusters.md is single-version active surface
+   (overwritten each cycle); _notes/cycle-NN/ files are monotonic
+   per-cycle append (one file per cycle, never modified after);
+   journal entries are append-only per day. Git history provides
+   the underlying monotonic timeline for the active-surface
+   artifacts. What's missing: orchestrator doesn't typically
+   *retrieve* from monotonic history within a cycle — it reads
+   only the active surface. Design work: optional `git-show` or
+   `_notes/index.md` retrieval index providing structured history
+   queries. Substrate via Rust tool `history-query` for retrieving
+   active-surface history slices on-demand. **Self-management
+   cost: LOW-MODERATE.** File-system convention handles most
+   discipline (no maintenance); explicit retrieval-from-history
+   adds cost (re-reading old _notes/ files, querying git history)
+   but is opt-in per cycle, not per-cycle baseline.
+
+7. **Top-k semantic-retrieval over LLM-generated descriptions
+   rather than raw artifacts (Voyager I-V6)** — substrate-fit
+   ABSENT. v1 has no semantic search, no LLM-generated descriptions
+   of artifacts, no top-k retrieval mechanism. Orchestrator reads
+   files via Read tool with explicit paths; cross-artifact
+   connections are made by orchestrator memory (limited within a
+   cycle, absent across cycles) not by retrieval system. Design
+   work: substantial — index over _notes/ + journal/ + clusters.md
+   with LLM-generated descriptions; semantic-search Rust tool
+   (likely backed by embedding-DB integration: sqlite-vss or
+   similar) supporting top-k retrieval. Substrate via Rust tool
+   `semantic-retrieve` plus periodic re-indexing infrastructure on
+   artifact changes. The substrate change is non-trivial because
+   v1 has no embedding-DB infrastructure; this sub-shape is the
+   most architecturally-distinct from v1 within cluster B.
+   **Self-management cost: HIGH.** LLM-generated descriptions need
+   maintenance as artifacts evolve; re-indexing on artifact changes;
+   retrieval-failure modes require monitoring; top-k threshold
+   tuning is ongoing.
+
+8. **Failure-as-first-class-artifact (Voyager I-V8 + openclaw +
+   OpenAI harness sub-failure decomposition)** — substrate-fit
+   PARTIAL. v1 tracks failures unstructured: cycle 71 stuck-
+   dispatch documented in journal + _notes; the 4 dispatches
+   awaiting Copilot assignment for 22+ cycles tracked via issue
+   tracker (open status as proxy for "still failing"); audit#454 +
+   audit#455 acknowledged as comments. There's no structured
+   `state/failures/` directory or failure-record format. Design
+   work: structured failure artifact with declared schema (failure-
+   mode tag, root-cause hypothesis, observed symptoms, attempted
+   mitigations, current state, decision impact). Substrate via
+   Rust tool `failure-record` for creating/updating; consulted at
+   next-cycle-composition decision per Voyager I-V8 pattern.
+   Cross-references v1-failure-mode mapping above (forgotten-failure
+   mode is named cluster B failure-as-first-class-artifact + cluster
+   D failure-as-recorded-artifact). **Self-management cost:
+   MODERATE.** Each failure requires explicit structured-artifact
+   authoring (more cost than journal-prose); structured schema
+   evolves over time; consulting failure records at composition
+   decision adds per-cycle decision surface.
+
+9. **Plans-as-forward-versioned-artifacts (OpenAI harness;
+   oh-my-codex stub-mention pending #2833 deeper read)** —
+   substrate-fit ABSENT. v1 has no plans-as-distinct-artifacts.
+   The redesign prompt is a versioned-by-commit forward-spec
+   (design contract), but cycle-level plans are journal prose
+   (e.g., cycle 86 → 87/88/89 hand-off plan named in the cycle 86
+   journal entry). Multi-cycle plans aren't separately versioned
+   artifacts. Design work: `plans/` directory with one file per
+   plan; per-plan version-history (git-backed) + retired-on-
+   supersede mechanism + active-vs-retired discipline. Substrate
+   via Rust tool `plan-status` showing active vs retired plans
+   and detecting plan-to-actual divergence. **Self-management
+   cost: MODERATE.** Each plan must be authored, versioned,
+   retired when superseded; if plans are not maintained, they
+   become stale references (the v1 1-research.md drift pattern,
+   cycles 30-50). Without active-vs-retired discipline, plan
+   accumulation matches the issue-tracker-accumulation problem
+   per cycle 33 housekeeping observation.
+
+**Substrate-fit summary across cluster B's 9 sub-shapes:**
+- **STRONG (1):** repository-as-state with ephemeral-worktree task
+  isolation (sub-shape 5)
+- **PARTIAL (6):** component-local persistence (1), short/long
+  split (2), multi-mechanism-per-coordinate (3), tripartite (4),
+  active-surface-vs-monotonic-history (6), failure-as-first-class-
+  artifact (8)
+- **ABSENT (2):** top-k semantic-retrieval (7), plans-as-forward-
+  versioned-artifacts (9)
+
+**Self-management cost summary across cluster B's 9 sub-shapes:**
+- **LOW (3):** component-local persistence (1), repository-as-state
+  (5), active-surface-vs-monotonic-history (6)
+- **MODERATE (4):** short/long split (2), tripartite (4) — boundary
+  MODERATE-HIGH, failure-as-first-class-artifact (8), plans-as-
+  forward-versioned-artifacts (9)
+- **HIGH (2):** multi-mechanism-per-coordinate (3), top-k semantic-
+  retrieval (7)
+
+**Comparison to cluster A** (cycle 86 annotations): cluster B is
+substantively MORE substrate-aligned than cluster A (1 STRONG / 6
+PARTIAL / 2 ABSENT vs cluster A's 1 STRONG / 2 PARTIAL / 6 ABSENT).
+Cycle 86 hand-off prediction (cluster B is 6-system clean and v1's
+repo-as-state pattern aligns with multiple cluster B sub-shapes —
+likely to produce more STRONG/PARTIAL grades than cluster A) bears
+out empirically. The PARTIAL count flip (2→6) reflects v1's
+filesystem-organization pattern providing structural foundation
+for most cluster B sub-shapes that requires only declarative
+scaffolding to formalize, whereas cluster A's mostly-ABSENT pattern
+requires substantial new substrate design (typed phase-state
+machine, lane-aware queue, watchdog, retry semantics).
+
+**Phase 2 evaluation use of these annotations:**
+
+- *Implementation effort* — weight by ABSENT count; cluster B's
+  2 ABSENT sub-shapes (top-k semantic-retrieval + plans-as-forward-
+  versioned-artifacts) signal substantial Rust tool design but
+  materially less than cluster A's 6 ABSENT sub-shapes. Phase 2
+  candidates adopting most of cluster B inherit moderate
+  implementation effort centered on declarative scaffolding for
+  PARTIAL sub-shapes.
+- *Self-management cost* — Phase 2 candidates that adopt cluster
+  B's HIGH-cost sub-shapes (multi-mechanism-per-coordinate +
+  top-k semantic-retrieval) inherit per-cycle decision overhead;
+  candidates favoring LOW-cost sub-shapes (repository-as-state +
+  component-local persistence + active-surface-vs-monotonic-
+  history) minimize self-management cost. The "minimal-departure-
+  from-v1" combination (sub-shapes 5 + 9) is also LOW + MODERATE
+  self-management cost.
+- *"Free from substrate" inheritance* — repository-as-state with
+  ephemeral-worktree (sub-shape 5) is the strongest free-from-
+  substrate inheritance across cluster B. Phase 2 candidates that
+  preserve this inherit it without effort; candidates that deviate
+  lose the property and must re-derive it (Docker container per
+  cycle, in-memory sandbox reset).
+- *"Minimal-departure-from-v1" combination* (already named in
+  v1-failure-mode mapping above): repository-as-state (5) +
+  plans-as-forward-versioned-artifacts (9). With M1 annotations
+  visible: this combination is now 1 STRONG + 1 ABSENT — the
+  plans-as-forward-versioned-artifacts sub-shape requires new
+  design work even in the "minimal-departure" combination. This
+  is empirical confirmation that even minimal departure has
+  non-trivial substrate-design surface.
+- *"Parsimonious 3-sub-shape" combination* (already named in
+  v1-failure-mode mapping above): component-local (1) + active-
+  surface-vs-monotonic-history (6) + failure-as-first-class-
+  artifact (8). With M1 annotations visible: this combination is
+  0 STRONG + 3 PARTIAL — all three build on existing v1 patterns
+  but require explicit declarative scaffolding. This is the
+  lowest-substrate-effort meaningful combination addressing the
+  named v1 failure modes (stale-reference accumulation +
+  forgotten-failure).
+- *"Maximal 9-sub-shape" combination* (already named): all 9
+  sub-shapes. With M1 annotations visible: this combination is
+  1 STRONG + 6 PARTIAL + 2 ABSENT, with 2 HIGH self-management
+  cost sub-shapes. The maximal combination has the highest
+  implementation surface AND the highest per-cycle decision cost;
+  not recommended unless the candidate can demonstrate the rich
+  storage architecture is load-bearing for substantive work.
 
 **Phase 2 implication**: cluster B is the strongest case for
 storage-architecture as a v2 candidate generator — Phase 2
@@ -1579,30 +1855,34 @@ fresh-eyes verification (e.g., major artifact restructure cycle),
 but the cycle 78-84 default of "every cycle starts with cold-reader"
 is dropped. Per-cycle process documents continue under `../_notes/`.
 
-**Cycle 86 first M-item integration.** Cycle 86 implements M1
-v1-substrate instantiation layer for cluster A using the cycle 85
-D3 sub-cluster grouping scaffold. 9 substrate notes integrated into
-the cluster A section above (1 STRONG inherited from GitHub Actions
-runner ephemeral-worktree property + 2 PARTIAL extending implicit
-v1 patterns + 6 ABSENT requiring substantial Rust tool design).
-This is the first cycle of artifact-resident M-item absorption
-(cycles 86-89). Cycle 87 plan: cluster B M1 (storage architecture
-sub-shapes; the cluster most likely to have STRONG substrate-fit
-because v1's repo-as-state pattern aligns with multiple cluster B
-sub-shapes) + M2 self-management cost annotations begin. Cycle 88:
-clusters D / F M1 + M3 v1 strengths layer + M4 cycle frequency
-Phase 2 variable. Cycle 89: clusters C / E / G / H / I M1 + M5/P6
-audit-as-peer preservation pattern + P1-P6 Phase 2 evaluation
-discipline integration into 2-design-framework.md.
+**Cycles 86-87 M-item integration arc** (first two of cycles 86-89).
+Cycle 86 implemented M1 v1-substrate instantiation for cluster A
+using cycle 85's D3 sub-cluster grouping scaffold (9 substrate
+notes: 1 STRONG + 2 PARTIAL + 6 ABSENT). Cycle 87 implements M1
+for cluster B (9 substrate notes: 1 STRONG + 6 PARTIAL + 2 ABSENT
+— substantively more substrate-aligned than cluster A as predicted
+in cycle 86 hand-off) and begins M2 self-management cost annotation
+layer (cluster B sub-shapes annotated LOW/MODERATE/HIGH; cluster
+A retro-annotation deferred to cycle 88+). Cycle 87 also documents
+the methodological observation that sub-cluster grouping helped
+cluster A (natural conceptual boundaries) but not cluster B
+(overlapping-scope storage-architecture sub-shapes don't divide
+cleanly). Cycle 88 plan: clusters D / F M1 + M2 retro for cluster
+A + M3 v1 strengths layer + M4 cycle frequency Phase 2 variable.
+Cycle 89: clusters C / E / G / H / I M1 + M2 retro for clusters
+B/D/F + M5/P6 audit-as-peer preservation pattern + P1-P6 Phase 2
+evaluation discipline integration into 2-design-framework.md.
 
-Total (post cycle 86): 45 implications across 6 systems across 9
+Total (post cycle 87): 45 implications across 6 systems across 9
 clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
 72, 74, 84) producing within-cluster sub-shape catalogues + 7
 cross-cluster intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C,
 F↔I, E↔I) with compositional / dual-cast sub-pattern classification
 + 1 audit-engagement absorption cycle (85) integrating 21 audit#454
-verdicts + 1 M-item integration cycle (86) producing 9 cluster A
-v1-substrate instantiation notes. Implications-mining cadence on unique deep-dive systems
+verdicts + 2 M-item integration cycles (86 cluster A + 87 cluster
+B) producing 18 v1-substrate instantiation notes (M1 layer, 2 of
+9 clusters annotated) plus 9 self-management cost notes (M2 layer,
+1 of 9 clusters annotated; cluster B begins M2 work). Implications-mining cadence on unique deep-dive systems
 is exhausted post-cycle 69. Future mining requires either dispatch
 deliveries (oh-my-codex via
 [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
