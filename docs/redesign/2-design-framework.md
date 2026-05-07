@@ -823,9 +823,15 @@ preserved-primitives constraints it honors. Suggested structure:
   work or add self-management?
 ```
 
-The template is preliminary and subject to iteration before Phase 2
-candidate generation begins. The post-retrospective checkpoint gates that
-work; this template is preparation, not commitment.
+The template is preliminary and subject to iteration. Cycle 90 began Phase 2
+candidate authoring against this template, producing Candidates A and B at
+[`2-candidates/`](./2-candidates/) — see [`2-candidates/README.md`](./2-candidates/README.md)
+for the index and selection criteria. Iteration on the template itself
+remains open; modifications to the template (e.g., adding evaluation slots
+that emerge as candidates accumulate) flow back into this section.
+Phase 2 candidate-selection is one of the three hard checkpoints requiring
+Eva's explicit approval — see redesign prompt SECTION 9 (`CHECKPOINTS`)
+and SECTION 9.5 (`ITERATION-UNTIL-APPROVAL`).
 
 ## Phase 2 candidate evaluation criteria (audit#454 P1-P6 absorption, cycle 89)
 

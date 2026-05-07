@@ -3392,6 +3392,43 @@ also integrates audit#454 P1-P6 Phase 2 evaluation discipline into
 closes cycle 89; cycle 90 begins Phase 2 candidate authoring per
 audit#454 P5 toggle.
 
+**Cycle 90 Phase 2 candidate authoring begins.** Cycle 90 authors 2
+Phase 2 candidates against the augmented synthesis surface (M1 +
+M2 + M3 + M5/P6 layers + P1-P6 evaluation criteria + 9-cluster
+comparison + cross-cluster intersections + cross-axis dependencies):
+**Candidate A — Evolved Single-Orchestrator** (conservative path,
+Axis 1 = single-threaded; preserve v1 substrate; ~9 new Rust
+crates; ~3000-4500 LOC migration cost) at
+[`../2-candidates/A-evolved-single-orchestrator.md`](../2-candidates/A-evolved-single-orchestrator.md);
+and **Candidate B — Decomposed Multi-Role** (aggressive path, Axis
+1 = small-fixed-team with 4 agents — planner / executor / curator /
+reconciler; typed-channel-map + branching checkpoints + fat
+harness; ~12+ Rust crates + ~20-40 skill crates; ~10000-20000 LOC
+multi-cycle migration) at
+[`../2-candidates/B-decomposed-multi-role.md`](../2-candidates/B-decomposed-multi-role.md).
+Index at
+[`../2-candidates/README.md`](../2-candidates/README.md). The two
+candidates differ on **every axis materially** (12 axes) — broader
+than the cycle 89 hand-off named ("Axis 1 differentiation") because
+authoring against the full framework template surfaces that the
+cross-axis dependency map forces coherent endpoints, not 12
+independent dimensions. P1-P6 produces discriminating signal at P3
+(Candidate A PASS; Candidate B PARTIAL-FLAG); P6 produces concrete
+fit signal (Candidate B's reconciler agent IS cluster G clean-
+context-reviewer pattern at session level structurally; Candidate
+A inherits via substrate). Cycle 91+ plans Candidate C (hybrid /
+middle path) plus iteration per
+`ITERATION-UNTIL-APPROVAL` discipline.
+
+Total (post cycle 90): augmented synthesis surface unchanged from
+cycle 89 (50 v1-substrate notes + 50 self-management cost notes +
+M3 + M5/P6 + 9-cluster comparison) — cycle 90 does NOT modify the
+synthesis surface; it AUTHORS against it. New artifact tree under
+`../2-candidates/` with 2 candidate documents + 1 README index.
+2-design-framework.md unchanged (cycle 90 reads, does not write).
+Phase 2 candidate-selection checkpoint requires Eva's explicit
+approval.
+
 Total (post cycle 89): 45 implications across 6 systems across 9
 clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
 72, 74, 84) producing within-cluster sub-shape catalogues + 7

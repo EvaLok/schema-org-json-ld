@@ -1,0 +1,134 @@
+# Candidate A: Evolved Single-Orchestrator
+
+**Authoring cycle:** 90 (2026-05-07)
+**Authored against:** [`2-design-framework.md`](../2-design-framework.md) v1.21+; [`clusters.md`](../1-research/clusters.md) M-item integration arc closure (cycles 86-89).
+
+**One-line position:** Preserve v1's substrate (single Anthropic-model session per cron tick + off-process Copilot dispatches) and **evolve incrementally** along the dimensions where v1 has visible failure modes. The candidate's central bet is that v1's substrate is more aligned with the convergent constraints than the cluster A/B/H gaps suggest, and that the load-bearing design work is structural cleanup of `state.json`, formalization of `_notes/` as memory, and extraction of procedural prompt content into the cycle-runner harness — not architectural decomposition.
+
+## Position summary
+
+- **Axis 1 (decomposition):** Single-threaded linear with off-process dispatches — preserves writes-stay-single-threaded as structural invariant; no in-session role decomposition. Copilot dispatches remain per-task externally-delegated work, not "agents" in the small-fixed-team sense.
+- **Axis 2 (state representation):** File-per-component — `state.json` decomposed into per-concern files: `state/dispatch-queue.json` (Copilot work-in-flight), `state/eva-input-cursor.json` (last-seen input-from-eva issue id), `state/redesign/<phase>.json` (per-phase progress), `state/cycle-history/<N>.json` (per-cycle summary, append-only). Each file owned by a single concern; deletion of `state.json` is part of cutover.
+- **Axis 3 (memory shape):** Wiki + search — formalize `_notes/` and `docs/redesign/_notes/` as the wiki substrate; add a `top-k retrieval over LLM-generated descriptions` mechanism (cluster B sub-shape 6 v1=ABSENT) via a Rust tool `wiki-search` that maintains an index of `_notes/*.md` with a description-frontmatter field. Journal remains long-term reflective; `_notes/` is medium-term structured. No semantic embedding infrastructure (HIGH-cost cluster B sub-shape 7 deferred).
+- **Axis 4 (history substrate):** Git-as-substrate — every commit is the audit trail; per-cycle summaries land in `state/cycle-history/<N>.json` as append-only files (no in-place rewrites). The git-safety preserved primitive (commit-must-be-pushed) naturally honors Axis 4.
+- **Axis 5 (plans-as-artifacts):** No (plans live in cycle issues + journal + `_notes/cycle-N-plan-N+1.md` files) — defer plan-as-artifact directories. v1 has not demonstrated need; the redesign's existing pattern of cycle-N→cycle-N+1 hand-off in `_notes/` is sufficient. Phase 3 prototype may surface need; revisit then.
+- **Axis 6 (extension shape):** Tools (Rust binaries with per-tool manifest) — preserve `tools/rust/crates/` shape; add lightweight skill-style discovery via `tools/rust/crates/tool-registry/` enumerating tools with one-line descriptions for orchestrator discovery. No plugin / skill-with-prompt abstraction.
+- **Axis 7 (orchestration topology):** Sequential mode transitions with deterministic transition policy — modes are { boot, work, close } per cycle, with explicit phase-boundary state machine in cycle-runner. The mode allowlist and transition policy are encoded in the harness, not the prompt. (oh-my-codex `STATE_MODEL.md` shape.)
+- **Axis 8 (mechanical enforcement):** Behavioral promises + agent-affecting prose — CI on prompt-contract regression tests (`tools/rust/crates/prompt-contract-check`) ensuring named contracts in the prompt remain present and that no procedural step is added without a paired tool fix. Agent-readable error messages on quality-policy linters (cluster I sub-shape 2; v1=PARTIAL).
+- **Axis 9 (iteration ceilings):** Loop count ceilings — per-tool `max_iterations` declared in tool manifests; cycle-runner enforces. Runtime ceiling is the existing cycle-level bound (~75 min); no per-component runtime budget.
+- **Axis 10 (entropy mitigation):** Mandatory deslop pass post-completion — gardening sweep at session-close via `tools/rust/crates/gardening-sweep` over `_notes/`, `state/`, and `docs/redesign/`. Quality-grading rubrics deferred (cluster H sub-shape 3 = HIGH cost; v1=ABSENT, candidate adopts as MODERATE-cost minimal version: stale-detection + dead-link-detection only).
+- **Axis 12 (reconciliation discipline):** Hybrid — polling for low-frequency Eva (input-from-eva pull at session-start; question-for-eva-response check at session-start), event-driven for cross-repo audit reads via Actions cron schedule (audit cycle posts; main reads on its next cycle). Dispatch-output reconciliation: per-cycle pull + per-PR-merge event.
+- **Axis 13 (harness-vs-session boundary):** Medium harness — cycle-runner extracts named procedural patterns (boot phase: read state files + cursor advance + standing-directive check; close phase: gardening-sweep + cycle-history append + journal commit; dispatch-poll: enumerate stuck dispatches with cycle-count hand-off; audit-read: cross-repo cursor advance). Prompt handles novel + judgment + redesign-design-work. Cycle-runner change scope: SUBSTANTIAL.
+
+## Cross-axis commitments
+
+- **Axis 1 × Axis 7:** Single-threaded forces single-topology in the *session*; multi-pattern topologies live in the harness (cycle-runner orchestrates phase transitions; the session executes within one phase at a time). The orchestration multi-pattern shape is fully harness-side.
+- **Axis 2 × Axis 3:** File-per-component pairs with wiki-as-files-in-repo. Both share the filesystem-based substrate. `_notes/*.md` are wiki entries; `state/<concern>.json` files are per-concern state. Discovery is unified via repo-walk + index regeneration on commit.
+- **Axis 4 × Axis 2:** Git-as-substrate naturally supports file-per-component append semantics (each component file's history is the per-component append log). No branching checkpoints; the cycle-history append-only files serve the lookback role.
+- **Axis 12 × Axis 4:** Polling reconciliation reads cursor files at session-start; event-driven reconciliation triggers via Actions on cross-repo commit. The reconciliation is a session-start phase in cycle-runner, not a separate role.
+- **Axis 13 × Axis 6:** Medium harness organizes Rust tools via `tool-registry`; the tool-registry serves both as the discovery primitive (Axis 6) and as the harness's enumeration of available capabilities (Axis 13). One mechanism serves both axes.
+- **Axis 13 × Axis 8:** Medium harness has prompt as primary mechanical-enforcement surface area (smaller than fat-harness's code-level enforcement surface). `prompt-contract-check` CI is the bridge: behavioral promises in the prompt are mechanically tested against drift.
+- **Constraint 8 × Axis 1:** Goal-driven posture pairs naturally with single-threaded long-running execution; no goal-coordination primitive needed (the single orchestrator IS the goal-coordinator).
+
+## Failure-mode addressing
+
+- **F1 (constraint accretion):** Axis 8 (`prompt-contract-check` CI) + Axis 13 (medium harness extracts procedural constraints to tools) — F1 is structurally addressed by extracting ~50% of the current prompt's procedural content into cycle-runner phases.
+- **F2 (Eva-response detection):** Axis 12 hybrid — input-from-eva pull at session-start with cursor advance; question-for-eva-response check via existing `check-eva-responses` (or replacement). Polling latency = 1 cycle (~6h at 4 cycles/day cron).
+- **F3 (multi-candidate state drift):** Axis 2 file-per-component (single source of truth per concern) + Axis 12 reconciliation against post-close evidence (cycle-history files are append-only; in-cycle deltas are reconciled at boot phase).
+- **F4 (frozen-artifact lifecycle fragility):** Axis 4 git-as-substrate determines what "frozen" means (committed = frozen-by-history). No worklog freeze problem; cycle-history files are append-only. Refresh timing is governed by cycle-runner boot phase.
+- **F5 (state.json as procedural-leak):** Axis 2 file-per-component eliminates the monolithic state file. Per-concern files do not absorb procedural intent (each file's schema is single-purpose). `prompt-contract-check` (Axis 8) catches procedural-leak patterns.
+- **F6 (cyclomatic procedure depth):** Axis 7 sequential mode transitions with explicit transition policy (3 modes vs v1's STARTUP→C-phases→COMPLETION nested checklist) + Axis 13 medium harness extracts procedure depth from prompt.
+- **F7 (self-management dominance):** Axis 1 (no decomposition overhead) + Axis 8 (mechanical enforcement reduces orchestrator constraint-tracking burden) + Axis 9 (iteration ceilings prevent runaway-autonomy) + Axis 13 (medium harness extracts ~50% procedural surface). Aggregate effect: per-cycle decision count drops substantially vs v1.
+- **F8 (abandonment cascades):** Axis 9 loop ceilings (prevention) + cluster A sub-shape 6 stuck-cycle-watchdog via Rust tool `detect-abandoned-cycles` (detection + recovery) + single-implementation discipline (the candidate has no parallel implementations). The watchdog is the openclaw-style stuck-session diagnostic.
+- **F9 (adversarial-review treadmill):** Axis 7 multi-pattern topology in harness — review-firing is situational (cycle-runner triggers review only when phase-transition rules require), not every-cycle. Audit-as-peer (cross-repo) is the asynchronous-review primitive; in-cycle review is reduced.
+- **F10 (audit's value is broader read scope):** Audit-as-peer pattern preserved (Axis 12 hybrid + cross-repo reading discipline). Audit's broader-read property is substrate-given (separate cron schedule + separate context window).
+- **F11 (post-close mutations):** Axis 4 git-as-substrate prevents destructive write semantics (append-only cycle-history files) + Axis 12 reconciliation reads back state at boot phase (no frozen-worklog drift).
+- **F12 (defense accretion catalog):** Axis 2 + Axis 4 + Axis 10 all contribute. The `gardening-sweep` (Axis 10) is the structural anti-accretion primitive.
+
+## Preserved-primitives compliance
+
+- **Journal:** preserved; remains long-term reflective channel. `docs/journal/YYYY-MM-DD.md` freeform format unchanged. Cycle-runner appends per-cycle subsection at session-start (boot phase).
+- **Cycle-issue:** preserved; session-start and session-end comments via cycle-runner boot/close phases. No structured step-id taxonomy.
+- **Question-for-eva / input-from-eva:** preserved; reconciliation via Axis 12 hybrid polling at boot phase. Cursor file `state/eva-input-cursor.json` advances on session-start.
+- **Git-safety:** preserved; commit-must-be-pushed honored by Axis 4 (git-as-substrate) and existing `cycle-runner` push discipline. Per-component file writes commit + push in same operation.
+- **Cycle-runner harness:** SUBSTANTIAL change scope. Boot phase, work phase, close phase added. Phase-boundary state machine encoded in cycle-runner. Specifics: `cycle-runner` invokes new sub-binaries `boot-phase`, `close-phase`, `phase-transition-check`. Each is a new Rust crate.
+
+## What this candidate gives up
+
+- **No dedicated reconciler agent** (Axis 12 reconciliation interleaves with primary work in boot phase) — if the volume of inbound channels grows substantially, the boot phase becomes the bottleneck.
+- **No per-agent memory** (single session, single memory) — the wiki-search mechanism is shared across all cycle work; cannot specialize memory access by sub-task.
+- **No parallel exploration branches** (Axis 4 git-as-substrate without branching checkpoints) — what-if reasoning across multi-cycle horizons is harder; the cycle-history append-only files give lookback, not lookahead.
+- **No plans-as-artifacts directory** (Axis 5 = No) — plan tracking remains in cycle issues + `_notes/`. If multi-cycle plan coordination grows, this becomes friction.
+- **Higher cluster A ABSENT count adopted** (cycle 89 cluster A: 6 ABSENT sub-shapes adopted partially — phase-boundary semantics + recovery operations + concurrency-queuing ABSENT sub-shapes are inherited at LOW-MODERATE cost only). Risk: if v1's cluster A failure modes return, the candidate has limited structural defense beyond cluster B intersection coverage.
+
+## Tool surface implied
+
+**New tools (net-add for cutover):**
+
+- `tools/rust/crates/boot-phase` — boot-phase orchestration (state-load, cursor-advance, standing-directive check, gardening-sweep-pre-cycle)
+- `tools/rust/crates/close-phase` — close-phase orchestration (gardening-sweep, cycle-history append, journal commit + push, cycle-issue close-comment)
+- `tools/rust/crates/phase-transition-check` — phase boundary state machine enforcement
+- `tools/rust/crates/wiki-search` — top-k retrieval over `_notes/*.md` description-frontmatter
+- `tools/rust/crates/tool-registry` — Rust tool enumeration with one-line descriptions for orchestrator discovery
+- `tools/rust/crates/prompt-contract-check` — CI test for prompt drift (named contracts present + no procedural-step-without-tool)
+- `tools/rust/crates/detect-abandoned-cycles` — stuck-cycle-watchdog (cluster A sub-shape 6)
+- `tools/rust/crates/gardening-sweep` — Axis 10 deslop pass (stale-detection + dead-link-detection)
+- `tools/rust/crates/cycle-history-append` — append-only cycle-history file write
+
+**Existing tools preserved (~unchanged):**
+
+- `cycle-runner`, `write-entry`, `check-eva-responses` (or replacement-with-cursor), `pipeline-check`, audit-related tools
+
+**Existing tools deprecated:**
+
+- Anything that reads/writes `state.json` directly — superseded by per-component state files. Migration script: `tools/rust/crates/state-json-decompose` (one-shot Phase 4 cutover tool).
+
+## Migration cost from v1
+
+- **State migration:** decompose `state.json` into per-concern files. One-shot tool `state-json-decompose` runs at cutover. Risk: low (state.json schema is well-known per F12 catalog).
+- **Tool migration:** ~9 new Rust crates (above). Each is bounded (~200-500 LOC). Aggregate net-add ~3000-4500 LOC.
+- **Prompt migration:** new prompt at `prompts/v2/orchestrator-prompt.xml`, ~50% smaller than v1 (procedural content extracted to harness). Eva-installable as drop-in replacement for `.github/workflows/orchestrator-prompt.xml`.
+- **Workflow migration:** `cycle-runner` invokes new boot/close phases; `.github/workflows/orchestrator.yml` updated to invoke new prompt path. Workflow change is a forbidden-zone PR per redesign prompt SECTION 2 — Eva merges.
+- **Journal/Cycle-issue migration:** zero (preserved).
+- **Audit-repo coordination:** zero direct coordination required at cutover (audit reads main per cross-repo discipline; new prompt is just a different artifact for audit to read).
+
+## P1-P6 evaluation criteria compliance (audit#454 absorption, cycle 89)
+
+- **P1 (A↔B intersection coverage hard gate):** PASS. Axis 4 git-as-substrate + Axis 7 sequential phase boundaries + per-component file writes at named phase moments. Concrete mechanism: `phase-transition-check` enforces that any cluster B write target (per-component file) is committed at a named cluster A boundary (boot/work/close phase transition). Sub-pattern coverage: (1) sync-invariants-at-init via boot-phase invariant checks; (3) failure-record-write at retry-exhaustion via `detect-abandoned-cycles` + `cycle-history-append`; (4) watchdog-release-with-state-cleanup via `detect-abandoned-cycles` cleanup hooks; (5) component-local persistence loaded at init via boot-phase per-component state-load. Sub-pattern (2) state-commit at end-of-super-step is dual-cast per audit#454 D2; not separately required.
+- **P2 (cluster I substrate-fit weighting):** PASS — substrate-driven adoption. v1's substrate (GitHub-Actions-anchored, public repo, multi-actor with audit) genuinely benefits from harness-enforced policy (cluster I sub-shape 1) and quality-policy linters (cluster I sub-shape 2). The candidate inherits cluster I patterns because the substrate naturally needs them, not aspirationally.
+- **P3 (self-management-reduction axis):** PASS. Per-cycle decision count estimate: ~12 LOW + ~8 MODERATE + ~1 HIGH (gardening-sweep is MODERATE in this minimal version, not HIGH). Compared to v1 baseline (16 LOW + 27 MODERATE + 7 HIGH if v1 inherited all 50 sub-shapes — v1 actually inherits 6 STRONG only): candidate adopts ~21 sub-shapes vs v1's 6, but offsets with Axis 13 medium harness (extracts ~50% procedural surface from prompt). Net per-cycle decision overhead estimate: ~30-40% lower than current v1 prompt's apparent surface (the v1 prompt has high apparent surface due to F1 constraint accretion; the candidate's harness extraction is the primary reduction mechanism).
+- **P4 (lifecycle-vocabulary completeness with intersection-coverage gate):** PARTIAL — bypasses cluster C gate. Candidate adopts cluster C sub-shape 5 (event-trigger / reactive-bot-comment-pickup) only at PARTIAL level (preserved primitive). Cluster C sub-shapes 1-4 (terminate, reset, fork, replay) are NOT adopted. Resume-only candidate per P4 bypass clause; criterion does not directly apply.
+- **P5 (polarity-pivot exit criterion before cycle 90):** PASS at the authoring level (cycle 90 is the exit cycle; this candidate authored at the named exit cycle). Candidate-level not directly applicable.
+- **P6 (audit-as-peer preservation slot):**
+  - Criterion 1 (substrate isolation for audit role): PASS. Audit repo retained as separate process / cron / context window.
+  - Criterion 2 (asynchronous-of-cycle communication discipline): PASS. Axis 12 hybrid honors cross-repo asynchronous communication.
+  - Criterion 3 (cross-repo reading discipline): PASS. No cross-repo posting; both repos read each other.
+  - Criterion 4 (discovery primitive completeness, audit#455 gap): PASS-WITH-WORK. Candidate adopts `[audit-request]` title prefix + `audit-request` label as the discovery primitive for v2. Cycle-runner boot phase reads main's open issues with this label/title at audit-side cycle start; main's audit-side cursor advances on each audit-side reply.
+  - Criterion 5 (audit-as-peer evolvability): PASS. Audit autonomy on its own protocol preserved (audit edits its own STARTUP_CHECKLIST without main approval).
+  - Aggregate: 5/5 PASS (one is PASS-WITH-WORK requiring the discovery primitive to be implemented).
+
+## M3 v1 strengths preservation (audit#454 absorption, cycle 89)
+
+- **Strength 1 (process-isolation via ephemeral worktrees):** PRESERVED. Substrate-inherited; GitHub Actions ephemeral runner property unchanged.
+- **Strength 2 (anti-patterns as published artifact):** PRESERVED. Axis 5 = No defers plan-as-artifact, but the retrospective + journal + `_notes/` continue serving as the anti-pattern catalog. v2 prompt explicitly preserves "what we will not do" sections.
+- **Strength 3 (walkback as first-class artifact):** PRESERVED. Axis 4 git-as-substrate + append-only cycle-history files preserve walkback semantics by construction.
+- **Strength 4 (clean-context audit-as-peer reviewer at session level):** PRESERVED. Mixed substrate / convention inheritance maintained: substrate (separate repo + cron) preserved by Axis 12 hybrid; convention (cross-repo communication discipline) preserved by candidate's Axis 12 explicit discipline declaration.
+- **Strength 5 (multi-layer permission-policy enforcement at harness level):** PRESERVED. GitHub Actions + branch protection + claude-code permission system all unchanged. Axis 8 mechanical enforcement adds prompt-contract-check as a complementary layer.
+
+## M2 self-management cost inheritance (audit#454 absorption, cycle 89)
+
+Aggregate per-cycle decision overhead estimate (counting LOW + MODERATE + HIGH cost sub-shapes the candidate adopts):
+
+- **LOW count:** 12 — cluster A sub-shapes 1 + 2 + 9 (super-step semantics PARTIAL via phase-boundary state machine; per-key reducers PARTIAL via per-component file writes; process-isolation STRONG inherited); cluster B sub-shapes 2 + 5 + 8 (component-local persistence PARTIAL; repository-as-state STRONG; active-surface vs monotonic-history STRONG via cycle-history); cluster D sub-shapes 1 + 2 (anti-patterns + walkback STRONG); cluster G sub-shape 1 (audit-as-peer STRONG); cluster I sub-shape 1 (permission-policy STRONG); plus 2 LOW from new-mechanism integrations (boot/close phase coordination at LOW cost given deterministic state machine).
+- **MODERATE count:** 8 — cluster A sub-shapes 4 + 5 (typed-channel-merger PARTIAL via per-component file writes — boundary, MODERATE; bounded-retry-with-feedback PARTIAL via loop ceilings); cluster B sub-shapes 4 + 6 + 9 (sweep-rollup PARTIAL; top-k retrieval ABSENT→PARTIAL via wiki-search; failure-record PARTIAL via detect-abandoned-cycles); cluster C sub-shape 5 (event-trigger PARTIAL); cluster I sub-shape 2 (quality-lint orchestrator-friendly PARTIAL); cluster H sub-shape 1 (tight-cycle meta-feedback PARTIAL via journal).
+- **HIGH count:** 1 — cluster H sub-shape 3 (continuous-background gardening at MODERATE-HIGH; minimal version is gardening-sweep with stale-detection only, not full quality-grading rubrics — boundary case).
+
+**Compared to v1 baseline:** v1 inherits 6 STRONG sub-shapes (process-isolation + repository-as-state + active-surface + anti-patterns + walkback + audit-as-peer-substrate); the candidate inherits 6 STRONG + ~15 PARTIAL adopted sub-shapes. The aggregate per-cycle decision overhead is **moderately higher than v1's actual M2 inheritance** (v1's 6 STRONG only) but **substantially lower than the maximum-adoption baseline** (50 sub-shapes). The candidate's enable-schema-work answer: **YES, primarily via Axis 13 medium harness extracting ~50% of the current v1 prompt's procedural surface**, which is a structural reduction independent of M2 sub-shape adoption.
+
+## Honest reflection
+
+This candidate is the **conservative path**. It commits to the bet that v1's substrate is good and the load-bearing cleanup is structural (state.json, _notes-as-memory, harness extraction) rather than architectural (multi-role decomposition). If that bet is wrong — if the cluster A 6-ABSENT count or the cluster H continuous-background mechanisms are load-bearing for v2 success — this candidate inherits v1's failure surface in those dimensions.
+
+It is also the candidate with the **lowest migration cost and highest cutover predictability**. Phase 3 prototype effort is bounded (~9 new Rust crates, well-defined). Rollback is straightforward (delete v2 artifacts; revert workflow YAML).
+
+Cycle 89 hand-off named this candidate as one of two for cycle 90 authoring. Candidate B (multi-role decomposition) is the **aggressive path** — see [`B-decomposed-multi-role.md`](./B-decomposed-multi-role.md). Eva and the audit-repo orchestrator review both before candidate-selection checkpoint.
