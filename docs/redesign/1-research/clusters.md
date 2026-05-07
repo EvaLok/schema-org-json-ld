@@ -98,11 +98,38 @@ into next-attempt prompt (Voyager I-V7), and (cycle 68) process-
 isolation discipline at session level via ephemeral worktrees
 (OpenAI harness).
 
+**Sub-cluster groupings (cycle 85 audit#454 D3 absorption).** The 9
+sub-shapes partition into four conceptually distinct sub-cluster
+groupings:
+
+- **Phase-boundary semantics** (4 sub-shapes): super-step semantics,
+  phase-boundary state semantics, termination predicates, per-key
+  reducers
+- **Recovery operations** (3 sub-shapes): stuck-session watchdog,
+  sync invariants at init, bounded retries with feedback
+- **Concurrency / queuing** (1 sub-shape): lane-aware FIFO with
+  per-session serialization
+- **Process isolation** (1 sub-shape): ephemeral worktrees
+
+Distribution (4/3/1/1) signals: phase-boundary is structurally
+well-attested, recovery is well-attested, but concurrency and
+process-isolation are 1-sub-shape thin within cluster A. Future
+systems may elevate these to their own sub-cluster groupings or
+distinct clusters as corpus depth supports it. Phase 2 candidate
+evaluation should check coverage at the sub-cluster grouping level,
+not just at the cluster A level — a candidate covering only
+phase-boundary semantics is not equivalent to a candidate covering
+all four sub-cluster groupings.
+
 **Phase 2 implication**: cluster A is near-mandatory. v1's failure
 modes (stale-reference accumulation, abandonment cascade,
 chronic-category currency loop) all map to gaps in cycle-internal
-phasing. Sub-shape variety (9) gives Phase 2 candidates significant
-combinatoric room for differentiation.
+phasing — see sub-cluster grouping annotations in the v1-failure-mode
+mapping below. Sub-shape variety (9 across 4 sub-cluster groupings)
+gives Phase 2 candidates significant combinatoric room for
+differentiation, but candidates should be evaluated for coverage
+distribution across sub-cluster groupings, not just total sub-shape
+count.
 
 ## Cluster B: cross-cycle artifact organization
 
@@ -430,11 +457,33 @@ journal. Cluster D additions for v2:
   structured failure records consulted at next-cycle-composition
   decision
 
-**Cluster I substrate-correlation observation.** v1's substrate
-(GitHub-Actions-anchored multi-actor with audit) is *close* to the
-cloud-anchored multi-actor substrate that correlates with cluster I.
-Phase 2 candidates SHOULD weight cluster I patterns highly even at
-2-system convergence depth. Specific mechanisms:
+**Cluster I substrate-fit observation (revised cycle 85 per audit#454
+D1).** v1's substrate (GitHub-Actions-anchored multi-actor with audit)
+is *close* to the cloud-anchored multi-actor substrate that
+correlates with cluster I. Phase 2 candidates SHOULD evaluate cluster
+I patterns for **substrate-fit**: the limited evidence we have is
+about systems whose substrate looks like v1's substrate, so the
+patterns transfer with substantively higher prior probability for
+v1 than for substantively different substrates.
+
+**Substrate-fit weighting is NOT corpus-depth weighting.** Cluster I
+remains at 2-system convergence (openclaw + OpenAI harness). The
+fact that cluster I now has 3 cross-cluster intersection disciplines
+(D↔I, F↔I, E↔I) is **intersection coverage**, not evidence-depth
+increase — the same 2 systems are analyzed from 3 different angles.
+Phase 2 candidate evaluation should distinguish:
+
+- **Substrate-fit weighting** (real, applies for v1's
+  GitHub-Actions-anchored substrate): cluster I patterns have higher
+  prior probability of transfer than corpus depth alone would suggest
+- **Corpus-depth weighting** (unchanged): cluster I patterns are
+  attested at 2-system convergence; cluster A and cluster B are at
+  6-system convergence. Two candidates with similar cluster I
+  coverage may differ on whether their architecture genuinely *needs*
+  cluster I patterns (substrate-fit) vs adopting them aspirationally
+  because the synthesis weights them highly
+
+Specific mechanisms:
 - **Harness-enforced tool-call policy decoupled from prompt-level
   rules** (openclaw I-O1) — Rust tools enforce what the LLM can
   invoke, not just prompt-level "don't do X" rules
@@ -464,6 +513,26 @@ discipline surface Phase 2 candidates compose against. Each is
 examined below with sub-patterns from the corpus and Phase 2
 implications.
 
+**Sub-pattern classification (cycle 85 audit#454 D2 absorption).**
+Sub-patterns within each intersection are classified as one of:
+
+- **Compositional**: two distinct mechanisms from the two clusters
+  composing at their shared boundary. The intersection is the
+  composition discipline. Compositional sub-patterns count toward
+  intersection-coverage criteria for Phase 2 candidates.
+- **Dual-cast**: one mechanism cast under both cluster labels —
+  the same primitive serves dual roles in the two clusters. Dual-cast
+  sub-patterns are evidence the cluster boundary is thin at that
+  point and warrant revisitation; they should NOT count toward
+  intersection-coverage criteria for Phase 2 candidates.
+
+The compositional / dual-cast classification was added cycle 85 in
+response to audit#454 D2. Three dual-cast cases identified
+explicitly (A↔B sub-pattern 2; A↔C sub-pattern 2; E↔I sub-pattern
+1); other sub-patterns default to compositional unless tagged.
+Future synthesis cycles may surface additional dual-cast cases in
+F↔I, B↔C, F↔H, D↔I that warrant similar tagging.
+
 ### A↔B: storage-discipline at cycle-boundary moments
 
 Cluster A defines *when* in the cycle phase-boundary moments
@@ -483,12 +552,20 @@ Five sub-patterns from the corpus:
    cycles.
 
 2. **State-commit at end-of-super-step** (LangGraph I-L1 + I-L2).
-   Cluster A super-step boundary + cluster B per-key reducer
-   rules. Each super-step ends with a coordinated state-commit
-   through reducers; cluster B reducer rules ARE cluster A
-   boundary semantics. Without explicit super-step boundaries,
-   reducer rules fire at fuzzy points and produce write-write
-   conflicts.
+   `[DUAL-CAST]` Cluster A super-step boundary + cluster B per-key
+   reducer rules. Each super-step ends with a coordinated
+   state-commit through reducers; cluster B reducer rules ARE
+   cluster A boundary semantics — same LangGraph mechanism cast
+   under both cluster labels. Without explicit super-step
+   boundaries, reducer rules fire at fuzzy points and produce
+   write-write conflicts. **Dual-cast classification (cycle 85
+   audit#454 D2):** this sub-pattern does not count toward A↔B
+   intersection-coverage criteria for Phase 2 candidates because
+   the boundary between cluster A super-step and cluster B
+   reducer-rule is thin at this point — they're the same
+   primitive serving dual roles. Phase 2 candidates that adopt
+   LangGraph-style super-step+reducer don't need separate A↔B
+   intersection discipline at this sub-pattern's location.
 
 3. **Failure-record-write at retry-exhaustion** (Voyager I-V7 +
    I-V8). Cluster A bounded-retry-with-feedback (retry exhaustion
@@ -715,15 +792,24 @@ Five sub-patterns from the corpus:
    external interrupt rather than typed completion.
 
 2. **Stuck-watchdog × lane-release** (openclaw I-O5 — within-system
-   pair, two-cluster cast). Cluster A I-O5 is the watchdog as
+   pair). `[DUAL-CAST]` Cluster A I-O5 is the watchdog as
    phase-boundary detection (recovery-without-abort lifecycle
    operation per cycle 70 phrasing); cluster C I-O5 is the same
    mechanism cast as lane-release lifecycle op. The same I-O5
    implication is BOTH a cluster A boundary-detection sub-shape AND
-   a cluster C lifecycle-op sub-shape. The intersection IS what
-   makes I-O5 actionable: watchdog without lane-release detects
-   stuckness silently; lane-release without watchdog has no trigger.
-   Recovery-without-abort emerges only at the intersection.
+   a cluster C lifecycle-op sub-shape — same openclaw mechanism cast
+   under both cluster labels. The intersection IS what makes I-O5
+   actionable: watchdog without lane-release detects stuckness
+   silently; lane-release without watchdog has no trigger.
+   Recovery-without-abort emerges only at the intersection. **Dual-
+   cast classification (cycle 85 audit#454 D2):** this sub-pattern
+   does not count toward A↔C intersection-coverage criteria for
+   Phase 2 candidates because the boundary between cluster A
+   watchdog-detection and cluster C lane-release lifecycle-op is
+   thin at this point — they're the same primitive serving dual
+   roles. Phase 2 candidates that adopt openclaw-style I-O5 don't
+   need separate A↔C intersection discipline at this sub-pattern's
+   location.
 
 3. **Super-step boundary × fork** (LangGraph I-L1 super-step + I-L4
    time travel — within-system pair). Cluster A super-step boundary
@@ -823,11 +909,19 @@ Five sub-patterns from the corpus:
    cluster B failure-record write before lane-release. Without the
    intersection, watchdog releases lanes silently → loss of v2
    design-input evidence. The v1 cycle-71 stuck-dispatch incident
-   illustrates this directly: the orchestrator self-diagnosed the
-   malformed dispatch and produced a diagnosis comment on the dispatch
-   issue, but no structured failure-record persisted to a known
-   storage surface for next-cycle composition decisions; the diagnosis
-   lives only in unstructured issue comments and the journal.
+   is well-described by this intersection in retrospect (cycle 85
+   audit#454 D4 corrective): the orchestrator self-diagnosed the
+   malformed dispatch and produced a diagnosis comment on the
+   dispatch issue, but no structured failure-record persisted to a
+   known storage surface for next-cycle composition decisions; the
+   diagnosis lives only in unstructured issue comments and the
+   journal. Note: B↔C synthesis happened cycle 72, post-incident;
+   the cycle-71 incident is post-hoc described by B↔C, not
+   predicted by it. Cycle 85 J-Q(a) discipline applied: empirical
+   observation (cycle 72 B↔C describes cycle 71 incident pattern)
+   distinguished from claim about prediction (cycle 71 was
+   understood in B↔C terms) — the former is licensed, the latter
+   is not.
 
 5. **Event-trigger × per-component resume opt-in** (openclaw reactive
    event-trigger + Voyager I-V3 per-component resume). Reactive
@@ -970,13 +1064,22 @@ hand-rule-driven.
 Four sub-patterns from the corpus:
 
 1. **TypeBox schemas × harness validation** (openclaw — within-system
-   pair). TypeBox is single-source-of-truth that produces validators
-   in TypeScript / Swift / JSON-Schema; cluster I enforces those
-   validators at boundaries (default-deny on schema mismatch). The
-   intersection IS the substrate: schema *is* the policy, validator
-   *is* the harness check. Without the intersection, harness has
+   pair). `[DUAL-CAST]` TypeBox is single-source-of-truth that
+   produces validators in TypeScript / Swift / JSON-Schema; cluster I
+   enforces those validators at boundaries (default-deny on schema
+   mismatch). The intersection IS the substrate: schema *is* the
+   policy, validator *is* the harness check — same TypeBox primitive
+   serving dual roles. Without the intersection, harness has
    hand-written validation rules that drift from TypeBox schemas →
-   silent acceptance of invalid data or false rejection of valid data.
+   silent acceptance of invalid data or false rejection of valid
+   data. **Dual-cast classification (cycle 85 audit#454 D2):** this
+   sub-pattern does not count toward E↔I intersection-coverage
+   criteria for Phase 2 candidates because the boundary between
+   cluster E typed-contract and cluster I harness-enforcement is
+   thin at this point — they're the same TypeBox primitive serving
+   dual roles. Phase 2 candidates that adopt openclaw-style TypeBox
+   single-source-of-truth don't need separate E↔I intersection
+   discipline at this sub-pattern's location.
 
 2. **Per-key reducer rules × policy-at-merge-time** (LangGraph I-L2
    per-key reducers + cluster I). Per-key reducers are typed merge-
@@ -1248,22 +1351,78 @@ cycles, deferred this synthesis:
   on the four flagged intersections from cycle 72 (A↔C, B↔C,
   F↔I, E↔I — all four elevated to full treatment matching cycle-
   72 format with 4-5 sub-patterns each, v1 failure-mode mapping,
-  Phase 2 implication; ~340 lines added; cluster-I substrate-
-  correlation hardened — every cluster I sub-shape now has a
-  full intersection discipline; cluster C re-foregrounded as
-  lifecycle-vocabulary linchpin via A↔C + B↔C dual participation)
+  Phase 2 implication; ~340 lines added; cluster-I intersection
+  coverage extended — every cluster I sub-shape now has a full
+  intersection discipline (revised cycle 85 per audit#454 D1: this
+  is intersection-coverage extension, NOT corpus-depth hardening;
+  cluster I remains at 2-system convergence); cluster C
+  re-foregrounded as lifecycle-vocabulary linchpin via A↔C + B↔C
+  dual participation)
 
-Total: 45 implications across 6 systems across 9 clusters across
-8 mining cycles, plus 4 synthesis cycles (65, 70, 72, 74) producing
-within-cluster sub-shape catalogues + 7 cross-cluster intersection
-disciplines (A↔B, F↔H, D↔I, A↔C, B↔C, F↔I, E↔I) + per-cycle
-process documents under `../_notes/`. Implications-mining cadence
-on unique deep-dive systems is exhausted post-cycle 69. Future
-mining requires either dispatch deliveries (oh-my-codex via
+### Post-cycle-74 cold-reader rhythm and cycle 85 toggle
+
+Cycles 75-84 ran a cold-reader rhythm with substantive focal
+diversifying across stress-tests, corrective audits, explore-
+alternatives, and synthesis:
+
+- Cycles 75-77: cold-reader on prior cycle (3 instances)
+- Cycles 78-80: cold-reader-then-stress-test (cluster I; cluster F;
+  cluster A vs G — HARDENED at 3 instances)
+- Cycle 81: cold-reader-then-self-congratulation-audit (NOVEL shape)
+- Cycle 82: cold-reader-then-over/under-prescription-audit
+- Cycle 83: cold-reader-then-explore-alternatives
+- Cycle 84: cold-reader-then-synthesis (RE-INSTANCE; ~3400 lines of
+  accumulated _notes distilled into 6 v2 design-input categories)
+
+The post-cycle-74 cold-reader rhythm produced refinements integrated
+into clusters.md cycles 79-80 (cluster A vs G boundary, cluster F
+multi-lens framework) and methodology refinements documented in
+_notes/ for cycles 81-84 (granular-vs-broad conflation, 3.5-axis
+matrix for lexicon, anti-inheritance discipline). The artifact-
+resident integration rate dropped post-cycle-80 — cycles 81-84
+produced methodology refinements that live in _notes/ but did not
+update clusters.md.
+
+**Cycle 85 toggle (audit#454 D5/P5 absorption).** Audit cycle 212
+identified the post-cycle-80 cold-reader rhythm as having reached
+diminishing-returns boundary and recommended cycles 85-90 toggle
+to artifact-resident integration of accumulated synthesis OR
+Phase 2 candidate authoring. Cycle 85 implements the toggle:
+
+- Cold-reader cadence as cycle-agnostic prefix is **suspended**
+  for cycles 85-89 in favor of artifact-resident integration
+- Cycle 85 substantive focal: per-question audit#454 absorption +
+  targeted clusters.md revisions (D1, D2, D3, D4 ACCEPT verdicts
+  applied; D5 acknowledged in this cadence summary)
+- Cycles 86-89 plan: M1 v1-substrate instantiation layer, M2
+  self-management cost annotations, M3 v1 strengths layer, M4
+  cycle frequency Phase 2 variable, M5/P6 audit-as-peer
+  preservation pattern, P1-P6 Phase 2 evaluation discipline
+- Cycle 90 trigger: if cycles 86-89 complete cleanly, cycle 90
+  begins Phase 2 candidate authoring against the augmented
+  synthesis surface
+
+Cold-reader prefix may return cycle 90+ if specific outputs warrant
+fresh-eyes verification (e.g., major artifact restructure cycle),
+but the cycle 78-84 default of "every cycle starts with cold-reader"
+is dropped. Per-cycle process documents continue under `../_notes/`.
+
+Total (post cycle 85): 45 implications across 6 systems across 9
+clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
+72, 74, 84) producing within-cluster sub-shape catalogues + 7
+cross-cluster intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C,
+F↔I, E↔I) with compositional / dual-cast sub-pattern classification
++ 1 audit-engagement absorption cycle (85) integrating 21 audit#454
+verdicts. Implications-mining cadence on unique deep-dive systems
+is exhausted post-cycle 69. Future mining requires either dispatch
+deliveries (oh-my-codex via
 [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
-still in flight, PAI via [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
-dispatched cycle 71) OR re-mining existing systems at deeper
-depth. Synthesis cycles continue extending upward (within-cluster
-→ cross-cluster → potentially cross-system architectural-pattern
-synthesis) while waiting for new mining material; the synthesis
-arc has been substantively additive across cycles 65, 70, 72, 74.
+still in flight, PAI via
+[#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
+dispatched cycle 71, oh-my-claudecode via
+[#2847](https://github.com/EvaLok/schema-org-json-ld/issues/2847)
+dispatched cycle 75, openai/symphony via
+[#2851](https://github.com/EvaLok/schema-org-json-ld/issues/2851)
+dispatched cycle 77) OR re-mining existing systems at deeper
+depth. The synthesis arc has been substantively additive across
+cycles 65, 70, 72, 74, 84.
