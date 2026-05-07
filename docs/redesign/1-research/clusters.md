@@ -74,6 +74,16 @@ own substrate (cloud-anchored multi-actor with audit) — Phase 2
 candidates SHOULD weight cluster I patterns highly despite the low
 depth count.
 
+**v1-substrate instantiation annotation work begun cycle 86
+(audit#454 M1 absorption).** Cluster A receives full substrate-fit
+annotations this cycle as proof-of-format using cycle 85's D3
+sub-cluster grouping scaffold. Cycles 87-89 extend the annotation
+to clusters B / D / F / H (most-foregrounded clusters first), then
+C / E / G / I per cycle 85's M1-M5 multi-cycle plan. Annotation
+format (substrate-fit STRONG / PARTIAL / ABSENT + current v1
+instantiation + design work needed) and Phase 2 evaluation use are
+documented in the cluster A subsection below.
+
 ## Cluster A: cycle-internal boundaries with state-write semantics
 
 `[6-system clean]` AutoGen + LangGraph + Cognition + openclaw +
@@ -120,6 +130,168 @@ evaluation should check coverage at the sub-cluster grouping level,
 not just at the cluster A level — a candidate covering only
 phase-boundary semantics is not equivalent to a candidate covering
 all four sub-cluster groupings.
+
+**v1-substrate instantiation (M1, cycle 86 audit#454 absorption).**
+Each of the 9 sub-shapes is annotated with how its mechanism maps
+to v1's substrate (GitHub Actions runner / Rust tools / Claude Code
+session / cron trigger / repository-as-state / GitHub issue tracker).
+Annotation format: substrate-fit (STRONG / PARTIAL / ABSENT) +
+current v1 instantiation if any + design work needed for Phase 2
+candidates that adopt the sub-shape. Phase 2 candidate evaluation
+uses these annotations to weight implementation effort by ABSENT
+count and to identify mechanisms that v1's substrate provides "for
+free" (STRONG) versus those requiring substantial substrate-design
+work.
+
+*Phase-boundary semantics sub-shapes:*
+
+1. **Super-step semantics with per-channel reducer rules
+   (LangGraph I-L1)** — substrate-fit PARTIAL. v1's cron-triggered
+   cycle is implicit super-step (cycle issue lifecycle as the
+   boundary), but per-channel reducer rules are absent (multiple
+   file writes in the same cycle silently overwrite, no per-state-
+   surface declared reducer). Design work: explicit phase boundaries
+   within a cycle (Phase 0 read state / Phase 1 substantive work /
+   Phase 2 write artifacts / Phase 3 post comments) + per-state-
+   surface reducer rules declared in a registry. Substrate via Rust
+   tool `enforce-phase-boundary` invoked at session start and at
+   phase transitions.
+
+2. **Phase-boundary state semantics (AutoGen I-3 + LangGraph
+   I-L1)** — substrate-fit ABSENT. v1's cycle has implicit phase
+   boundaries but no declarative state-write semantics at each
+   boundary (no "at this phase boundary, these state writes have
+   happened or must happen"). Design work: typed phase-state
+   machine (`cycle-state.json` with phase tag + transition guards).
+   Substrate via Rust tool `cycle-state-machine` embedded in
+   cycle-runner harness; transitions emit state-write semantics
+   declared per phase.
+
+3. **Termination predicates as cycle-internal phase delimiters
+   (AutoGen I-3)** — substrate-fit ABSENT. v1 terminates on
+   wall-clock (75-min session timeout) or orchestrator-judgment
+   (close cycle issue), not predicate-driven per-phase termination.
+   Design work: declarative termination predicates per phase (e.g.,
+   "Phase 1 complete when journal-entry-written AND
+   cycle-end-comment-posted"). Substrate via Rust tool
+   `phase-termination-check` that runs at phase boundaries; exits
+   non-zero if predicates fail (escalates via question-for-eva).
+
+4. **Per-key reducers with explicit merge rules (LangGraph
+   I-L2)** — substrate-fit PARTIAL. v1 has implicit reducers
+   (journal entries append; clusters.md uses last-write-wins;
+   issue comments append) but no declared per-state-surface
+   reducer registry — multiple writes silently overwrite when
+   intent was merge-or-append. Design work: state surface registry
+   declaring reducer per surface (append / replace / merge-keys).
+   Substrate via Rust tool `apply-state-update` that takes
+   (surface, update) and applies the declared reducer; files
+   declare reducer via header comment or central registry file.
+
+*Recovery operations sub-shapes:*
+
+5. **Stuck-session watchdog (openclaw I-O5)** — substrate-fit
+   ABSENT. v1's cycle-runner has wall-clock session timeout but
+   no detection of "previous cycle abandoned mid-flight" (no
+   journal entry written, no end-of-cycle comment posted,
+   dispatched issue without acknowledgment). The cycle 71
+   stuck-dispatch incident is the canonical example: dispatch was
+   filed but the orchestrator-bot couldn't self-fix the malformed
+   assignment, and v1 had no detection mechanism so the dispatch
+   sat 8+ cycles before diagnosis. Design work: Rust tool
+   `detect-abandoned-cycles` runs at session start, checks recent
+   cycle issues for incomplete artifacts and outputs structured
+   remediation hints. Optional integration with cycle-runner
+   harness for automatic recovery or escalation to question-for-
+   eva.
+
+6. **Sync invariants at init (Voyager I-V4)** — substrate-fit
+   ABSENT. v1 session init reads recent journal entries and the
+   prompt but doesn't validate cross-storage consistency. The
+   stale-reference accumulation in 1-research.md (cycles 30-50,
+   cleanup work in cycles 60-61) is the canonical example. Design
+   work: Rust tool `state-sync-check` (already named in v1-failure-
+   mode mapping) validates clusters.md cross-references; 1-research.md
+   system list matches systems/ subdirectory; cycle issue label
+   state coherent. Outputs structured remediation text on
+   divergence; exits non-zero on critical divergence to halt cycle
+   entry.
+
+7. **Bounded retries with critic-feedback fed forward (Voyager
+   I-V7)** — substrate-fit ABSENT. v1's dispatch failures (Copilot
+   assignment delays; malformed dispatches) require orchestrator-
+   decides-per-cycle judgment. The 4 dispatches awaiting Copilot
+   assignment for 22+ cycles (#2833, #2842, #2847, #2851) are the
+   canonical example. Design work: Rust tool `dispatch-with-retry`
+   (already named in v1-failure-mode mapping) wrapping `gh issue
+   create` with max-retries semantic; prior-attempt context
+   preserved in retry payload; structured failure diagnostic on
+   max-retries-exceeded. Each retry includes critique context from
+   prior attempt fed forward into the next-attempt issue body.
+
+*Concurrency / queuing sub-shape:*
+
+8. **Lane-aware FIFO with per-lane concurrency caps and
+   per-session serialization (openclaw I-O3)** — substrate-fit
+   ABSENT. v1's cycle is serial: one cron tick per ~6 hours, one
+   orchestrator session per tick. There's no notion of multiple
+   parallel lanes — substantive / absorption / housekeeping work
+   shapes are sequential within a single cycle. Design work:
+   substrate change is non-trivial. Three options for Phase 2
+   candidates: (a) multiple parallel cron schedules with
+   lane-tagged outputs; (b) single cycle spawns parallel tool
+   invocations as lanes (Claude Code session invokes multiple
+   tools each acting as a parallel lane); (c) issue-tracker-as-
+   queue with explicit lane labels and per-lane stuck-watchdog.
+   Most v1-substrate-aligned: option (c) with Rust tool
+   `lane-queue-status` reading issue labels — preserves
+   repository-as-state without architectural shift.
+
+*Process isolation sub-shape:*
+
+9. **Process-isolation discipline at session level via ephemeral
+   worktrees (OpenAI harness, cycle 68)** — substrate-fit STRONG.
+   GitHub Actions runners ARE ephemeral worktrees: each cron-
+   triggered cycle runs in a fresh runner with the repo cloned
+   fresh; no state carries across runners except through the
+   repository (commits) and external systems (issues, labels,
+   comments). v1 inherits this property "for free" from the
+   substrate. Design implication: Phase 2 candidates that preserve
+   "cycle = isolated process" inherit this without effort;
+   candidates that deviate (e.g., persistent worker process) lose
+   the property and must re-derive it via different mechanism
+   (Docker container per cycle; in-memory sandbox reset).
+
+**Substrate-fit summary across cluster A's 9 sub-shapes:**
+- **STRONG (1):** process-isolation via ephemeral worktrees
+- **PARTIAL (2):** super-step semantics, per-key reducers
+- **ABSENT (6):** phase-boundary state semantics, termination
+  predicates, stuck-session watchdog, sync invariants at init,
+  bounded retries with feedback, lane-aware FIFO
+
+The 6 ABSENT sub-shapes constitute the bulk of cluster A's
+substrate-design work for Phase 2 candidates. The 2 PARTIAL
+sub-shapes need design work but build on existing v1 patterns
+(implicit super-step boundary, implicit per-file reducer
+behavior). The 1 STRONG sub-shape (process-isolation) is
+inherited from the substrate; Phase 2 candidates should not
+assume it requires implementation.
+
+**Phase 2 evaluation use of these annotations:**
+
+- *Implementation effort* — weight by ABSENT count; cluster A's
+  6 ABSENT sub-shapes signal substantial Rust tool design work
+  for any candidate adopting most of cluster A
+- *Substrate-design effort by sub-cluster grouping* — recovery
+  operations have 3 ABSENT sub-shapes (largest substrate-design
+  burden); phase-boundary semantics have 2 ABSENT + 2 PARTIAL
+  (next largest); concurrency-queuing has 1 ABSENT (single
+  decision-point with 3 named options); process-isolation has
+  0 ABSENT (free from substrate)
+- *"Free from substrate" inheritance* — candidates should
+  explicitly acknowledge which mechanisms they inherit (don't
+  need to design) versus which they implement; failure to do so
+  is itself a Phase 2 evaluation flag for under-specification
 
 **Phase 2 implication**: cluster A is near-mandatory. v1's failure
 modes (stale-reference accumulation, abandonment cascade,
@@ -1407,13 +1579,30 @@ fresh-eyes verification (e.g., major artifact restructure cycle),
 but the cycle 78-84 default of "every cycle starts with cold-reader"
 is dropped. Per-cycle process documents continue under `../_notes/`.
 
-Total (post cycle 85): 45 implications across 6 systems across 9
+**Cycle 86 first M-item integration.** Cycle 86 implements M1
+v1-substrate instantiation layer for cluster A using the cycle 85
+D3 sub-cluster grouping scaffold. 9 substrate notes integrated into
+the cluster A section above (1 STRONG inherited from GitHub Actions
+runner ephemeral-worktree property + 2 PARTIAL extending implicit
+v1 patterns + 6 ABSENT requiring substantial Rust tool design).
+This is the first cycle of artifact-resident M-item absorption
+(cycles 86-89). Cycle 87 plan: cluster B M1 (storage architecture
+sub-shapes; the cluster most likely to have STRONG substrate-fit
+because v1's repo-as-state pattern aligns with multiple cluster B
+sub-shapes) + M2 self-management cost annotations begin. Cycle 88:
+clusters D / F M1 + M3 v1 strengths layer + M4 cycle frequency
+Phase 2 variable. Cycle 89: clusters C / E / G / H / I M1 + M5/P6
+audit-as-peer preservation pattern + P1-P6 Phase 2 evaluation
+discipline integration into 2-design-framework.md.
+
+Total (post cycle 86): 45 implications across 6 systems across 9
 clusters across 8 mining cycles, plus 5 synthesis cycles (65, 70,
 72, 74, 84) producing within-cluster sub-shape catalogues + 7
 cross-cluster intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C,
 F↔I, E↔I) with compositional / dual-cast sub-pattern classification
 + 1 audit-engagement absorption cycle (85) integrating 21 audit#454
-verdicts. Implications-mining cadence on unique deep-dive systems
+verdicts + 1 M-item integration cycle (86) producing 9 cluster A
+v1-substrate instantiation notes. Implications-mining cadence on unique deep-dive systems
 is exhausted post-cycle 69. Future mining requires either dispatch
 deliveries (oh-my-codex via
 [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833)
