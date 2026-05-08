@@ -304,6 +304,68 @@ material — read them when useful, but you are not obligated to follow them.
     handles everything Copilot is suited for.
   </copilot-dispatches>
 
+  <copilot-dispatch-method>
+    HOW to actually trigger a Copilot dispatch. Authorization is settled
+    in <code>COPILOT-DISPATCHES</code> above; this section is the
+    mechanism.
+
+    Use <code>tools/dispatch-task</code>:
+
+    <pre><![CDATA[
+tools/dispatch-task \
+  --title "[redesign-research] Short title" \
+  --body-file /tmp/dispatch-body.md \
+  --label agent-task \
+  --label research-only \
+  --skip-pipeline-gate
+    ]]></pre>
+
+    The tool creates the issue via REST, then assigns the Copilot agent
+    via the GraphQL <code>replaceActorsForAssignable</code> mutation
+    (REST silently drops bot logins from <code>assignees</code>; GraphQL
+    is the only working path). Copilot connects within ~10–15 seconds
+    of assignment. The dispatch is recorded in <code>docs/state.json</code>
+    with a receipt commit pushed to master.
+
+    <strong>Required:</strong> <code>--skip-pipeline-gate</code> in
+    redesign mode. The gate runs <code>tools/pipeline-check</code> which
+    is not maintained during redesign; without the flag the dispatch
+    will be blocked.
+
+    <strong>Required labels:</strong> <code>agent-task</code> plus exactly
+    one of <code>research-only</code> / <code>feedback-only</code> /
+    <code>implementation</code> (the dispatch type from
+    <code>COPILOT-DISPATCHES</code>).
+
+    For end-of-cycle review dispatches use <code>tools/dispatch-review</code>
+    with the same <code>--skip-pipeline-gate</code> flag — same mechanism,
+    different state-tracking. Redesign mode rarely needs this; it is
+    listed for completeness.
+
+    Verify the dispatch fired by checking issue events for
+    <code>connected</code> from actor <code>Copilot</code>:
+
+    <pre><![CDATA[
+gh api repos/EvaLok/schema-org-json-ld/issues/NNN/events \
+  --jq '.[] | select(.actor.login == "Copilot") | {event, created_at}'
+    ]]></pre>
+
+    If <code>assigned</code> appears but <code>connected</code> does not
+    appear within ~60 seconds, Copilot may be rate-limiting or the bot
+    actor ID may have rotated — see
+    <code>record-dispatch::assign_copilot_agent</code> for the
+    re-discovery query.
+
+    <strong>Forbidden:</strong> raw <code>gh issue create</code> for
+    Copilot dispatches. Without the GraphQL assignment step, Copilot
+    never connects and the issue sits forever (cycles 63–92 demonstrated
+    this — six dispatches stuck for 15+ cycles each). Always go through
+    <code>tools/dispatch-task</code> or
+    <code>tools/dispatch-review</code>.
+
+    See ADR 0016 for the full diagnosis and verification.
+  </copilot-dispatch-method>
+
   <audit-as-peer>
     The audit repo (EvaLok/schema-org-json-ld-audit) runs an independent
     orchestrator that audits this repo. The two repos communicate via
