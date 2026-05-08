@@ -86,6 +86,7 @@ cross-system synthesis below cross-validates patterns across systems.
 | OpenAI harness-engineering | Copilot dispatch (cycle 26, [PR #2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)) + deeper read (cycle 41, [PR #2805](https://github.com/EvaLok/schema-org-json-ld/pull/2805)) | Deep-dive | [`systems/openai-harness.md`](1-research/systems/openai-harness.md) |
 | oh-my-codex | Copilot dispatch (cycle 26, [PR #2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)) | **Stub** — cycle-63 deeper read in flight ([#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833); supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782)) | [`systems/oh-my-codex.md`](1-research/systems/oh-my-codex.md) |
 | openai/symphony | Copilot dispatch (cycle 77, [PR #2873](https://github.com/EvaLok/schema-org-json-ld/pull/2873) absorbed cycle 98) | **First-pass** — spec + impl-shape; deeper-read queue documented | [`systems/symphony.md`](1-research/systems/symphony.md) |
+| oh-my-claudecode | Copilot dispatch (cycle 75, [PR #2876](https://github.com/EvaLok/schema-org-json-ld/pull/2876) absorbed cycle 99) | **First-pass** — surface architecture + hooks/lifecycle + .omc state model + 22-pattern mapping; deeper-read queue documented | [`systems/oh-my-claudecode.md`](1-research/systems/oh-my-claudecode.md) |
 
 Single-system observations (patterns supported by only one system, not
 yet elevated to cross-system) are held in
@@ -683,7 +684,7 @@ identifications. Order not yet committed.
 | Semantic Kernel | Microsoft's agent SDK; planner/skills split | Copilot research-only dispatch (lower priority) | Pending |
 | Anthropic engineering posts | Claude Code, agent SDK, internal tooling experience | Orchestrator-direct | Pending |
 | openai/symphony | Per Eva directive [#2775](https://github.com/EvaLok/schema-org-json-ld/issues/2775) | Copilot research-only dispatch (cycle 77, [#2851](https://github.com/EvaLok/schema-org-json-ld/issues/2851)) | First-pass landed (cycle 98, [PR #2873](https://github.com/EvaLok/schema-org-json-ld/pull/2873)); per-system file [`systems/symphony.md`](1-research/systems/symphony.md) |
-| oh-my-claudecode | Per Eva directive [#2774](https://github.com/EvaLok/schema-org-json-ld/issues/2774) | TBD | Pending |
+| oh-my-claudecode | Per Eva directive [#2774](https://github.com/EvaLok/schema-org-json-ld/issues/2774) | Copilot research-only dispatch (cycle 75, [#2847](https://github.com/EvaLok/schema-org-json-ld/issues/2847)) | First-pass landed (cycle 99, [PR #2876](https://github.com/EvaLok/schema-org-json-ld/pull/2876)); per-system file [`systems/oh-my-claudecode.md`](1-research/systems/oh-my-claudecode.md) |
 
 ### Cycle plan (provisional)
 
