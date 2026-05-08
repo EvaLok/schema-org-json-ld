@@ -172,13 +172,14 @@ The candidate's P3 PASS claim depends on the Axis 13 medium harness extracting ~
 - Per-cycle audit-side artifact read (audit's `_notes/`, audit's `docs/redesign/`)
 - Audit critique surface (issues with `[redesign-feedback]` title prefix or audit-cycle-post pattern)
 
-**Extracted (estimated XML element count from v1 prompt):**
+**Extracted (XML element count from v1 prompt — VERIFIED cycle 96 per PR #2878 absorption):**
 
-- STARTUP_CHECKLIST.xml currently has ~180 named steps across S0-S15 step IDs (each step is a named procedural pattern extractable to a deterministic phase)
-- COMPLETION_CHECKLIST.xml currently has ~80 named steps across C0-C15 step IDs
-- Aggregate: ~260 named procedural steps in v1 STARTUP + COMPLETION checklists
-- Of these, ~130-160 are deterministic (read-this-file, write-this-template, advance-this-cursor, enumerate-this-list) and structurally extractable to cycle-runner phases without orchestrator judgment
-- Remaining ~100-130 require orchestrator judgment (substantive-focal selection, situational decisions, bottleneck-state assessment, sibling-pattern recognition) and stay in the v2 prompt
+- STARTUP_CHECKLIST.xml: **35** named `<step>`/`<substep>` IDs across S0-S15 (verified count, not estimate)
+- COMPLETION_CHECKLIST.xml: **15** named `<step>`/`<substep>` IDs across C0-C15
+- orchestrator-prompt.xml: 0 `<step>`/`<substep>` element IDs (prose+tag structure, not numbered-step structure)
+- **Aggregate: 50 named step/substep IDs** in v1 STARTUP + COMPLETION checklists. The cycle 91 authoring claim of "~260" was a 5.2× overcount, fabricated to support the ~50% extraction percentage rather than counted from the files. (See cycle 96 absorption note `_notes/cycle-96-feedback-absorption.md` Finding 1.)
+- **Per cycle 91 _notes** (`_notes/cycle-91-candidate-C-and-A-sharpening.md`), the extractable-pattern count from the original sharpening exercise was "~15 from STARTUP + ~10 from COMPLETION + ~5 dispatch-poll + ~5 audit-read" = **~35 extractable patterns**, distinct unit-of-analysis from step IDs (patterns aggregate cross-step responsibilities). Against the verified 50-step denominator, the extraction-percentage calculation is **indeterminate without first agreeing on the unit of analysis** (step IDs vs patterns). The original "~130-160 extractable" figure does not survive verification.
+- The judgment-vs-deterministic split below describes the **judgment-required surface** that medium-harness extraction would NOT eliminate, independent of any extraction-percentage claim.
 
 ### What the medium harness retains (orchestrator-judgment surface)
 
@@ -193,7 +194,7 @@ The candidate's P3 PASS claim depends on the Axis 13 medium harness extracting ~
 
 ### Estimated v2 prompt size
 
-- v1 prompt (current orchestrator-prompt.xml + STARTUP_CHECKLIST.xml + COMPLETION_CHECKLIST.xml): aggregate ~2400 lines (prompt ~1100 lines + STARTUP ~800 lines + COMPLETION ~500 lines).
+- v1 prompt (current orchestrator-prompt.xml + STARTUP_CHECKLIST.xml + COMPLETION_CHECKLIST.xml): aggregate **1,289 lines** (prompt **559** + STARTUP **298** + COMPLETION **432**) — VERIFIED cycle 96 against the actual files. The cycle 91 authoring claim of "~2400 lines (prompt ~1100 + STARTUP ~800 + COMPLETION ~500)" was 1.86× the actual size; component overestimates were 2× / 2.7× / 1.16× respectively. (See cycle 96 absorption note Finding 2.)
 - v2 prompt (this candidate's prompt only; no external checklists): estimated ~600-800 lines.
   - Purpose / mission / authority sections: ~150 lines (relatively unchanged from v1's mission section)
   - Preserved-primitives + security: ~120 lines (mostly unchanged)
@@ -201,8 +202,8 @@ The candidate's P3 PASS claim depends on the Axis 13 medium harness extracting ~
   - Tool registry reference: ~50 lines (one-line description per tool with invocation contract)
   - Judgment-call surface (substantive-focal selection, situational decisions, sibling-pattern recognition, honest reflection, cross-repo-communication, cycle-composition-shape declaration): ~150 lines
   - Iteration-until-approval discipline + abort criteria + checkpoints: ~80 lines
-- **Aggregate v2 prompt**: ~600-800 lines, vs v1's ~2400 lines = ~67-75% reduction at the byte level.
-- **Procedural-surface reduction at the structural level**: ~130-160 of ~260 named steps extracted = ~50-62% of named-step extraction.
+- **Aggregate v2 prompt**: ~600-800 lines, vs v1's verified **1,289** lines = **~38-53% byte-level reduction**. The cycle 91 authoring claim of "~67-75% reduction" rested entirely on the inflated 2400-line denominator and does not survive verification. The direction (v2 prompt is shorter than v1 total surface) holds; the magnitude is roughly half what was originally claimed.
+- **Procedural-surface reduction at the structural level**: **indeterminate** until extraction-count and step-count units of analysis are reconciled (see `Extracted` block above). The cycle 91 authoring "~50-62%" figure used a fabricated 260-step denominator and an unmeasured 130-160 extractable count; both inputs require regrounding before any percentage claim.
 
 ### Validation plan (cycle 92+ Phase 3 prototype work)
 
@@ -210,19 +211,21 @@ The estimates above are derived from v1 prompt structure analysis, not yet valid
 
 1. Author a draft v2 prompt at `prompts/v2/orchestrator-prompt.xml` covering the categories above. Measure actual line count.
 2. Author the `boot-mode` Rust crate as the smallest scaffold of the medium-harness extraction. Measure how much procedural content fits into deterministic Rust code vs what spills back into the prompt.
-3. Compare actual extraction percentage against the ~50% structural estimate.
-4. If extraction percentage falls below 40%, the P3 PASS claim weakens; investigate whether more procedural content can be extracted (potentially shifting toward the fat-harness Axis 13 position) or whether the orchestrator-judgment surface is genuinely larger than estimated.
+3. **Decide and document the unit of analysis** (step IDs vs named patterns vs prose-procedural clauses) BEFORE measuring extraction percentage. Per cycle 96 absorption Risk 0, the choice of unit is a candidate claim itself, not a measurement.
+4. Measure extraction in the chosen unit against the verified v1 baseline (50 step IDs, 1,289 prompt+checklist lines).
+5. **Hard refutation threshold (added cycle 96 per PR #2878 Finding 18 — external falsification criterion):** if the chosen unit measures < **30%** extraction with judgment-surface preservation intact, P3 is **reclassified to PARTIAL-FLAG regardless of direction-validation status**. This is a pre-agreed threshold that does not depend on the orchestrator's own assessment. Between 30% and 50%, P3 is PASS-WITH-NOTE. At ≥ 50%, P3 is full PASS. Specifying this threshold in advance is the discipline absent from the cycle 91 sharpening's soft "weakens" language.
 
-If the validation reveals that ~50% extraction is achievable, P3 PASS is grounded. If validation reveals < 40% extraction is achievable while preserving orchestrator-judgment surface, the candidate's P3 PASS claim is weaker than asserted and should be revised to PASS-WITH-NOTE or PARTIAL.
+If validation reveals ≥ 50% extraction is achievable in the chosen unit, P3 PASS is grounded. Between 30-50%, P3 is PASS-WITH-NOTE. Below 30%, P3 fails outright and the candidate's substrate-bet (medium-harness adequately extracts procedural surface) is refuted; design reverts to either fat-harness Axis 13 or larger v2 prompt.
 
 ### Risks named at the structural level (not yet validated)
 
-- **Risk 1:** the named-step taxonomy in v1 STARTUP/COMPLETION is incomplete (some procedural patterns are not explicitly numbered S/C step IDs but are named in prose). The ~260 step count is a lower bound; the actual procedural surface may be larger.
-- **Risk 2:** the boundary between deterministic-extractable and judgment-required is fuzzy for some steps (e.g., "post session-start comment with templated content" is deterministic in template but judgment-required in what to fill in). The ~50% extraction estimate assumes deterministic-extractable cases dominate; if judgment-required cases dominate, extraction is lower.
+- **Risk 0 (added cycle 96 per PR #2878 absorption — baseline-measurement risk):** prior to cycle 96, the quantitative baselines (step count, line count) used in this section were unverified estimates that did not survive checking against the actual XML files. Any subsequent percentage-extraction claim depends on (a) a verified count of v1's procedural surface in a chosen unit of analysis (step IDs, patterns, prose-procedural-clauses, or some hybrid) AND (b) a measured count of what extraction actually achieves at prototype scaffolding. Both inputs are now flagged as requiring direct measurement before any further percentage claim. The cycle 96 verification re-grounds the line-count baseline at 1,289 (down from the claimed 2,400) and the step-ID denominator at 50 (down from the claimed 260); the extractable-pattern numerator from cycle 91's _notes was ~35, distinct unit from step IDs. Re-grounding the percentage claim requires reconciling these units.
+- **Risk 1:** the named-step taxonomy in v1 STARTUP/COMPLETION is one unit of analysis (50 step+substep IDs measured); other units (named patterns spanning multiple steps; prose-procedural clauses) may give different denominators. The choice of denominator is itself a candidate-claim decision, not a measurement.
+- **Risk 2:** the boundary between deterministic-extractable and judgment-required is fuzzy for some steps (e.g., "post session-start comment with templated content" is deterministic in template but judgment-required in what to fill in). Any extraction-percentage estimate assumes deterministic-extractable cases dominate; if judgment-required cases dominate, extraction is lower regardless of denominator chosen.
 - **Risk 3:** the v2 prompt's tool-registry reference may grow substantially as the tool count grows (cluster B's per-component-state files alone require ~5 dedicated tool descriptions). Aggregate v2 prompt size is sensitive to tool count.
 - **Risk 4:** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress.
 
-These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (50% vs 40% vs 30%) but not the *direction* (medium-harness extraction reduces procedural surface). P3 PASS direction is validated; magnitude is sharpened to ~40-50% rather than ~50%, with cycle 92+ prototype required for empirical validation.
+These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (which is now indeterminate without re-grounded baselines) but not the *direction* (medium-harness extraction reduces procedural surface — structurally plausible regardless of denominator). **P3 PASS direction continues to hold on structural argument; magnitude is currently indeterminate and awaits Phase 3 prototype measurement against verified baselines.** Per cycle 96 absorption: the cycle 91 sharpening's "magnitude is sharpened to ~40-50% rather than ~50%" conclusion was internally inconsistent with the README tracker's "~50-62%" label, and both rested on overcounted denominators; the README-tracker entry has been revised in this absorption pass.
 
 ## Cycle 93+94 prototype scaffolding: migration-cost validation
 
