@@ -131,4 +131,95 @@ This candidate is the **conservative path**. It commits to the bet that v1's sub
 
 It is also the candidate with the **lowest migration cost and highest cutover predictability**. Phase 3 prototype effort is bounded (~9 new Rust crates, well-defined). Rollback is straightforward (delete v2 artifacts; revert workflow YAML).
 
-Cycle 89 hand-off named this candidate as one of two for cycle 90 authoring. Candidate B (multi-role decomposition) is the **aggressive path** — see [`B-decomposed-multi-role.md`](./B-decomposed-multi-role.md). Eva and the audit-repo orchestrator review both before candidate-selection checkpoint.
+Cycle 89 hand-off named this candidate as one of two for cycle 90 authoring. Candidate B (multi-role decomposition) is the **aggressive path** — see [`B-decomposed-multi-role.md`](./B-decomposed-multi-role.md). Cycle 91 added Candidate C (hybrid) — see [`C-hybrid.md`](./C-hybrid.md). Eva and the audit-repo orchestrator review all three before candidate-selection checkpoint.
+
+## Cycle 91 sharpening: Axis 13 medium-harness extraction details
+
+The candidate's P3 PASS claim depends on the Axis 13 medium harness extracting ~50% of the current v1 prompt's procedural surface to cycle-runner phases. Cycle 90 hand-off named this estimate as a candidate weak point for cycle 91+ sharpening; this section grounds the estimate in concrete extraction-vs-retention content. The estimate is at the **structural level** (named procedural patterns extracted) not the **byte level** (literal prompt-text reduction); the byte-level reduction is a downstream consequence and varies with how concisely the orchestrator can describe the extracted contracts in the v2 prompt.
+
+### What the medium harness extracts (boot/work/close phases + dispatch-poll + audit-read)
+
+**Boot-phase responsibilities** — currently in v1 prompt's STARTUP_CHECKLIST.xml:
+
+- Read `state.json` and decompose into per-component file reads (`state/dispatch-queue.json`, `state/eva-input-cursor.json`, `state/redesign/<phase>.json`, `state/cycle-history/<N>.json`)
+- Advance `state/eva-input-cursor.json` by pulling `input-from-eva` issues authored by Eva since last-cursor; surface new directives
+- Pull `question-for-eva` response check (delegated to `check-eva-responses` or replacement)
+- Read recent journal entries (configurable lookback window)
+- Read recent commits (configurable lookback window)
+- Read audit-repo cycle posts since last-audit-cursor
+- Standing-directive check (active `input-from-eva` directives)
+- Pre-cycle gardening sweep (stale `_notes/` detection, dead-link detection)
+- Post session-start comment on cycle-issue with templated content (model, run id, mode, cycle-composition-shape declaration, observations going in, standing-tasks summary)
+
+**Close-phase responsibilities** — currently in v1 prompt's COMPLETION_CHECKLIST.xml:
+
+- Gardening sweep (deslop pass over `_notes/`, `state/`, `docs/redesign/`)
+- Cycle-history append (append-only `state/cycle-history/<N>.json`)
+- Journal commit + push (single operation per git-safety preserved primitive)
+- Cycle-issue close-comment (templated session-end summary with bottleneck-state honesty + sibling-pattern tracking + cycle-(N+1) plan)
+- Cycle-issue close
+- Standing-task tracking: open issues count, open PR count, standing input-from-eva directives count
+
+**Dispatch-poll responsibilities** — currently in v1 prompt's various sections:
+
+- Enumerate stuck dispatches (Copilot agent assignments not yet started)
+- Cycle-count hand-off ("X+ cycles awaiting Eva's manual Copilot assignment")
+- Per-dispatch state advance when output arrives (PR-merge events, comment events)
+
+**Audit-read responsibilities** — currently in v1 prompt's cross-repo discipline section:
+
+- Cross-repo cursor advance (audit cycles read since last-cursor)
+- Per-cycle audit-side artifact read (audit's `_notes/`, audit's `docs/redesign/`)
+- Audit critique surface (issues with `[redesign-feedback]` title prefix or audit-cycle-post pattern)
+
+**Extracted (estimated XML element count from v1 prompt):**
+
+- STARTUP_CHECKLIST.xml currently has ~180 named steps across S0-S15 step IDs (each step is a named procedural pattern extractable to a deterministic phase)
+- COMPLETION_CHECKLIST.xml currently has ~80 named steps across C0-C15 step IDs
+- Aggregate: ~260 named procedural steps in v1 STARTUP + COMPLETION checklists
+- Of these, ~130-160 are deterministic (read-this-file, write-this-template, advance-this-cursor, enumerate-this-list) and structurally extractable to cycle-runner phases without orchestrator judgment
+- Remaining ~100-130 require orchestrator judgment (substantive-focal selection, situational decisions, bottleneck-state assessment, sibling-pattern recognition) and stay in the v2 prompt
+
+### What the medium harness retains (orchestrator-judgment surface)
+
+- **Substantive-focal selection** — what the cycle's primary substantive activity is (deepening cluster annotations, sharpening candidates, integrating audit critique, dispatching research, etc.). Not deterministic; depends on cycle-N hand-off + standing tasks + bottleneck state + audit critique landing.
+- **Situational decisions** — when to dispatch Copilot research vs answer in-cycle; when to file a question-for-eva vs resolve autonomously; when to ask audit for critique vs proceed.
+- **Sibling-pattern recognition** — which functional-class shapes a cycle is an instance of; whether a methodology pattern advances to TESTED / HARDENED.
+- **Honest reflection** — F1-F5 correctives, anti-inheritance corrective, generalization-level discipline. Requires per-cycle judgment about what was actually substantive vs what looked substantive.
+- **Cross-repo-communication framing** — when audit-as-peer requests critique; when to surface a structural gap as a `[redesign-feedback]` request; how to frame the request for audit's reading discipline.
+- **Cycle-composition-shape declaration** — naming what shape the cycle is, whether it's an instance of a prior shape, whether a new shape is emerging. Depends on the cycle's actual content, not a deterministic check.
+- **Bottleneck-state honesty** — is the bottleneck external (Eva's manual Copilot assignment) or internal (orchestrator's choice)? Naming this honestly per cycle requires judgment.
+- **Iteration-until-approval discipline** — when an artifact is "stable" vs "needs more iteration"; what specific weak points to sharpen each cycle.
+
+### Estimated v2 prompt size
+
+- v1 prompt (current orchestrator-prompt.xml + STARTUP_CHECKLIST.xml + COMPLETION_CHECKLIST.xml): aggregate ~2400 lines (prompt ~1100 lines + STARTUP ~800 lines + COMPLETION ~500 lines).
+- v2 prompt (this candidate's prompt only; no external checklists): estimated ~600-800 lines.
+  - Purpose / mission / authority sections: ~150 lines (relatively unchanged from v1's mission section)
+  - Preserved-primitives + security: ~120 lines (mostly unchanged)
+  - Mode-transition contracts (boot / work / close): ~100 lines (instructing orchestrator on per-mode invocation, not procedural steps)
+  - Tool registry reference: ~50 lines (one-line description per tool with invocation contract)
+  - Judgment-call surface (substantive-focal selection, situational decisions, sibling-pattern recognition, honest reflection, cross-repo-communication, cycle-composition-shape declaration): ~150 lines
+  - Iteration-until-approval discipline + abort criteria + checkpoints: ~80 lines
+- **Aggregate v2 prompt**: ~600-800 lines, vs v1's ~2400 lines = ~67-75% reduction at the byte level.
+- **Procedural-surface reduction at the structural level**: ~130-160 of ~260 named steps extracted = ~50-62% of named-step extraction.
+
+### Validation plan (cycle 92+ Phase 3 prototype work)
+
+The estimates above are derived from v1 prompt structure analysis, not yet validated by Phase 3 prototype. Cycle 92+ Phase 3 prototype effort should:
+
+1. Author a draft v2 prompt at `prompts/v2/orchestrator-prompt.xml` covering the categories above. Measure actual line count.
+2. Author the `boot-mode` Rust crate as the smallest scaffold of the medium-harness extraction. Measure how much procedural content fits into deterministic Rust code vs what spills back into the prompt.
+3. Compare actual extraction percentage against the ~50% structural estimate.
+4. If extraction percentage falls below 40%, the P3 PASS claim weakens; investigate whether more procedural content can be extracted (potentially shifting toward the fat-harness Axis 13 position) or whether the orchestrator-judgment surface is genuinely larger than estimated.
+
+If the validation reveals that ~50% extraction is achievable, P3 PASS is grounded. If validation reveals < 40% extraction is achievable while preserving orchestrator-judgment surface, the candidate's P3 PASS claim is weaker than asserted and should be revised to PASS-WITH-NOTE or PARTIAL.
+
+### Risks named at the structural level (not yet validated)
+
+- **Risk 1:** the named-step taxonomy in v1 STARTUP/COMPLETION is incomplete (some procedural patterns are not explicitly numbered S/C step IDs but are named in prose). The ~260 step count is a lower bound; the actual procedural surface may be larger.
+- **Risk 2:** the boundary between deterministic-extractable and judgment-required is fuzzy for some steps (e.g., "post session-start comment with templated content" is deterministic in template but judgment-required in what to fill in). The ~50% extraction estimate assumes deterministic-extractable cases dominate; if judgment-required cases dominate, extraction is lower.
+- **Risk 3:** the v2 prompt's tool-registry reference may grow substantially as the tool count grows (cluster B's per-component-state files alone require ~5 dedicated tool descriptions). Aggregate v2 prompt size is sensitive to tool count.
+- **Risk 4:** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress.
+
+These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (50% vs 40% vs 30%) but not the *direction* (medium-harness extraction reduces procedural surface). P3 PASS direction is validated; magnitude is sharpened to ~40-50% rather than ~50%, with cycle 92+ prototype required for empirical validation.
