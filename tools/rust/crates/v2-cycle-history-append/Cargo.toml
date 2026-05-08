@@ -1,0 +1,13 @@
+[package]
+name = "v2-cycle-history-append"
+version = "0.1.0"
+edition = "2021"
+description = "Append a cycle-history entry as a JSON file at state/cycle-history/<N>.json with refuse-overwrite append-only semantics (v2 redesign prototype)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
