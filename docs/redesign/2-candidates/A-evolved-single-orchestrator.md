@@ -86,7 +86,7 @@
 ## Migration cost from v1
 
 - **State migration:** decompose `state.json` into per-concern files. One-shot tool `state-json-decompose` runs at cutover. Risk: low (state.json schema is well-known per F12 catalog).
-- **Tool migration:** ~9 new Rust crates (above). Each is bounded (~200-500 LOC). Aggregate net-add ~3000-4500 LOC.
+- **Tool migration:** ~9 new Rust crates (above). Per-crate scope ~200-500 LOC empirically validated at **2 of 9 instances** (cycle 93 `v2-tool-registry` 231 prod LOC; cycle 94 `v2-cycle-history-append` 268 prod LOC) — see [`Cycle 93+94 prototype scaffolding: migration-cost validation`](#cycle-9394-prototype-scaffolding-migration-cost-validation) for full empirical detail. Aggregate net-add **~2500-4500 production LOC** with smaller-end bias caveat (the 2 measured crates are structurally simpler; remaining 7 likely larger). **Aggregate including tests: ~7000-12000 LOC** at observed test:prod ratio of 1.5×-1.9× (cycle 95 added). **Dependency-footprint cost is one-time at the first crate**, not per-crate (cycle 94 measurement: subsequent crates reusing the {clap, serde, serde_json, tempfile} dep stack add zero transitive deps).
 - **Prompt migration:** new prompt at `prompts/v2/orchestrator-prompt.xml`, ~50% smaller than v1 (procedural content extracted to harness). Eva-installable as drop-in replacement for `.github/workflows/orchestrator-prompt.xml`.
 - **Workflow migration:** `cycle-runner` invokes new boot/close phases; `.github/workflows/orchestrator.yml` updated to invoke new prompt path. Workflow change is a forbidden-zone PR per redesign prompt SECTION 2 — Eva merges.
 - **Journal/Cycle-issue migration:** zero (preserved).
@@ -223,3 +223,61 @@ If the validation reveals that ~50% extraction is achievable, P3 PASS is grounde
 - **Risk 4:** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress.
 
 These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (50% vs 40% vs 30%) but not the *direction* (medium-harness extraction reduces procedural surface). P3 PASS direction is validated; magnitude is sharpened to ~40-50% rather than ~50%, with cycle 92+ prototype required for empirical validation.
+
+## Cycle 93+94 prototype scaffolding: migration-cost validation
+
+The Migration cost section's tool-migration claims (~9 crates, ~200-500 LOC each, ~3000-4500 aggregate net-add) were named at cycle 90 authoring without empirical grounding. Cycle 93 began Phase 3 prototype scaffolding by building `v2-tool-registry`; cycle 94 extended to `v2-cycle-history-append`. This section consolidates the 2-instance empirical findings as cycle 95 propagation. Per `direction-vs-magnitude` discipline (cycle 91 lexicon entry, HARDENED at 5+ instances): direction-supporting at 2 of 9 instances; magnitude-validating awaits remaining 7 crates.
+
+### Per-crate measurements (cycles 93-94)
+
+| Metric | Cycle 93 `v2-tool-registry` | Cycle 94 `v2-cycle-history-append` |
+|---|---|---|
+| Production LOC | ~231 | ~268 |
+| Test LOC (inline + integration) | ~347 | ~510 |
+| Total LOC | ~578 | ~804 |
+| Test count | 15 | 31 |
+| Test:Prod ratio | ~1.5× | ~1.9× |
+| Build time (release, dep-cache warm) | ~1.24s | ~1.01s |
+| New transitive deps added to workspace lockfile | ~30 (`{clap, serde, serde_json, tempfile}` first establishment) | 0 |
+
+### Validation findings against cycle 90 authoring claims
+
+- **Per-crate scope (~200-500 LOC) — DIRECTION-VALIDATED at 2 instances.** Both crates fall within the stated range. Both are at the smaller end of the tool surface; the 2-of-9 evidence is direction-supporting on per-crate boundedness. Magnitude-validation requires measurement of structurally-larger crates (`wiki-search`, `boot-phase`, `close-phase`).
+- **Aggregate production-LOC claim (~3000-4500) — DIRECTION-SUPPORTING; magnitude trajectory may shift below the lower bound.** Trajectory at ~250 LOC/crate × 9 crates = ~2250 production LOC. Caveat: remaining 7 crates likely larger; trajectory may rise. Updated estimate: ~2500-4500 production LOC.
+- **Aggregate-with-tests claim — INTRODUCED CYCLE 95.** Implicit in cycle 90 authoring (which named production-LOC only). Test:Prod ratio averaged 1.7× across 2 instances (range 1.5×-1.9×). Aggregate-with-tests trajectory ~7000-12000 LOC (production + tests). This is a substantial revision to the deliverable's apparent scope — the test code is part of the deliverable per `ARTIFACT-COMPOSITION` and should not be hidden.
+- **Dependency-footprint risk — REFUTED at second-crate level.** Cycle 93's risk #3 (Cargo.lock churn growing per crate) was framed as per-crate accretion. Cycle 94's measurement: subsequent crates reusing the established dep stack add zero transitive deps. **Implication:** workspace dependency footprint is bounded; argues for `[workspace.dependencies]` convention at cutover (declare common deps once, members reference with `{ workspace = true }`).
+- **Build-time aggregate — BOUNDED.** Both crates build in ~1.0-1.2s release mode after dep cache is warm. Aggregate build time for full 9-crate set plausibly bounded at ~10s release (workspace property: shared deps mean only crate-local code recompiles).
+
+### Structural insights surfaced cycles 93-94
+
+1. **Refuse-overwrite as structural append-only enforcement primitive.** v2 write tools implement filesystem-level refuse-overwrite (cycle-history-append being the first; tool-registry is read-only so question didn't arise). This makes Axis 4 (git-as-substrate) more robust at the tool level: the tool itself enforces the append-only invariant; an orchestrator bug or rogue manual edit cannot accidentally overwrite cycle-history. v1 relied on prompt-level convention (procedural step the orchestrator was supposed to follow); v2 promotes to tool-level enforcement. Pattern other v2 write tools should follow.
+2. **Pass-through schema as forward-compatibility default.** `cycle-history-append` enforces 3 required fields and lets the rest pass through verbatim. New cycle-history schema fields can be added at the orchestrator level without tool change. Deliberate looseness — schema strictness is a future migration if downstream consumers (e.g., `detect-abandoned-cycles`, trend-analysis tools) demand it. For prototype, the looseness is correct.
+3. **CLI-field-overrides-JSON precedence.** `--from-json file.json --field model=overrideX` resolves to CLI override. Useful for callers with mostly-fixed JSON payloads + per-invocation overrides (e.g., wrapper injecting `started_at`). Integration tests document this precedence explicitly.
+4. **Workspace dependency-footprint bounded after first crate.** If A's remaining 7 crates converge on the {clap, serde, serde_json, tempfile} dep stack, workspace dependency footprint is bounded at the first-crate establishment. Cutover implication: `[workspace.dependencies]` convention naturally indicated.
+5. **Atomic write via tmp + rename.** Both write tools use `target.with_extension("...tmp") + fs::rename` for atomic write. Same-filesystem assumption documented (cross-mount support requires `tempfile::NamedTempFile::persist` upgrade if needed).
+
+### Risks named for the cycle 93+94 evidence base
+
+1. **Smaller-end bias.** The 2 measured crates are the structurally-simplest (read-only catalog access; append-only single-record JSON write). The remaining 7 (`boot-phase`, `close-phase`, `phase-transition-check`, `wiki-search`, `prompt-contract-check`, `detect-abandoned-cycles`, `gardening-sweep`) are likely larger. Trajectory may shift upward beyond ~2500-4500 production LOC.
+2. **Test-code amplification widening.** Test:Prod ratio went 1.5× → 1.9× from cycle 93 to cycle 94, partly because cycle-history-append has a larger CLI surface (more options, validation paths, error cases). If subsequent crates have similar surface area expansion, aggregate-with-tests may approach the upper end of ~12000 LOC.
+3. **2-of-9 instances is direction-supporting only.** Aggregate-LOC magnitude validation requires more instances. Cycle 96+ should continue prototype scaffolding, prioritizing structurally-larger crates (wiki-search likely largest) to test aggregate-LOC bound.
+4. **Workspace-dependency convention not yet decided.** The `[workspace.dependencies]` convention is naturally indicated but not yet adopted in the v2 workspace `Cargo.toml`. Cutover plan should specify this convention explicitly.
+5. **`--field` value auto-typing ambiguity inherited from cycle 94.** Values like `true` parse as boolean; `123` as integer. Edge case: a string field intended to hold "true" silently becomes a boolean. Documented per cycle 94 risk #2; defer to `--field-string KEY=VALUE` if recurring.
+6. **Non-RFC3339 `started_at` strings accepted.** `cycle-history-append` accepts any non-empty string; malformed timestamp surfaces only at downstream parse. Documented per cycle 94 risk #3; defer until consumer pressure forces stricter validation.
+
+### Sibling-pattern entries surfaced cycles 93-94
+
+- **Prototype-scaffold migration-cost-validation discipline** — TESTED at 2 instances (cycle 93 + cycle 94). Pattern: each prototype crate produces direction-vs-magnitude data; aggregation across N instances grades direction-validated vs magnitude-validated.
+- **Direction-vs-magnitude discipline** — extends to 5+ instances (cycle 91 A's Axis 13 + cycle 92 B's per-role decision count + cycle 92 C's central bet + cycle 93 prototype scaffold migration-cost + cycle 94 prototype scaffold migration-cost #2). HARDENED.
+- **Refuse-overwrite primitive** — NOVEL at 1 instance (cycle 94). Other v2 write tools should follow the same pattern.
+- **Pass-through schema forward-compatibility** — NOVEL at 1 instance (cycle 94).
+
+### Cycle 96+ measurement plan
+
+Continue prototype scaffolding to broaden evidence base from 2 to 3+ instances:
+
+1. **`phase-transition-check`** (state machine validation) — structurally distinct from file-write/file-enumerate tools (validation vs mutation). Estimated ~300-400 LOC. Tests aggregate-LOC magnitude under different surface shape.
+2. **`prompt-contract-check`** (CI test for prompt drift) — likely larger (~400-500 LOC). Tests upper end of stated per-crate range.
+3. **`wiki-search`** (top-k retrieval) — likely largest in surface area; tests upper bound of per-crate scope claim.
+
+Sequencing prioritizes structurally-distinct tool types over similar-shape repetition. After 3-4 measurements across distinct tool shapes, aggregate-LOC trajectory becomes magnitude-validating rather than direction-supporting.
