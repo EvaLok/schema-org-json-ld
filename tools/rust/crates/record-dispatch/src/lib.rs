@@ -6,6 +6,17 @@ pub const PIPELINE_GATE_FAILURE_MESSAGE: &str =
     "Cannot dispatch: pipeline-check failed. Fix failures before dispatching.";
 pub const REVIEW_DISPATCH_WARNING: &str =
     "Pipeline gate bypassed for review dispatch (--review-dispatch)";
+
+/// GraphQL actor ID for the GitHub Copilot coding agent
+/// (`copilot-swe-agent`). Stable for `EvaLok/schema-org-json-ld`.
+/// Re-discover via:
+/// `gh api graphql -f query='query { repository(owner: "EvaLok", name: "schema-org-json-ld")
+///   { suggestedActors(capabilities: [CAN_BE_ASSIGNED], first: 10)
+///     { nodes { login __typename ... on Bot { id } ... on User { id } } } } }'`
+pub const COPILOT_AGENT_ACTOR_ID: &str = "BOT_kgDOC9w8XQ";
+
+/// GraphQL actor ID for the EvaLok user. Same re-discovery query as above.
+pub const EVALOK_USER_ACTOR_ID: &str = "U_kgDOALttcg";
 const PIPELINE_CHECK_ARGS: [&str; 9] = [
     "tools/pipeline-check",
     "--exclude-step",
@@ -596,6 +607,49 @@ pub fn push_to_origin_master(repo_root: &Path) -> Result<(), String> {
     if !output.status.success() {
         return Err(command_failure_message("git push origin master", &output));
     }
+    Ok(())
+}
+
+/// Assign the GitHub Copilot coding agent (and EvaLok) to an issue via the
+/// GraphQL `replaceActorsForAssignable` mutation. This is the only path that
+/// successfully wakes Copilot for a dispatched issue — REST `assignees`
+/// silently drops bot logins, and the legacy `agent_assignment` REST field is
+/// no longer functional. See ADR 0016.
+///
+/// Takes the issue's GraphQL node ID (returned by REST `gh api .../issues`
+/// POST as `node_id`, or queryable via GraphQL `repository.issue(number).id`).
+/// Returns `Ok(())` on success; on error returns the underlying gh failure
+/// message verbatim — caller decides whether to fail the dispatch or
+/// continue (the issue was already created).
+pub fn assign_copilot_agent(issue_node_id: &str) -> Result<(), String> {
+    let query = format!(
+        "mutation($id: ID!) {{ \
+           replaceActorsForAssignable(input: {{ \
+             assignableId: $id, \
+             actorIds: [\"{COPILOT_AGENT_ACTOR_ID}\", \"{EVALOK_USER_ACTOR_ID}\"] \
+           }}) {{ \
+             assignable {{ ... on Issue {{ number assignees(first: 5) {{ nodes {{ login }} }} }} }} \
+           }} \
+         }}"
+    );
+
+    let output = Command::new("gh")
+        .arg("api")
+        .arg("graphql")
+        .arg("-f")
+        .arg(format!("query={query}"))
+        .arg("-F")
+        .arg(format!("id={issue_node_id}"))
+        .output()
+        .map_err(|error| format!("failed to execute gh api graphql: {error}"))?;
+
+    if !output.status.success() {
+        return Err(command_failure_message(
+            "gh api graphql replaceActorsForAssignable",
+            &output,
+        ));
+    }
+
     Ok(())
 }
 

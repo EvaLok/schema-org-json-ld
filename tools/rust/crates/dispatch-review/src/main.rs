@@ -1,8 +1,9 @@
 use clap::Parser;
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, dispatch_commit_message, enforce_pipeline_gate,
-    restore_sealed_last_cycle, should_sync_last_cycle_summary, snapshot_sealed_last_cycle,
-    sync_last_cycle_summary_after_dispatch, update_review_dispatch_tracking, ProcessRunner,
+    apply_dispatch_patch, assign_copilot_agent, build_dispatch_patch, dispatch_commit_message,
+    enforce_pipeline_gate, restore_sealed_last_cycle, should_sync_last_cycle_summary,
+    snapshot_sealed_last_cycle, sync_last_cycle_summary_after_dispatch,
+    update_review_dispatch_tracking, ProcessRunner,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -15,7 +16,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const BASE_BRANCH: &str = "master";
 
 #[derive(Parser, Debug)]
 #[command(name = "dispatch-review")]
@@ -43,14 +43,11 @@ struct Cli {
     /// Record an already-created review issue number without calling gh api (testing/recovery)
     #[arg(long)]
     record_only: Option<u64>,
-}
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-struct AgentAssignment {
-    target_repo: String,
-    base_branch: String,
-    model: String,
-    custom_instructions: String,
+    /// Skip the C5.5 review-dispatch gate (use in redesign mode where the
+    /// C5.5 gate is not maintained).
+    #[arg(long)]
+    skip_pipeline_gate: bool,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -58,14 +55,13 @@ struct ReviewIssuePayload {
     title: String,
     body: String,
     labels: Vec<String>,
-    assignees: Vec<String>,
-    agent_assignment: AgentAssignment,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CreatedIssue {
     number: u64,
     html_url: String,
+    node_id: String,
 }
 
 fn main() {
@@ -80,7 +76,7 @@ fn run(cli: Cli) -> Result<(), String> {
     let current_cycle = resolve_cycle(cli.cycle, &cli.repo_root)?;
     let body = read_body_file(&cli.body_file)?;
     let model = state_schema::default_agent_model(&cli.repo_root)?;
-    let payload = build_issue_payload(current_cycle, &body, &model);
+    let payload = build_issue_payload(current_cycle, &body);
 
     if cli.dry_run {
         println!(
@@ -95,9 +91,21 @@ fn run(cli: Cli) -> Result<(), String> {
         CreatedIssue {
             number: issue_number,
             html_url: format!("https://github.com/{MAIN_REPO}/issues/{issue_number}"),
+            node_id: String::new(),
         }
     } else {
-        create_issue(&payload)?
+        let issue = create_issue(&payload)?;
+        // Assign Copilot via GraphQL (REST drops bot logins). Failures here
+        // do NOT roll back the dispatch — the issue exists and assignment
+        // can be retried manually. See ADR 0016.
+        if let Err(error) = assign_copilot_agent(&issue.node_id) {
+            eprintln!(
+                "warning: created review issue #{} but failed to assign Copilot agent: {}. \
+                 Re-run the GraphQL replaceActorsForAssignable mutation manually.",
+                issue.number, error
+            );
+        }
+        issue
     };
     let state_result = record_created_issue(
         &cli.repo_root,
@@ -105,6 +113,7 @@ fn run(cli: Cli) -> Result<(), String> {
         created_issue.number,
         &payload.title,
         &model,
+        cli.skip_pipeline_gate,
     );
     if let Err(error) = state_result {
         return Err(format!(
@@ -120,18 +129,11 @@ fn run(cli: Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn build_issue_payload(cycle: u64, body: &str, model: &str) -> ReviewIssuePayload {
+fn build_issue_payload(cycle: u64, body: &str) -> ReviewIssuePayload {
     ReviewIssuePayload {
         title: format!("[Cycle Review] Cycle {} end-of-cycle review", cycle),
         body: body.to_string(),
         labels: vec!["agent-task".to_string(), "cycle-review".to_string()],
-        assignees: vec!["copilot-swe-agent[bot]".to_string()],
-        agent_assignment: AgentAssignment {
-            target_repo: MAIN_REPO.to_string(),
-            base_branch: BASE_BRANCH.to_string(),
-            model: model.to_string(),
-            custom_instructions: String::new(),
-        },
     }
 }
 
@@ -184,10 +186,15 @@ fn record_created_issue(
     issue: u64,
     title: &str,
     model: &str,
+    skip_pipeline_gate: bool,
 ) -> Result<(), String> {
-    // Enforce pipeline gate (logs warning for review dispatches, blocks for others)
-    if let Err(error) = enforce_pipeline_gate(repo_root, true, &ProcessRunner) {
-        return Err(format!("pipeline gate check failed: {:?}", error));
+    if skip_pipeline_gate {
+        eprintln!("--skip-pipeline-gate: bypassing C5.5 review-dispatch gate (redesign mode)");
+    } else {
+        // Enforce pipeline gate (logs warning for review dispatches, blocks for others)
+        if let Err(error) = enforce_pipeline_gate(repo_root, true, &ProcessRunner) {
+            return Err(format!("pipeline gate check failed: {:?}", error));
+        }
     }
 
     let mut state = read_state_value(repo_root)?;
@@ -323,26 +330,30 @@ mod tests {
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--dry-run"));
         assert!(help.contains("--record-only"));
+        assert!(help.contains("--skip-pipeline-gate"));
     }
 
     #[test]
-    fn build_issue_payload_includes_labels_assignee_and_agent_assignment() {
-        let payload = build_issue_payload(200, "Review body", "gpt-5.4");
+    fn build_issue_payload_omits_legacy_fields_for_graphql_assignment() {
+        let payload = build_issue_payload(200, "Review body");
 
         assert_eq!(
             payload.title,
             "[Cycle Review] Cycle 200 end-of-cycle review"
         );
         assert_eq!(payload.labels, vec!["agent-task", "cycle-review"]);
-        assert_eq!(payload.assignees, vec!["copilot-swe-agent[bot]"]);
-        assert_eq!(
-            payload.agent_assignment,
-            AgentAssignment {
-                target_repo: MAIN_REPO.to_string(),
-                base_branch: BASE_BRANCH.to_string(),
-                model: "gpt-5.4".to_string(),
-                custom_instructions: String::new(),
-            }
+        // Bot assignee and agent_assignment are intentionally absent —
+        // REST silently drops bot logins from `assignees`, and the legacy
+        // `agent_assignment` REST field is no longer functional. Copilot
+        // is assigned via GraphQL after issue creation. See ADR 0016.
+        let serialized = serde_json::to_value(&payload).expect("serialize");
+        assert!(
+            serialized.get("assignees").is_none(),
+            "assignees field must not appear in REST POST payload: {serialized}"
+        );
+        assert!(
+            serialized.get("agent_assignment").is_none(),
+            "agent_assignment field must not appear in REST POST payload: {serialized}"
         );
     }
 
@@ -395,6 +406,7 @@ mod tests {
             2521,
             "[Cycle Review] Cycle 495 end-of-cycle review",
             "gpt-5.4",
+            true,
         )
         .expect("record should succeed");
 

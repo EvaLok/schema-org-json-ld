@@ -1,6 +1,6 @@
 use clap::{ArgAction, Parser};
 use record_dispatch::{
-    apply_dispatch_patch, build_dispatch_patch, concurrency_warning_message,
+    apply_dispatch_patch, assign_copilot_agent, build_dispatch_patch, concurrency_warning_message,
     dispatch_commit_message, enforce_pipeline_gate, push_to_origin_master, resolve_model,
     should_sync_last_cycle_summary, sync_last_cycle_summary_after_dispatch, CommandRunner,
     PipelineGateError, ProcessRunner,
@@ -17,7 +17,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 const MAIN_REPO: &str = "EvaLok/schema-org-json-ld";
-const BASE_BRANCH: &str = "master";
 
 #[derive(Parser, Debug)]
 #[command(name = "dispatch-task")]
@@ -30,7 +29,7 @@ struct Cli {
     #[arg(long)]
     body_file: PathBuf,
 
-    /// Model for agent_assignment
+    /// Coding-agent model identifier recorded in docs/state.json
     #[arg(long)]
     model: Option<String>,
 
@@ -49,6 +48,11 @@ struct Cli {
     /// Print what would be created without actually dispatching
     #[arg(long)]
     dry_run: bool,
+
+    /// Skip the pipeline-check gate (use in redesign mode where the
+    /// production pipeline is not actively maintained).
+    #[arg(long)]
+    skip_pipeline_gate: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,26 +91,17 @@ impl AddressedFinding {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-struct AgentAssignment {
-    target_repo: String,
-    base_branch: String,
-    model: String,
-    custom_instructions: String,
-}
-
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 struct IssuePayload {
     title: String,
     body: String,
     labels: Vec<String>,
-    assignees: Vec<String>,
-    agent_assignment: AgentAssignment,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CreatedIssue {
     number: u64,
     html_url: String,
+    node_id: String,
 }
 
 /// Trait that abstracts the GitHub API call for testability.
@@ -179,7 +174,7 @@ fn run_with_runners(
 ) -> Result<(), String> {
     let body = read_body_file(&cli.body_file, cli.dry_run)?;
     let model = resolve_model(cli.model.as_deref(), &cli.repo_root)?;
-    let payload = build_issue_payload(&cli.title, &body, &cli.labels, &model);
+    let payload = build_issue_payload(&cli.title, &body, &cli.labels);
 
     if cli.dry_run {
         println!(
@@ -191,26 +186,41 @@ fn run_with_runners(
         return Ok(());
     }
 
-    // Validate pipeline gate before creating the issue.
-    let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, false, pipeline_runner) {
-        Ok(warning) => warning,
-        Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
-            return Err(message);
+    if cli.skip_pipeline_gate {
+        warn("--skip-pipeline-gate: bypassing pipeline-check (redesign mode)");
+    } else {
+        let pipeline_warning = match enforce_pipeline_gate(&cli.repo_root, false, pipeline_runner) {
+            Ok(warning) => warning,
+            Err(PipelineGateError::ReviewDispatchBlocked(message)) => {
+                return Err(message);
+            }
+            Err(PipelineGateError::ExecutionFailed(detail)) => {
+                eprintln!("pipeline-check execution error: {detail}");
+                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+            }
+            Err(PipelineGateError::Failed) => {
+                return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
+            }
+        };
+        if let Some(warning) = pipeline_warning {
+            warn(warning);
         }
-        Err(PipelineGateError::ExecutionFailed(detail)) => {
-            eprintln!("pipeline-check execution error: {detail}");
-            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-        }
-        Err(PipelineGateError::Failed) => {
-            return Err(record_dispatch::PIPELINE_GATE_FAILURE_MESSAGE.to_string());
-        }
-    };
-    if let Some(warning) = pipeline_warning {
-        warn(warning);
     }
 
     // Create the GitHub issue first; only modify state on success.
     let created_issue = api_runner.create_issue(&payload)?;
+
+    // Assign the Copilot coding agent via GraphQL. Failures here do NOT
+    // roll back the dispatch — the issue exists and assignment can be
+    // retried manually. Log a warning and continue to state recording.
+    if let Err(error) = assign_copilot_agent(&created_issue.node_id) {
+        warn(&format!(
+            "warning: created issue #{} but failed to assign Copilot agent: {}. \
+             Re-run the GraphQL replaceActorsForAssignable mutation manually \
+             (see record-dispatch::assign_copilot_agent and ADR 0016).",
+            created_issue.number, error
+        ));
+    }
 
     // Record the dispatch in state.json.
     match record_dispatch_state(
@@ -380,18 +390,11 @@ fn reconcile_review_history_dispatches(
     Ok(())
 }
 
-fn build_issue_payload(title: &str, body: &str, labels: &[String], model: &str) -> IssuePayload {
+fn build_issue_payload(title: &str, body: &str, labels: &[String]) -> IssuePayload {
     IssuePayload {
         title: title.to_string(),
         body: body.to_string(),
         labels: labels.to_vec(),
-        assignees: vec!["copilot-swe-agent[bot]".to_string()],
-        agent_assignment: AgentAssignment {
-            target_repo: MAIN_REPO.to_string(),
-            base_branch: BASE_BRANCH.to_string(),
-            model: model.to_string(),
-            custom_instructions: String::new(),
-        },
     }
 }
 
@@ -564,17 +567,25 @@ mod tests {
             "Fix the thing",
             "Body text here",
             &["agent-task".to_string()],
-            "gpt-5.4",
         );
 
         assert_eq!(payload.title, "Fix the thing");
         assert_eq!(payload.body, "Body text here");
         assert_eq!(payload.labels, vec!["agent-task"]);
-        assert_eq!(payload.assignees, vec!["copilot-swe-agent[bot]"]);
-        assert_eq!(payload.agent_assignment.target_repo, MAIN_REPO);
-        assert_eq!(payload.agent_assignment.base_branch, BASE_BRANCH);
-        assert_eq!(payload.agent_assignment.model, "gpt-5.4");
-        assert_eq!(payload.agent_assignment.custom_instructions, "");
+        // Bot assignee and agent_assignment intentionally excluded from the
+        // REST payload — REST silently drops bot logins from `assignees`,
+        // and the legacy `agent_assignment` field is no longer functional.
+        // Copilot is assigned via GraphQL after issue creation.
+        // See ADR 0016.
+        let serialized = serde_json::to_value(&payload).expect("serialize");
+        assert!(
+            serialized.get("assignees").is_none(),
+            "assignees field must not appear in REST POST payload: {serialized}"
+        );
+        assert!(
+            serialized.get("agent_assignment").is_none(),
+            "agent_assignment field must not appear in REST POST payload: {serialized}"
+        );
     }
 
     #[test]
@@ -632,6 +643,7 @@ mod tests {
                 addresses_finding: Vec::new(),
                 repo_root: repo.path().to_path_buf(),
                 dry_run: true,
+                skip_pipeline_gate: false,
             },
             &pipeline_runner,
             &api_runner,
@@ -671,6 +683,7 @@ mod tests {
                 addresses_finding: Vec::new(),
                 repo_root: repo.path().to_path_buf(),
                 dry_run: true,
+                skip_pipeline_gate: false,
             },
             &pipeline_runner,
             &api_runner,
@@ -692,6 +705,7 @@ mod tests {
         assert!(help.contains("--addresses-finding"));
         assert!(help.contains("--repo-root"));
         assert!(help.contains("--dry-run"));
+        assert!(help.contains("--skip-pipeline-gate"));
     }
 
     #[test]

@@ -185,7 +185,7 @@ impl TempFixture {
         fs::write(&self.body_file, "dispatch body\n").expect("body file should be written");
         fs::write(
             self.bin_root.join("gh"),
-            "#!/usr/bin/env bash\nset -euo pipefail\ncat >/dev/null\nprintf '%s\\n' '{\"number\":602,\"html_url\":\"https://github.com/EvaLok/schema-org-json-ld/issues/602\"}'\n",
+            "#!/usr/bin/env bash\nset -euo pipefail\ncat >/dev/null\nprintf '%s\\n' '{\"number\":602,\"html_url\":\"https://github.com/EvaLok/schema-org-json-ld/issues/602\",\"node_id\":\"I_kwDOTEST00000000\"}'\n",
         )
         .expect("fake gh should be written");
         make_executable(&self.bin_root.join("gh"));
