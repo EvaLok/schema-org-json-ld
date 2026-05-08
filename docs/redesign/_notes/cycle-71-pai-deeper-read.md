@@ -4,7 +4,7 @@
 **Dispatch issue:** [#2842](https://github.com/EvaLok/schema-org-json-ld/issues/2842)
 **Baseline:** `docs/redesign/1-research/systems/pai.md` (cycle-14 README-only stub, 85 lines)
 **Repo read:** `danielmiessler/Personal_AI_Infrastructure` at commit `9fb9c86` (main, 2026-04-30)
-**Primary source:** v5.0.0 release in `Releases/v5.0.0/` — the current development branch. v4.0.3 (the cycle-14 baseline) is a prior stable; all code citations below are from v5.0.0 unless noted.
+**Primary source:** v5.0.0 in `Releases/v5.0.0/` — the latest release snapshot in the main branch at time of read (alongside v4.0.3, which is the prior community-stable release). All code citations below are from v5.0.0 unless noted.
 
 ---
 
