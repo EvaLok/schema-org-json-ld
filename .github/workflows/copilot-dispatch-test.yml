@@ -1,0 +1,52 @@
+name: Copilot Dispatch Test
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ORCHESTRATOR_PAT }}
+          fetch-depth: 1
+
+      - name: Load test prompt
+        id: prompt
+        run: |
+          {
+            echo "content<<PROMPT_EOF"
+            cat .github/workflows/copilot-dispatch-test-prompt.md
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run dispatch test via Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.ORCHESTRATOR_PAT }}
+          prompt: ${{ steps.prompt.outputs.content }}
+          claude_args: |
+            --model claude-opus-4-7
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Bash(gh *)",
+                  "Bash(jq *)",
+                  "Bash(date *)",
+                  "Bash(sleep *)",
+                  "Bash(cat *)",
+                  "Bash(echo *)",
+                  "Bash(grep *)",
+                  "Bash(seq *)"
+                ]
+              }
+            }
