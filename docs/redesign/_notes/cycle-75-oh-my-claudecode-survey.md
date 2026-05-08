@@ -220,7 +220,7 @@ Classification: **Needs deeper read**.
 ## 7) Cross-reference to oh-my-codex (cycle-26 patterns 1–22)
 
 Source for pattern names/baseline descriptions:
-- Issue #2847 supplement comment `4383627221` (cycle-76 robustness fix for lens 7).
+- Issue #2847 supplement comment #4383627221: https://github.com/EvaLok/schema-org-json-ld/issues/2847#issuecomment-4383627221 (cycle-76 robustness fix for lens 7).
 
 Legend:
 - **PARALLEL** = same shape visible.
@@ -254,7 +254,7 @@ Legend:
 | 21 | Deterministic keyword detection first, heuristics second | PARALLEL | Medium | Hooks doc describes deterministic keyword matching and conflict order (`docs/HOOKS.md:L346-L352`, `L411-L430`). |
 | 22 | Commit-signing / lore-format guardrails | ABSENT | Low | No equivalent surfaced in first-pass focal read. |
 
-Important caveat: row #15 and #16 are explicitly weak-confidence because full implementation tracing was out of first-pass scope.
+Important caveat: patterns #15 (MCP transport failure fallback) and #16 (install false-green detection) are explicitly weak-confidence because full implementation tracing was out of first-pass scope.
 
 ### 7.1 Hypothesis checks (H1/H2/H3)
 
@@ -427,4 +427,3 @@ Still transferable:
 3. Verify migration mechanics beyond docs (`docs/MIGRATION.md`) in code paths.
 4. Verify whether any anti-pattern catalogs equivalent to cycle-26 `<Bad>` patterns exist outside first-pass sampled files.
 5. Validate MCP failure-mode behavior and fallback semantics in real runtime paths (not just available modules).
-
