@@ -33,6 +33,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.ORCHESTRATOR_PAT }}
           prompt: ${{ steps.prompt.outputs.content }}
+          show_full_output: true
           claude_args: |
             --model claude-opus-4-7
           settings: |
