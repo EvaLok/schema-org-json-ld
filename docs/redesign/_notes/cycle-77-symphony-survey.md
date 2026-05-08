@@ -11,6 +11,8 @@ Method notes:
 - Used GitHub API directory listings for structure/size checks.
 - Where a claim comes from docs but was not fully verified in code at survey depth, it is labeled explicitly.
 
+This deliverable follows the dispatch-required 12-lens structure in order: repo glance, spec architecture, Elixir architecture, spec-as-contract, workflow contract, tracker integration, workspace isolation, lifecycle/phasing, trust posture, 22-pattern cross-reference, Symphony-specific new patterns/hypothesis calls, and anchoring caveats.
+
 ---
 
 ## 1. Repo at a glance
@@ -41,8 +43,6 @@ Current GitHub metadata (at survey read time) from repository search:
 - Forks: `2097`
 - Open issues count field: `5`  
   (search API output for `openai/symphony`, fetched during this survey).
-
-Interpretation note: this count is slightly higher than the cycle-77 pre-dispatch sweep’s “4 open issues,” indicating active movement between dispatch time and survey read.
 
 ### 1.5 Cluster anchoring from glance layer
 
@@ -224,7 +224,7 @@ Direct alignments:
 **H4 CONFIRMED (strong).**  
 All required conditions are met:
 
-- operationally detailed spec (~2,169 lines in fetched copy)
+- operationally detailed spec (80KB at repo root metadata; `SPEC.md` size 80204 in `root-contents.json:83-87`)
 - explicit language-agnostic/multi-impl discipline (`SPEC.md:3`, `README.md:21-35`)
 - explicit RFC 2119 normative contract (`SPEC.md:7-14`)
 
@@ -414,12 +414,12 @@ This supports the substrate-correlation strengthening hypothesis (third converge
 
 ## 10. Cross-reference to oh-my-codex 22 patterns
 
-Baseline names/source: cycle-76 supplement comment on #2847 (comment `4383627221`), which preserves cycle-26 pattern names verbatim.  
+Baseline names/source: cycle-76 supplement comment on #2847 (comment 4383627221), which preserves cycle-26 pattern names verbatim.  
 Source URL: <https://github.com/EvaLok/schema-org-json-ld/issues/2847#issuecomment-4383627221>
 
 Legend: **PARALLEL / ADAPTED / ABSENT / NOT-COMPARABLE / NEW**
 
-1. **Workflow as named keyword keywords with transition policy** → **ADAPTED**. Symphony has explicit workflow state routing and transition policy in `WORKFLOW.md`, but not keyword-triggered mode switching (`WORKFLOW.md:106-127`).
+1. **Workflow as named keyword keywords with transition policy** (verbatim cycle-26 name) → **ADAPTED**. Symphony has explicit workflow state routing and transition policy in `WORKFLOW.md`, but not keyword-triggered mode switching (`WORKFLOW.md:106-127`).
 2. **Context snapshot grounding before execution** → **ADAPTED**. Symphony uses persistent workpad bootstrap/update discipline as execution context surface (`WORKFLOW.md:133-155`, `WORKFLOW.md:278-326`), but not `.omx/context` snapshot files.
 3. **Explicit stop conditions with named escalation paths** → **PARALLEL**. Symphony has explicit blockers/escape hatch and stop/wait states (`WORKFLOW.md:67`, `WORKFLOW.md:184-195`, `WORKFLOW.md:243-248`).
 4. **Evidence-backed completion, not assertion-backed** → **PARALLEL**. Completion bar requires validation/checks green and feedback sweep complete before `Human Review` (`WORKFLOW.md:227-233`, `WORKFLOW.md:262-270`).
@@ -636,7 +636,7 @@ Transfer:
 
 Items intentionally deferred (first-pass scope boundary):
 
-1. Full clause-by-clause conformance audit of `codex/app_server.ex` against all `SPEC.md` protocol MUST clauses.
+1. Full clause-by-clause conformance audit of `codex/app_server.ex` against all `SPEC.md` protocol MUST clauses (including the dynamic-reload parity caveat flagged in section 3.4).
 2. Full audit of `status_dashboard.ex` and observability API against spec’s optional monitoring interface guidance.
 3. Exhaustive tracker abstraction proof for non-Linear implementations beyond current `memory` adapter.
 4. Full cross-check of every RFC2119 clause against implementation behavior; this survey confirms many representative clauses, not complete formal conformance.
