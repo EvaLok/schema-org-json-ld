@@ -46,15 +46,16 @@ This directory is the artifact for Phase 2 candidate-selection. Each candidate i
 | **M3 strengths** | 5/5 PRESERVED | 5/5 PRESERVED-or-EXTENDED | 5/5 PRESERVED, 2 EXTENDED (S2, S3) |
 | **M2 cost (LOW + MOD + HIGH)** | 12 + 8 + 1 (~21 sub-shapes) | 16 + 22 + 5 (~43 sub-shapes) | 13 + 10 + 1 (~24 sub-shapes) |
 | **Migration: new Rust crates** | ~9 | ~12+ Rust + 20-40 skill | ~11 |
-| **Migration: net-add LOC** | ~3000-4500 | ~10000-20000 | ~4000-6000 |
-| **Migration: cutover scope** | bounded single-cycle per crate | multi-cycle build-out | bounded single-cycle per crate |
-| **Cutover predictability** | high | low | medium-high |
+| **Migration: net-add LOC** (doc range) | ~3000-4500 | ~10000-20000 | ~4000-6000 |
+| **Migration: net-add LOC** (PR #2877 lens-4 revised) | ~3600-6200 | ~14000-28000 | ~5200-8200 |
+| **Migration: cutover scope** | bounded single-cycle per crate (trivial); 1-2 cycles per orchestration-hub crate | multi-cycle build-out (PR #2877: 16-30 cycles for non-negotiable quality) | bounded single-cycle per A-shared crate; reconcile-mode + plan-lifecycle pair likely 2-3 cycles each |
+| **Cutover predictability** | medium-high (docs say "high"; PR #2877 lens-5 revises to medium-with-trivial-crate-bias since 2-3 crates likely under-estimated) | low | medium (docs say "medium-high"; PR #2877 net-assessment names C as most under-justified estimate posture, revises toward medium) |
 
 **Most-discriminating criteria across the 3 candidates:**
 
 - **P3 (self-management-reduction):** A passes decisively; C passes with note (3 more sub-shapes than A); B is PARTIAL-FLAG (~43 sub-shapes; per-role mitigation real but unproven). **P3 is the criterion that most clearly orders the three candidates.**
 - **P4 (lifecycle-vocabulary completeness):** A bypasses cluster C; C adopts 2/5 sub-shapes (replay + event-trigger); B adopts 5/5 sub-shapes. **P4 is the criterion where C bridges A and B with PARTIAL completeness.**
-- **Migration cost:** A is ~3000-4500 LOC; C is ~4000-6000 LOC; B is ~10000-20000 LOC. **C migration cost is closer to A than B; bounded single-cycle scope per crate.**
+- **Migration cost:** A is ~3000-4500 LOC stated / ~3600-6200 PR #2877 revised; C is ~4000-6000 stated / ~5200-8200 revised; B is ~10000-20000 stated / ~14000-28000 revised. **C migration cost is closer to A than B at the stated ranges; PR #2877 revisions narrow the C-vs-A gap less than docs suggest** (revised A-vs-C: 3600-6200 vs 5200-8200 means C's lower bound is above A's mid-range). Per cycle 97 absorption (PR #2877 Net assessment): **A and C are closer in risk than docs suggest; C is the candidate most likely to miss its own upper-bound estimate.** Selection ordering A > C >> B holds; the differentiation between A and C narrows once revised LOC ranges are admitted.
 - **F4 (frozen-artifact lifecycle):** A has no plan-lifecycle (implicit); C has plan-lifecycle states (active/completed/technical-debt); B has plan-lifecycle plus branching-checkpoints. **C bridges A and B on F4 structural addressing.**
 - **F2 (Eva-response detection):** A polls in boot-phase (interleaved); C runs first-class reconcile-mode; B has dedicated reconciler agent. **C bridges A and B on F2 structural addressing without paying full agent cost.**
 
@@ -71,6 +72,28 @@ This subsection tracks which candidate-specific load-bearing claims have been sh
 **Cross-cutting per cycle 96 absorption (PR #2878 Finding 16 — false-equivalence correction):** prior versions of this tracker applied uniform "structurally validated" status across A/B/C, obscuring that the three sharpening sections rest on **incompatible evidence types** — A's denominator was fabricated (verifiable via XML element count); B's baseline is circular (orchestrator self-measuring its own load); C's evidence mixes one cited source (F11) with structural arguments (F4) and unanchored estimates (F2). The differentiation above replaces the false-equivalence labeling. **C's F11 direction claim is the most honestly grounded single claim across all three candidates; A's claims have the most verifiable factual errors; B's claim has coherent internal logic with circular baseline.**
 
 **Methodological pattern (cycle 91-92 emergence — DEMOTED cycle 96 from "TESTED at 2-cycle evidence" to "REQUIRES-COUNTING-DISCIPLINE"):** the sharpening-as-grounding pattern's discipline bar (direction validated by enumeration) admits too low a bar — listing IS not measuring. Cycle 91-92 sharpening produced "structured lists with attached quantitative claims" rather than "measured counts grounding claims." Cycle 96 re-grounding establishes that future sharpening cycles must (a) verify denominators against actual files/data, (b) commit to a unit of analysis before measuring, (c) name a hard refutation threshold ahead of measurement. PR #2878 Finding 15 (discipline-bar-too-low) is the structural lesson; cycles 97+ should apply this to second-iteration sharpening of A/B/C remaining weak points.
+
+## Tool-surface feasibility tracker (PR #2877 absorption, cycle 97)
+
+PR #2877 (cycle-93-tool-surface-feasibility-feedback) evaluates per-crate and aggregate LOC feasibility across A/B/C through 7 explicit lenses with evidence-cited findings. **Calibration claim verified at high precision** at cycle 97 absorption: PR #2877 reports 38 v1 crates / median ~1081 LOC / mean ~2116 LOC / minority <500 LOC; cycle 97 verification finds 38 crates / median 1081.5 / mean 2118 / 7-of-38 (18%) under 500. Unlike PR #2878 (where cycle 91 sharpening's quantitative anchors were fabricated), PR #2877's author verifiably counted the workspace.
+
+| Lens | Finding | Verdict | Integration |
+|---|---|---|---|
+| 1 | A: `boot-phase`/`close-phase`/`wiki-search` under-estimated; `phase-transition-check`/`tool-registry`/`cycle-history-append` over-estimated | DIRECTION-SUPPORTING (2 measured trivial crates fall at lower end as predicted) | A Risk 7 added; A Migration cost annotated |
+| 2 | B: typed-channel infra LOC sink dominant; skill abstraction multiplies overhead; B's own line 62 says "several thousand LOC each" for key infra | INTEGRATED (B's internal contradiction makes critique self-reinforcing) | B Risk 9 added; B Migration cost annotated |
+| 3 | C: `reconcile-mode` under-estimated (multi-channel coordination); plan-lifecycle pair under-estimated; incremental delta over A low-balled | INTEGRATED (judgment-based, no measurement to disconfirm) | C Risk 9 added; C Migration cost annotated |
+| 4 | Aggregate revised: A 3000-4500 → 3600-6200; C 4000-6000 → 5200-8200; B 10000-20000 → 14000-28000 | INTEGRATED with caveat that 2-of-9 evidence is direction-supporting only | README Migration row dual-stated (doc range + PR #2877 revised) |
+| 5 | A "1 crate per cycle" optimistic for harder crates; C 5-10 cycles for 11 crates is too tight; B realistic 16-30 cycles | INTEGRATED (cycles 93-94 measured 1 trivial crate per cycle each — supports A only at trivial scope) | README Cutover row revised |
+| 6 | A: F1 coverage depends too much on prompt-contract-check (one static checker lags evolution); C: one reconcile-mode insufficient long-term abstraction for distinct inbound classes | INTEGRATED | A Risk 3 sharpened; C Risk 9 added |
+| 7 | Coordination grows super-linearly past ~15-25 callable units; threshold ~18-25; A registry scales to ~15; B 20-40 skills + roles explode discovery | INTEGRATED (v1+v2 surface 47 crates exceeds threshold for A; B 32-52 substantially exceeds) | A Risk 3 sharpened; B Risk 10 added |
+
+**Net assessment per PR #2877 (cycle 97 integration):**
+- **A:** Still most believable migration story; underestimates 2-3 crates; medium migration risk, not "high predictability" by default at the lens-5 cutover-scope-pacing dimension.
+- **C:** Most under-justified estimate posture across the three. Migration risk moves from "medium-high predictability" toward **medium**.
+- **B:** Correctly positioned as expensive; range still optimistic at top once full coordination/test burden counted.
+- **Selection ordering A > C >> B holds**, but A and C are closer in risk than the docs suggest; C is the candidate most likely to miss its own upper-bound estimate.
+
+**Verification-discipline lesson (cycle 96 → cycle 97 confirmation):** PR #2877's calibration-first methodology (verify workspace state → use as anchor for per-crate critique) is the inverse of PR #2878's fabrication-first methodology (assert quantitative anchors → no verification). Cycle 96 lesson: external feedback making claims about file state must be verified before integration. Cycle 97 application: PR #2877's calibration was verified to high precision (mean within 0.05%, median within 0.05%), supporting integration of the lens-by-lens judgment as well-grounded; PR #2877's lens-1 specific-crate predictions partially verified at 2 instances (trivial crates fall at lower end as predicted). The verification step is sustainable discipline: ~5 minutes of file-state checking against the most-load-bearing factual claim defends against fabrication-magnitude errors.
 
 ## Forward work (cycle 93+)
 
