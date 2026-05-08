@@ -173,3 +173,85 @@ C is **not** A + targeted additions cosmetically — three structural distinctio
 The cycle 90 hand-off named the authoring question: "Whether C is genuinely distinct from A + targeted additions, or just a partial-B." Answer: **genuinely distinct from A on three axes; preserved-distinct from B on five axes; the middle path is its own design space, not a hybrid in the dilution sense**.
 
 Cycle 91 produces this candidate as the third design. Eva and the audit-repo orchestrator review all three before candidate-selection checkpoint per the redesign prompt's `<audit-as-peer>` directive and `ITERATION-UNTIL-APPROVAL` discipline. The 3-candidate set is the redesign prompt's "ideally 3" target reached. Further iteration cycles will sharpen all three candidates and solicit critique before the candidate-selection checkpoint reaches Eva approval.
+
+## Cycle 92 sharpening: central-bet validation (F2 + F4 + F11 detection legibility)
+
+C's central bet is that **reconcile-mode + plans-as-artifacts carry their weight by improving F2 (Eva-response detection), F4 (frozen-artifact lifecycle), and F11 (post-close mutations) detection legibility** beyond what A's substrate-only-cleanup achieves. Cycle 91 hand-off named this as C's highest-leverage iteration target: the structural advantages over A are documented but the **concrete metric for "carrying their weight" was estimate-level**. This section grounds the central bet in measurable per-failure-mode metrics. Direction-vs-magnitude discipline (cycle 91 methodological pattern) applies: structural improvement direction is validated by enumeration; magnitude requires Phase 3 prototype validation.
+
+### F2 (Eva-response detection) — measurable how
+
+**Metric:** detection-latency in cycles between Eva-comment-time and orchestrator-acknowledgment-time, plus reliability-rate (% of Eva-comments detected within 1 cycle of arrival).
+
+**A's expected behavior:** boot-phase pull is interleaved with other boot-work (state-load, journal-read, audit-cursor advance, standing-directive check). Eva-response detection is one of ~9 boot-phase responsibilities. Latency = cycle-cadence (~6h at 4 cycles/day cron). Reliability is bounded by boot-phase completion — if boot-phase aborts before reaching Eva-response pull, detection slips by 1 cycle.
+
+**C's expected behavior:** reconcile-mode is a named first-class harness phase between boot and work. Eva-response detection is one of ~3 reconcile-mode responsibilities (Eva-response pull + audit-post pull + dispatch-PR-merge events). Latency = same cycle-cadence (no in-cycle event arrival in either A or C). Reliability is structurally improved: reconcile-mode runs after boot completes (boot-failure mode doesn't slip Eva-response detection); reconcile-mode has its own ~10min budget allocation (Eva-response pull doesn't compete with audit-cursor advance for boot-phase budget).
+
+**Quantified estimate of F2 improvement (C vs A):**
+- Latency: identical at cycle-cadence (both ~6h). **No improvement on absolute latency.**
+- Reliability: A at ~95% (5% failure due to boot-phase exhaustion before Eva-pull); C at ~99% (1% failure due to reconcile-mode boundary edge cases, e.g., reconcile-mode also exhausting budget). **~4 percentage point reliability improvement.**
+- Detection legibility (cycle-issue-comment record): A's pull is buried in boot-phase summary; C's reconcile-mode produces dedicated subsection if non-trivial deltas. **Higher legibility for Eva auditing.**
+
+### F4 (frozen-artifact lifecycle) — measurable how
+
+**Metric:** plan-state-distribution per cycle (count of plans in active / completed / technical-debt states); stale-active-plan detection lag (cycles between plan-becomes-stale and orchestrator-promotes); promotion-decision quality (% of technical-debt-promoted plans that were indeed deferred work, not just abandoned).
+
+**A's expected behavior:** no plan-lifecycle. Plans live in `_notes/` and `docs/redesign/_notes/` as freeform documents with no named lifecycle states. Stale-detection is implicit (orchestrator may notice during gardening-sweep, but no structured trigger). Frozen-artifact fragility manifests as `_notes/` documents that stop being updated — orchestrator may not notice without explicit per-cycle review.
+
+**C's expected behavior:** plan-lifecycle states (active / completed / technical-debt) are named directories. `plan-lifecycle` Rust tool tracks last-updated cursor per active plan. Stale-active-plan detection is structured: plans not updated in N cycles flagged for orchestrator review. Promotion-decisions go through plan-lifecycle CI (`plan-lifecycle-check` ensures named owner, last-updated cursor, promotion criteria).
+
+**Quantified estimate of F4 improvement (C vs A):**
+- Plan-state legibility: A has implicit lifecycle (zero named states); C has 3 named states. **Categorical improvement.**
+- Stale-detection lag: A relies on gardening-sweep (~per-cycle) but with no structured trigger (~3-5 cycle slip in practice from cycle 87 _notes-aging observation); C has structured trigger (~1 cycle slip — staleness fires at next cycle's reconcile-mode). **~3-4 cycle reduction in detection lag.**
+- Promotion-decision quality: A has no promotion concept; C has structured promotion with CI-checked invariants. **Categorical improvement.**
+
+### F11 (post-close mutations) — measurable how
+
+**Metric:** post-close-mutation-detection-rate (% of mutations to in-tree state files between cycle close and next-cycle boot that are detected by reconcile-mode); reconcile-mode delta-emit rate (count of typed-deltas per cycle from reconcile-mode); missed-mutation-rate (post-close mutations that never get reconciled).
+
+**A's expected behavior:** boot-phase reads state files at cycle-start. Post-close mutations (e.g., Eva edits a `state/standing-directives.json` between cycles, or a Copilot dispatch PR-merge updates dispatch-queue cursor) are noticed in boot-phase but the noticing is interleaved with other boot-work. Detection is coarse-grained (file-state at boot-time vs file-state at last-close-time). **Detection rate ~85-90%** based on cycle 75-83 cold-reader observation that some post-close mutations require explicit re-read mid-cycle when downstream-decisions surface stale state.
+
+**C's expected behavior:** reconcile-mode reads state files in dedicated phase. Per-channel handlers compare last-cycle's state-cursor vs current state. Typed-delta emit captures every state-file mutation. Detection is structured (per-channel handler per state-file).
+
+**Quantified estimate of F11 improvement (C vs A):**
+- Detection rate: A at ~85-90%; C at ~95-98% (per-channel handlers reduce miss rate). **~5-13 percentage point improvement.**
+- Delta-emit legibility: A's noticing is implicit (orchestrator may journal "post-close mutation detected" but no structured record); C's typed-deltas are first-class records in cycle-history. **Categorical legibility improvement.**
+- Missed-mutation-rate: A has implicit recovery (cold-reader cycle catches missed mutations later, with multi-cycle slip); C has structured detection per cycle. **~2-3 cycle reduction in mutation-recovery slip.**
+
+### Aggregate central-bet validation
+
+C's central bet — that reconcile-mode + plans-as-artifacts carry their weight — is **structurally validated by per-failure-mode enumeration**:
+
+- F2: ~4pp reliability improvement + higher legibility (real but small).
+- F4: categorical improvement on plan-lifecycle legibility + ~3-4 cycle reduction in stale-detection lag (substantial).
+- F11: ~5-13pp detection-rate improvement + categorical legibility improvement (substantial).
+
+**Direction:** structural advantages over A are real (validated by enumeration). The 3 additional sub-shapes adopted by C beyond A (replay PARTIAL via plan-lifecycle; event-trigger PARTIAL via reconcile-mode; plan-lifecycle MODERATE state-machine coordination) **carry their weight on F4 and F11**; F2 improvement is more marginal.
+
+**Magnitude:** structural enumeration suggests improvements are real but the absolute magnitudes (4pp / 3-4 cycle / 5-13pp) are estimates from cycle observation not Phase 3 prototype measurement. Magnitude validation requires running paired cycles (A-style boot-poll vs C-style reconcile-mode) on the same workload.
+
+### Validation plan (cycle 93+ Phase 3 prototype work)
+
+The estimates above are derived from cycle observation (cycles 75-91 cold-reader + boot-phase failure modes) and structural-enumeration of A's vs C's mode-topology, not yet validated by Phase 3 prototype paired-cycle measurement. Cycle 93+ Phase 3 prototype effort should:
+
+1. Author smallest-viable `reconcile-mode` Rust crate with per-channel handlers (Eva-response, audit-post, dispatch-PR-merge).
+2. Author smallest-viable `plan-lifecycle` Rust crate with active/completed/technical-debt state machine.
+3. Run paired cycles: A-prototype (3-mode boot/work/close) vs C-prototype (4-mode boot/reconcile/work/close) on the same workload (e.g., a candidate-sharpening cycle similar to cycle 92).
+4. Measure F2/F4/F11 metrics across paired cycles; compare against estimates above.
+5. If F4 + F11 improvements measure within 50% of estimate-magnitude, central-bet is validated. If F2 + F4 + F11 improvements are below 25% of estimate-magnitude, C's central-bet weakens — the 3 additional sub-shapes do not carry their weight.
+
+If validation reveals all three improvements are real, C's PASS-WITH-NOTE on P3 holds. If F2 improvement is null (~0pp reliability difference) but F4 + F11 hold, C's distinctness from A still holds via plans-as-artifacts (Axis 5) but reconcile-mode (Axis 7 + Axis 12) is weakened — the candidate may consolidate to "A + plans-as-artifacts" rather than full middle-path.
+
+### Risks named at the structural level
+
+- **Risk 1:** the F2 improvement estimate (~4pp reliability) is small enough that prototype measurement may be within noise. If cycle counts during Phase 3 prototype are bounded (~10-20 paired cycles), F2 improvement may not be statistically distinguishable from A's baseline. F4 + F11 improvements are larger magnitude and more measurably distinguishable.
+- **Risk 2:** plan-lifecycle requires plan-authoring discipline — if cycles don't author plans (e.g., absorption cycles, dispatch-poll cycles), the lifecycle is empty and F4 improvement is 0pp. The candidate's F4 improvement is conditional on cycles producing structured plans; cycles that don't (steady-state cycles) inherit A's F4 behavior.
+- **Risk 3:** reconcile-mode adds ~10min budget to cycle window (per Axis 9 per-mode runtime budget). If reconcile-mode handlers process inbound events efficiently, the budget is mostly idle (overhead without proportional benefit). If inbound events are heavy (audit critique landing + Eva-response + dispatch-PR-merge in same cycle), reconcile-mode may exceed budget and slip detection to next cycle anyway — degrading the F11 improvement.
+- **Risk 4:** the F11 detection-rate-improvement estimate (~5-13pp) is from cycle 75-83 cold-reader observation, which itself was an iteration on A-style behavior. Phase 3 prototype paired-cycle measurement may reveal the cold-reader cycle was already capturing most missed mutations, and reconcile-mode's marginal improvement is smaller than estimated.
+- **Risk 5:** plan-lifecycle CI (`plan-lifecycle-check`) adds CI surface that needs ongoing attention (similar to A's prompt-contract-check risk, but at a different layer). If plan-lifecycle CI invariants drift (e.g., new plan-lifecycle state added without paired CI update), F4 detection legibility degrades to A's implicit baseline.
+- **Risk 6:** reconcile-mode and work-mode share the same context-window (Axis 1 single-threaded). If reconcile-mode's deltas are non-trivial, work-mode inherits a contaminated context. C's distinctness from A's boot-phase pull is structural (named harness phase) but not context-isolated; the context-isolation property B claims (per-agent context-window) is NOT inherited by C.
+
+These risks are bounded — none threaten C's substrate-bet directly (A's substrate-bet is preserved). They threaten the *magnitude* of central-bet validation (F2 + F4 + F11 improvement vs A baseline) but not the *direction* (structural enumeration of advantages is real). C's central-bet direction is validated by structural enumeration; magnitude is sharpened to "real on F4 + F11; marginal on F2; conditional on cycles authoring plans" rather than uniform across all three failure modes. Cycle 93+ Phase 3 prototype paired-cycle measurement required for empirical magnitude validation.
+
+### Implication for candidate-selection checkpoint
+
+If Eva approves C at the candidate-selection checkpoint, Phase 3 prototype work should prioritize **reconcile-mode + plan-lifecycle** as the first scaffold (the C-specific structural additions); A-shared scaffold (`tool-registry`, `boot-mode`, `wiki-search`) follows. If prototype measurement reveals F2 + F4 + F11 magnitudes below estimate, C reverts to A + plans-as-artifacts (a smaller Phase 3 prototype) rather than fully middle-path. This rollback path is structurally bounded (delete reconcile-mode crate; collapse 4-mode to 3-mode) and preserves the central-bet validation discipline.

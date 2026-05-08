@@ -1,6 +1,6 @@
 # Phase 2 candidates
 
-**Status:** Phase 2 candidate authoring begins **cycle 90** (2026-05-07) per audit#454 P5 toggle and cycle 89 hand-off. The M-item integration arc closed cycle 89; this directory contains Phase 2 candidate documents authored against the augmented synthesis surface ([`../2-design-framework.md`](../2-design-framework.md) v1.21+ and [`../1-research/clusters.md`](../1-research/clusters.md) M-item layers M1+M2+M3+M5/P6 + 9-cluster comparison). **Cycle 91** (2026-05-08) added Candidate C, reaching the redesign prompt's "ideally 3" target.
+**Status:** Phase 2 candidate authoring begins **cycle 90** (2026-05-07) per audit#454 P5 toggle and cycle 89 hand-off. The M-item integration arc closed cycle 89; this directory contains Phase 2 candidate documents authored against the augmented synthesis surface ([`../2-design-framework.md`](../2-design-framework.md) v1.21+ and [`../1-research/clusters.md`](../1-research/clusters.md) M-item layers M1+M2+M3+M5/P6 + 9-cluster comparison). **Cycle 91** (2026-05-08) added Candidate C, reaching the redesign prompt's "ideally 3" target. **Cycle 92** (2026-05-08) sharpened B's per-role decision count and C's central-bet validation as paired sharpening (after cycle 91 sharpened A's Axis 13 extraction estimate); all three candidates now have first-iteration sharpening sections grounding their respective load-bearing claims.
 
 This directory is the artifact for Phase 2 candidate-selection. Each candidate is a separate file applying the [`2-design-framework.md`](../2-design-framework.md) candidate template (12 axes + cross-axis commitments + F-mapping + preserved-primitives compliance + P1-P6 evaluation criteria + M3 v1 strengths preservation + M2 self-management cost inheritance).
 
@@ -58,11 +58,24 @@ This directory is the artifact for Phase 2 candidate-selection. Each candidate i
 - **F4 (frozen-artifact lifecycle):** A has no plan-lifecycle (implicit); C has plan-lifecycle states (active/completed/technical-debt); B has plan-lifecycle plus branching-checkpoints. **C bridges A and B on F4 structural addressing.**
 - **F2 (Eva-response detection):** A polls in boot-phase (interleaved); C runs first-class reconcile-mode; B has dedicated reconciler agent. **C bridges A and B on F2 structural addressing without paying full agent cost.**
 
-## Forward work (cycle 92+)
+## Load-bearing claims sharpening tracker
 
-- **Sharpen all three candidates per `ITERATION-UNTIL-APPROVAL`** — each candidate has named weak points: A's Axis 13 medium harness extraction percentage estimate; B's per-role decision count empirical estimate; C's central bet (whether reconcile-mode + plans-as-artifacts carry their weight) is the candidate's named uncertainty. Cycles 92+ should sharpen these specific weak points.
-- **Solicit Copilot feedback dispatch** — per redesign prompt's `<copilot-as-feedback-peer>`, dispatch a feedback-only Copilot session pointing at this directory and asking for adversarial critique. Multiple parallel dispatches with different lenses (e.g., one focused on F-pattern coverage; one on P1-P6; one on tool surface feasibility) increase the critique surface.
-- **Audit critique solicitation** — this directory's content is read by the audit-repo orchestrator on its next cycle. Audit's adversarial critique is part of the candidate-selection checkpoint per the redesign prompt's `<audit-as-peer>` directive.
+This subsection tracks which candidate-specific load-bearing claims have been sharpened from estimate-level to grounded-with-validation-plan. Each entry: claim, sharpening-cycle, validation status (estimate / structurally-validated / prototype-pending / prototype-validated). Per `ITERATION-UNTIL-APPROVAL`, sharpening is one of the named iteration activities.
+
+| Candidate | Load-bearing claim | Sharpening cycle | Direction | Magnitude |
+|---|---|---|---|---|
+| **A** | Axis 13 medium-harness extracts ~50% of v1 procedural surface | Cycle 91 | structurally validated (~50-62% named-step extraction) | prototype-pending (~40-50% range) |
+| **B** | Per-role decision count is mitigated below v1 baseline despite ~3-4× sub-shape adoption | Cycle 92 | structurally validated (per-role ~6-15 decisions vs v1 ~25-40) | prototype-pending (aggregate is ~80-110% v1 not 3-4×) |
+| **C** | Reconcile-mode + plans-as-artifacts carry their weight via F2/F4/F11 detection legibility | Cycle 92 | structurally validated (F4 + F11 substantial; F2 marginal) | prototype-pending (paired-cycle measurement required) |
+
+**Methodological pattern (cycle 91-92 emergence — TESTED at 2-cycle evidence):** the sharpening pattern grounds estimate-level load-bearing claims with concrete enumeration (extraction surface / decision-class / detection metric), names a Phase 3 prototype validation plan, names risks at the structural level, and applies direction-vs-magnitude discipline (direction validated by enumeration; magnitude requires prototype). The pattern is repeatable across candidates and across load-bearing claims; cycles 93+ may apply it to additional weak points (e.g., A's tool-registry growth risk; B's coordination overhead estimate; C's plan-authoring discipline conditional).
+
+## Forward work (cycle 93+)
+
+- **Continue sharpening per `ITERATION-UNTIL-APPROVAL`** — first-iteration sharpening landed cycles 91-92 on highest-leverage claims. Second-iteration sharpening targets: A's tool-registry-growth risk (Risk 3 in A's sharpening); B's coordination-overhead-magnitude (~9-23 estimate); C's plan-authoring-discipline-conditional risk (Risk 2 in C's sharpening).
+- **Solicit Copilot feedback dispatch** — per redesign prompt's `<copilot-as-feedback-peer>`, dispatch a feedback-only Copilot session pointing at this directory and asking for adversarial critique. The 3-candidate set + sharpening sections give critique surface broader than 2-candidate set without sharpening. Multiple parallel dispatches with different lenses (F-pattern coverage / P1-P6 ordering / tool surface feasibility / sharpening-claim adversarial critique) increase the critique surface.
+- **Audit critique solicitation** — this directory's content is read by the audit-repo orchestrator on its next cycle. Audit's adversarial critique is part of the candidate-selection checkpoint per the redesign prompt's `<audit-as-peer>` directive. Cycle 92 sharpening sections give audit a sharpened critique surface for the candidate-selection-checkpoint review.
+- **Phase 3 prototype scaffold for the smallest load-bearing crate** — bounded preview: author 1-2 of A's smallest Rust crates (e.g., `tool-registry`, `boot-mode`) as proof-of-concept for migration cost estimate. Same approach for C's `reconcile-mode` if Eva pre-approves. NOT a full Phase 3 prototype — that requires candidate-selection-checkpoint approval. Cycle-bounded, scoped to migration-cost validation only.
 - **Iterate per `ITERATION-UNTIL-APPROVAL`** — candidate-selection is one of the three hard checkpoints. Eva's explicit approval is the only stopping signal. While awaiting approval, sharpen candidates, solicit additional critique, stress-test load-bearing claims, revisit dismissed alternatives.
 
 ## Selection criteria

@@ -145,3 +145,106 @@ But it is the candidate that structurally addresses the most failure modes and i
 Cycle 89 hand-off named this candidate as one of two for cycle 90 authoring. Candidate A (single-orchestrator evolution) is the **conservative path** — see [`A-evolved-single-orchestrator.md`](./A-evolved-single-orchestrator.md). Eva and the audit-repo orchestrator review both before candidate-selection checkpoint.
 
 A possible **Candidate C (hybrid / middle path)** is named in [`README.md`](./README.md) as a cycle 91+ work item — adopting candidate A's substrate-preservation bet for cycle-internal decomposition (Axis 1 = single-threaded) while adopting candidate B's structural additions for inbound reconciliation (Axis 12 dedicated reconciler, but as a sub-cycle of the single orchestrator, not a separate role) and plans-as-artifacts (Axis 5 = Yes). Whether C is genuinely distinct from A + targeted additions, or just a partial-B, is the cycle 91 authoring question.
+
+## Cycle 92 sharpening: per-role decision count empirical estimate
+
+The candidate's P3 PARTIAL-FLAG verdict depends on whether per-role decision count for any single role is small enough that the role-specialization mitigation is real, even though the **aggregate** per-cycle decision count across the 4-agent system is ~3-4× v1's. Cycle 91 hand-off named this estimate as B's highest-leverage iteration target. This section grounds the estimate in concrete per-role decision-count enumeration. The estimate is at the **structural level** (named decision points per role) not the **wall-clock-time level** (per-decision processing time); time-level validation requires Phase 3 prototype.
+
+### Per-role decision count enumeration (per cycle, single 75-min compute window)
+
+**Planner** (forward-look, candidate generation, cycle-N→N+1 hand-off, goal-coordination):
+
+- **Substantive-focal selection** for next cycle (1 decision; plan-channel write)
+- **Branch-spawning decisions** — when to fork an explore-branch (Axis 4 branching checkpoints) vs commit straight (~1-2 per cycle on average; 0 in steady-state cycles)
+- **Per-role goal decomposition** — decompose substantive-focal into executor / curator / reconciler tasks (~3 sub-tasks)
+- **Hand-off authoring** — write the cycle-N→N+1 plan-channel artifact (~1 decision; multi-paragraph)
+- **Goal-coherence enforcement** — Cognition Managed Devins coordinator (~1 decision per super-step transition; ~3 transitions per cycle)
+- **Plan-lifecycle promotion decisions** — Axis 5 active → completed | technical-debt (~1-2 per cycle on average)
+
+Estimated planner per-cycle decisions: **~6-10**.
+
+**Executor** (substantive cycle work, dispatches, artifact writes):
+
+- **Per-artifact-type decisions** — what to write where, how to structure (typically 1-3 artifacts per cycle, each with ~2-3 structural decisions)
+- **Dispatch decisions** — when to delegate to Copilot (research/feedback/implementation) vs handle in-cycle (~1-2 per cycle, 0 most cycles)
+- **Sibling-pattern recognition during work** — naming functional-class shapes, advancing TESTED → HARDENED grades (~2-3 per cycle)
+- **Honest reflection during work** — F1-F5 correctives applied while writing (~3-4 per cycle)
+- **Cross-axis trade-off decisions** — when authoring artifacts that touch multiple framework axes (~2-3 per cycle in candidate-authoring cycles; fewer in absorption cycles)
+
+Estimated executor per-cycle decisions: **~10-15** (higher in candidate-authoring cycles; lower in absorption / dispatch-poll cycles).
+
+**Curator** (memory consolidation, gardening, deslop, anti-pattern catalog):
+
+- **Memory-consolidation decisions** — score-gated (cluster H sub-shape 2 HIGH cost) — which insights to consolidate from per-agent local memory to shared long-term memory (~2-3 per cycle when threshold fires; 0 most cycles)
+- **Gardening-sweep decisions** — what's stale, what to deslop, when to flag for executor review (~2-3 per cycle)
+- **Anti-pattern catalog updates** — when a methodology pattern is HARDENED, when an anti-pattern emerges (~1-2 per cycle in active redesign; ~0 in steady-state)
+- **Quality-grading rubric application** — Axis 10 full rubrics on artifacts (~2-4 per cycle)
+- **Plan-lifecycle gardening hooks** — stale-active-plan detection (~1 per cycle)
+
+Estimated curator per-cycle decisions: **~6-12** (higher in active redesign; lower in steady-state cycles).
+
+**Reconciler** (Axis 12 inbound channels — Eva responses, audit posts, dispatch outputs, post-close mutations):
+
+- **Per-event handler invocations** — per-channel (Eva-response / audit-post / dispatch-PR-merge / post-close-mutation) — varies with inbound volume (~1-3 per cycle on average; 0 most cycles, ~5-10 when audit lands critique)
+- **Typed-delta emit decisions** — how to translate inbound event to per-channel state delta (~1-2 per event)
+- **Branch-spawn decisions for what-if reasoning** — Axis 12 × Axis 4 (~1 per cycle when inbound ambiguous; 0 most cycles)
+- **Post-close mutation reconciliation** — F11 cluster H sub-shape 4 (~1-2 per cycle)
+
+Estimated reconciler per-cycle decisions: **~3-7** (highly bimodal: ~3 on quiet cycles, ~7-10 on inbound-heavy cycles).
+
+### Aggregate vs v1 baseline
+
+**v1 baseline measurement** (from cycle 91 candidate-authoring single-orchestrator session):
+- Substantive-focal selection: 1
+- Per-axis position commitments for C: 12
+- A sharpening structural decisions: ~6 (extract-vs-retain, prompt-size estimate, validation plan, risks, etc.)
+- README expansion structural decisions: ~5
+- Sibling-pattern recognition: ~3
+- Honest reflection: ~4 (F1-F5 correctives)
+- Cross-repo-communication framing: ~1
+- Cycle-composition-shape declaration: ~1
+- Bottleneck-state honesty: ~1
+- Sharpening / iteration-until-approval discipline: ~3
+- Hand-off authoring: ~3 (cycle 92 plan options)
+
+**Estimated v1 per-cycle decision count (cycle 91 baseline): ~40 decisions** (in a candidate-authoring cycle; lower in absorption / dispatch-poll cycles, possibly ~15-25).
+
+**B aggregate per-cycle decision count: ~25-44** (planner ~6-10 + executor ~10-15 + curator ~6-12 + reconciler ~3-7), depending on cycle character.
+
+**Per-role decision count vs v1**: each agent's per-cycle work (~6-15 decisions) is genuinely smaller than v1's ~25-40 per-cycle decision count. The mitigation is real at the per-role level. **But aggregate is ~80-110% of v1's** — comparable, not 3-4× as the M2 cost-inheritance counts suggested.
+
+The 3-4× P3 risk language in the candidate's authored P3 verdict was **about sub-shape adoption count** (~43 sub-shapes adopted vs v1's 6 STRONG = 7×) **not per-cycle decision count**. The actual per-cycle decision count is comparable to v1's, not 3-4×, because most adopted sub-shapes don't fire every cycle (memory consolidation, branch-spawning, what-if reasoning, plan-lifecycle promotion are all bursty / situational, not per-cycle).
+
+### Coordination overhead estimate
+
+Per-role decision counts above do NOT include cross-role coordination overhead:
+
+- **Channel-routing** — typed-channel-map writes / reads cost coordination per super-step transition (~3-5 transitions per cycle at ~1-2 decisions each = ~3-10 per cycle)
+- **Super-step boundary state-sync** — per-channel reducer-rule application (~3-5 boundaries × ~1-2 decisions each = ~3-10 per cycle)
+- **Goal-coherence checks** — planner verifies executor / curator / reconciler outputs match plan-channel commitments (~3 per cycle, one per agent)
+
+**Estimated coordination overhead: ~9-23 decisions per cycle** — additive on top of per-role work.
+
+**B aggregate including coordination: ~34-67 decisions per cycle**, vs v1's ~40 baseline. **Lower bound is below v1; upper bound is ~1.7× v1.** The mitigation is real but conditional: B's aggregate is comparable to v1 in steady-state cycles and exceeds v1 only in inbound-heavy or branch-spawn-heavy cycles.
+
+### Validation plan (cycle 93+ Phase 3 prototype work)
+
+The estimates above are derived from candidate-authored decision-class enumeration, not yet validated by Phase 3 prototype. Cycle 93+ Phase 3 prototype effort should:
+
+1. Author smallest-viable 4-role driver (`role-driver` + `channel-router` + `super-step-boundary` Rust crates).
+2. Run a single end-to-end cycle on a known workload (e.g., a candidate-sharpening cycle similar to cycle 92's substantive focal).
+3. Count actual per-role decision points per role; compare against ~6-15 per-role estimate.
+4. Count actual coordination overhead; compare against ~9-23 estimate.
+5. Compare aggregate against v1 baseline measurement on the same workload.
+
+If validation reveals per-role decision count ≤ v1's per-cycle decision count for the executor-equivalent role, P3 PARTIAL-FLAG promotes to PASS-WITH-NOTE (matching C's grade). If validation reveals coordination overhead exceeds the estimate substantially (~30+ decisions per cycle from coordination alone), P3 weakens further.
+
+### Risks named at the structural level
+
+- **Risk 1:** the per-role decision-class enumeration is incomplete (lower bound). Per-role decisions about *how to structure the sub-task* are not enumerated (assumed embedded in tool / skill invocation contracts); if the orchestrator session for any role makes ~5 additional per-cycle structural decisions, aggregate grows by ~20.
+- **Risk 2:** coordination overhead estimate (~9-23 per cycle) assumes typed-channel-map reducer-rules are stable; if reducer-rules are revised mid-cycle (Axis 8 mechanical-enforcement evolves over time), coordination overhead grows substantially.
+- **Risk 3:** goal-coherence enforcement requires planner to evaluate executor / curator / reconciler outputs; this is itself a substantive decision-class that may exceed the ~3 per cycle estimate when goals are ambiguous or sub-tasks diverge.
+- **Risk 4:** the per-role decision count assumes each role's session is single-pass (one invocation per super-step). If sub-tasks require iteration within a role's super-step (e.g., executor needs to revisit a structural decision after curator review), per-role decision count multiplies.
+- **Risk 5:** the aggregate-comparable-to-v1 claim depends on per-role agents NOT also doing v1's coordination work (substantive-focal selection, sibling-pattern recognition, honest reflection). If those decision-classes leak across role boundaries (e.g., curator does its own honest reflection in addition to planner's coordination), aggregate inflates.
+
+These risks are bounded — none threaten the candidate's central decomposition bet directly. They threaten the *magnitude* of the per-role mitigation (per-role count comparable to v1 vs 50% of v1 vs 25% of v1) but not the *direction* (specialized roles reduce per-role decision-class diversity). P3 PARTIAL-FLAG direction holds; per-role mitigation is conditionally validated by structural enumeration; aggregate is comparable to v1 (not 3-4×) when sub-shape firing-rate is accounted for. Cycle 93+ prototype required for empirical validation of magnitude.
