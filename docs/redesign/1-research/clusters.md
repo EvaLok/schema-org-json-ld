@@ -2870,6 +2870,26 @@ explicitly (A↔B sub-pattern 2; A↔C sub-pattern 2; E↔I sub-pattern
 Future synthesis cycles may surface additional dual-cast cases in
 F↔I, B↔C, F↔H, D↔I that warrant similar tagging.
 
+**Cycle 104 absorption.** Cycle 102 catalogue rebuild added 4 new
+sub-shapes (cluster A sub-shapes 10 + 11 — classifier-mediated
+mode dispatch from PAI + deterministic-decision-tree routing from
+omx; cluster H sub-shapes 5 + 6 — feedback-signal-inference from
+PAI + evaluator-driven keep-discard from omx). Cycle 104
+integrates these new sub-shapes into three intersection sections
+(A↔B sub-pattern 6, F↔H sub-patterns 6 + 7, A↔C sub-pattern 6 —
+4 new sub-patterns total, all compositional). The new sub-patterns
+introduce session-entry-routing as a new cluster A boundary type
+intersecting with B (classification-record write) and C
+(lifecycle-op selection); and quality-judgment-axis stratification
+in F↔H (autonomy-mode × inference; cost-tier × evaluator-driven).
+D↔I, B↔C, F↔I, E↔I sections do not gain new sub-patterns from
+cycle 102 absorption — the new cluster A and H sub-shapes are
+substrate-fit ABSENT in v1 but do not directly compose with D, E,
+or I sub-shapes at sub-pattern density. Cluster I substrate-coverage
+extension (cycle 102; 4-substrate-type map) is reflected in the
+meta-observation `Cluster I substrate-correlation revisited`
+paragraph below rather than as a new F↔I sub-pattern.
+
 ### A↔B: storage-discipline at cycle-boundary moments
 
 Cluster A defines *when* in the cycle phase-boundary moments
@@ -2878,7 +2898,8 @@ intersection is the discipline of cluster B storage writes
 happening at named cluster A boundaries — which is what produces
 consistent state across cycles.
 
-Five sub-patterns from the corpus:
+Six sub-patterns from the corpus (sub-pattern 6 added cycle 104
+absorbing cluster A sub-shapes 10 + 11 from cycle 102):
 
 1. **Sync invariants asserted at session-init** (Voyager I-V4 +
    cluster B dual-storage discipline). Cluster A boundary (cycle
@@ -2930,6 +2951,33 @@ Five sub-patterns from the corpus:
    sessions where some components have current state and others
    have stale state.
 
+6. **Session-entry classification/routing × cluster B
+   classification-record** (PAI sub-shape A.10 + omx sub-shape A.11
+   — cross-system pipeline, **cycle 104 absorption** of cycle 102
+   cluster A sub-shape additions). Cluster A session-entry
+   classification (PAI's classifier-mediated dispatch, sub-shape
+   A.10) writes a typed classification record (the cycle 102 design
+   work names `cycle-classification.json` as the output target);
+   cluster A session-entry routing (omx's deterministic-decision-
+   tree, sub-shape A.11) reads that record + tool-specific rule
+   declarations and writes a route record. The classification-record
+   is cluster B persisted state at the session-entry boundary; the
+   route-record is a derived cluster B write coordinated with the
+   classification. Without the intersection, classifier output is
+   ephemeral (next cycle re-classifies from scratch — no cross-cycle
+   stability for routing decisions; replay can't reconstruct routing
+   reasoning). With the intersection, both classification and
+   routing decisions are auditable and replayable. The cycle 102
+   catalogue annotation explicitly cross-references these two
+   cluster A sub-shapes as a "classify-then-route pipeline";
+   sub-pattern 6 is the cluster B side of that pipeline. Distinct
+   from sub-pattern 1 (sync-invariants at init) which is a
+   consistency-check at session boundary; sub-pattern 6 is a
+   typed-classification-write at session boundary. Distinct from
+   sub-pattern 3 (failure-record-write at retry exhaustion) which
+   is at a recovery boundary; sub-pattern 6 is at the session-entry
+   boundary before any phase-boundary semantics begin.
+
 **v1 failure modes addressed by A↔B**:
 
 - **Stale-reference accumulation** (cleanup work cycles 60-61):
@@ -2945,6 +2993,14 @@ Five sub-patterns from the corpus:
   entries because cluster B failure-as-artifact discipline isn't
   triggered at any cluster A boundary; intersection sub-patterns
   3 + 4 provide both the trigger and the write
+- **Re-classified-from-scratch** (v1 has no session-entry
+  classification mechanism: each cycle re-derives task framing
+  from the cycle issue body in-prompt with no cross-cycle stable
+  classification — routing decisions are implicit in prose and
+  not replayable): A↔B sub-pattern 6 (session-entry classification/
+  routing × cluster B classification-record) provides typed
+  classification persistence for v2 candidates adopting cluster A
+  sub-shapes 10 + 11
 
 **Phase 2 implication**: A↔B is the highest-priority intersection
 for v1 failure-mode coverage. v2 candidates that adopt cluster A
@@ -2958,18 +3014,29 @@ name the cluster A boundary at which it fires; orphaned cluster
 B writes (no associated boundary) are smell of within-cluster-
 mechanism without intersection-discipline.
 
+The cycle 102 cluster A sub-shapes 10 + 11 (classifier-mediated
+dispatch + deterministic-decision-tree routing) introduce a
+session-entry boundary type new to A↔B; v2 candidates adopting
+either sub-shape inherit the corresponding cluster B
+classification-record write target (sub-pattern 6). Candidates that
+adopt the classify-then-route pipeline (both A.10 + A.11) inherit
+both the classification-record and the route-record as cluster B
+writes coordinated at the session-entry boundary.
+
 ### F↔H: stratification of feedback mechanisms
 
 Cluster F provides 8 stratification axes (version, task-class,
 capability-tier, terminology, role, cost-tier, autonomy-mode,
-capability-layer). Cluster H provides 4 post-session feedback
+capability-layer). Cluster H provides 6 post-session feedback
 sub-shapes (tight-cycle meta-feedback, score-gated consolidation,
-continuous-background gardening, capability-accumulation). Their
-intersection: feedback mechanisms differentiated along F-axes —
-different feedback frequency, authority, gating, scope, or
-content for different tiers.
+continuous-background gardening, capability-accumulation,
+feedback-signal-inference, evaluator-driven keep-discard — the
+last two added cycle 102). Their intersection: feedback mechanisms
+differentiated along F-axes — different feedback frequency,
+authority, gating, scope, or content for different tiers.
 
-Five sub-patterns from the corpus:
+Seven sub-patterns from the corpus (sub-patterns 6 + 7 added cycle
+104 absorbing cluster H sub-shapes 5 + 6 from cycle 102):
 
 1. **Capability-layer × capability-accumulation** (Voyager I-V10 +
    I-V5/I-V6). Cluster F capability-layer (primitives vs
@@ -3014,14 +3081,79 @@ Five sub-patterns from the corpus:
    `forbidden` lists. Stratification of feedback content per
    task class.
 
-**v1 failure mode addressed by F↔H**: chronic-category currency
-loop. v1 has uniform feedback for all chronic categories
-regardless of category urgency, autonomy mode, or capability-
-layer relevance. F↔H stratification produces differentiated
-cross-cycle learning — high-priority chronic categories with
-elevated feedback frequency, low-priority categories with
-score-gated consolidation, capability-accumulating categories
-at the appropriate layer.
+6. **Autonomy-mode × feedback-signal-inference** (Voyager I-V9
+   autonomy-mode toggle + PAI sub-shape H.5 feedback-signal-
+   inference — cross-system composition, **cycle 104 absorption**
+   of cycle 102 cluster H sub-shape 5 addition). Cluster F
+   autonomy-mode (auto vs manual) determines whether inferred
+   feedback is the primary signal or supplementary to explicit
+   operator input. Auto mode → inferred feedback is the dominant
+   signal because explicit operator feedback is rare in auto mode;
+   manual mode → inferred feedback supplements explicit operator
+   feedback (operator feedback is primary, inference catches what
+   operator said but didn't formally rate). Without the
+   intersection, feedback-signal-inference fires uniformly across
+   modes — over-fires in manual mode (creating signal-collisions
+   with explicit operator input where the same Eva utterance is
+   both an explicit feedback comment AND an inferred-rating event),
+   or under-fires in auto mode (no inferred signal accumulates
+   when explicit signal is rare and inference is gated to
+   "operator-marked" events). Distinct from sub-pattern 2
+   (autonomy-mode × tight-cycle-vs-continuous) which selects WHICH
+   feedback shape (tight vs continuous) per autonomy mode;
+   sub-pattern 6 selects WHICH feedback signal source (explicit vs
+   inferred) per autonomy mode.
+
+7. **Cost-tier × evaluator-driven keep-discard** (Voyager I-V2
+   cost-tier + omx sub-shape H.6 evaluator-driven keep-discard —
+   cross-system composition, **cycle 104 absorption** of cycle 102
+   cluster H sub-shape 6 addition). Cluster F cost-tier determines
+   evaluator-strictness for write-time keep-discard: high-cost tier
+   (Opus / gpt-4) work gets full LLM-critic evaluation since the
+   per-action evaluator-invocation cost is amortized by the
+   high-tier work's value; low-cost tier (Sonnet / Haiku /
+   gpt-3.5-turbo) work gets cheaper evaluator (regex-and-threshold
+   rules, or a cheaper-model critic) since per-action LLM-critic
+   invocation cost approaches the per-action work cost. Without
+   the intersection, evaluator runs at uniform cost-tier — wasted
+   Opus on simple findings (over-evaluating low-tier output and
+   inflating evaluator cost beyond work cost), or under-evaluating
+   high-cost findings with a cheap evaluator (false-keep on
+   low-quality high-tier output where the cheap evaluator misses
+   quality issues an Opus critic would catch). Distinct from
+   sub-pattern 3 (cost-tier × score-gated consolidation) which
+   gates frequency-of-consolidation per cost-tier; sub-pattern 7
+   gates evaluator-strictness per cost-tier.
+
+**v1 failure modes addressed by F↔H**:
+
+- **Chronic-category currency loop** (v1 has uniform feedback
+  for all chronic categories regardless of category urgency,
+  autonomy mode, or capability-layer relevance): F↔H sub-patterns
+  1-5 stratify feedback frequency, authority, gating, and
+  content; cross-cycle learning becomes differentiated rather
+  than uniform — high-priority chronic categories get elevated
+  feedback frequency, low-priority categories get score-gated
+  consolidation, capability-accumulating categories operate at
+  the appropriate layer
+- **No-inferred-feedback-stratification** (v1 has no inferred-
+  feedback mechanism and no autonomy-mode toggle, so even if
+  inferred feedback were added it would fire uniformly across
+  modes — over-firing in manual-mode-equivalent contexts where
+  explicit operator input exists, under-firing in auto-mode-
+  equivalent contexts where explicit input is rare): F↔H
+  sub-pattern 6 (autonomy-mode × feedback-signal-inference) is
+  the design discipline for v2 candidates adopting both
+  mechanisms (cluster F sub-axis 7 + cluster H sub-shape 5)
+- **Uniform-evaluator-cost** (v1 has no evaluator-driven keep-
+  discard and no cost-tier stratification; v2 candidates that add
+  evaluator-driven keep-discard without cost-tier stratification
+  will run a uniform evaluator on all output regardless of work
+  cost — wasted Opus on simple findings or under-evaluating
+  high-cost findings with a cheap evaluator): F↔H sub-pattern 7
+  (cost-tier × evaluator-driven keep-discard) is the design
+  discipline for v2 candidates adopting both mechanisms
+  (cluster F sub-axis 6 + cluster H sub-shape 6)
 
 **Phase 2 implication**: v2 candidates with cluster F sub-axes
 AND cluster H mechanisms but **not** their intersection produce
@@ -3033,6 +3165,19 @@ stratification candidates (all 8 F sub-axes) need at least 3
 H sub-shapes to match the discrimination granularity. Orphaned
 F sub-axes (axis with no associated H mechanism differentiation)
 are smell of stratification-without-feedback-discipline.
+
+The cycle 102 cluster H sub-shapes 5 + 6 (feedback-signal-inference
++ evaluator-driven keep-discard) introduce write-time and
+inference-time quality-judgment mechanisms (sub-patterns 6 + 7).
+These quality-judgment mechanisms compose with the existing
+aggregation-window mechanisms (sub-shapes 1-3) without redundancy:
+sub-pattern 6 produces the inferred signal, sub-pattern 1 (tight-
+cycle meta-feedback) consumes it as one of multiple feedback
+inputs; sub-pattern 7 gates write-time keep-discard, sub-pattern 2
+(score-gated consolidation) gates post-hoc consolidation. v2
+candidates can adopt either or both quality-judgment-axis
+sub-shapes alongside the aggregation-window sub-shapes; sub-pattern
+6 + 7 are not exclusive of sub-patterns 1-5.
 
 ### D↔I: documentation-as-policy-enforcement
 
@@ -3110,14 +3255,16 @@ catalog is decorative.
 ### A↔C: lifecycle operations at named phase boundaries
 
 Cluster A defines *when* in the cycle phase-boundary moments occur
-(termination predicates, super-step boundaries, watchdog detection).
-Cluster C names *what kinds of lifecycle ops* exist beyond resume
-(terminate, reset, fork, replay, reactive event-trigger, stuck-watchdog
-with stale-lane release). Their intersection: lifecycle ops execute AT
-named cluster A boundaries — typed cycle-internal vocabulary instead of
+(termination predicates, super-step boundaries, watchdog detection,
+session-entry classification/routing). Cluster C names *what kinds
+of lifecycle ops* exist beyond resume (terminate, reset, fork,
+replay, reactive event-trigger, stuck-watchdog with stale-lane
+release). Their intersection: lifecycle ops execute AT named
+cluster A boundaries — typed cycle-internal vocabulary instead of
 ad-hoc lifecycle execution.
 
-Five sub-patterns from the corpus:
+Six sub-patterns from the corpus (sub-pattern 6 added cycle 104
+absorbing cluster A sub-shapes 10 + 11 from cycle 102):
 
 1. **Termination-predicate × terminate operation** (AutoGen I-3 —
    within-system pair). Cluster A termination predicate IS the trigger
@@ -3173,6 +3320,36 @@ Five sub-patterns from the corpus:
    handling). The intersection produces typed event-handling: events
    become first-class boundaries with their own state-write semantics.
 
+6. **Session-entry classification/routing × lifecycle-op selection**
+   (PAI sub-shape A.10 + omx sub-shape A.11 + cluster C lifecycle ops
+   — cross-system composition, **cycle 104 absorption** of cycle 102
+   cluster A sub-shape additions). Cluster A session-entry
+   classification (PAI A.10) or routing decision (omx A.11)
+   determines which cluster C lifecycle op runs at session entry:
+   resume (default for routine cycle continuation), fork (branch to
+   alternative work line when classifier identifies experiment-class
+   task), replay (re-execute prior work when classifier identifies
+   re-test-class task), terminate (close immediately when classifier
+   identifies non-actionable cycle), event-trigger (handle a
+   non-cron-triggered cycle from a reactive event arriving
+   between cycles). Without the intersection, lifecycle ops fire on
+   uniform criteria — every session resumes by default, fork and
+   replay require explicit operator authorization, terminate fires
+   only on session timeout. With the intersection, the classifier
+   or decision-tree determines the lifecycle op as part of routing,
+   producing typed cycle-internal vocabulary at the session-entry
+   boundary that replaces ad-hoc lifecycle execution. Distinct from
+   sub-pattern 1 (termination-predicate × terminate) which fires
+   mid-cycle on a predicate match; sub-pattern 6 fires at
+   session-entry before any phase-boundary semantics begin.
+   Distinct from sub-pattern 2 (stuck-watchdog × lane-release) which
+   is a recovery operation triggered by stuckness detection;
+   sub-pattern 6 is a routing operation triggered by classification
+   regardless of stuckness. Distinct from sub-pattern 5 (phase-
+   boundary × reactive event-trigger) which handles between-cycle
+   events; sub-pattern 6 routes the cycle ITSELF at its entry,
+   regardless of trigger origin.
+
 **v1 failure modes addressed by A↔C**:
 
 - **Implicit cycle-phasing** (v1's cycle structure is procedural-prompt
@@ -3190,6 +3367,16 @@ Five sub-patterns from the corpus:
   trigger) provides typed mechanism for cross-session event handling
   — failed-cycle events trigger structured next-cycle pickup rather
   than relying on next-cycle's cold-read of the journal
+- **Implicit-lifecycle-selection** (v1's only formalized lifecycle
+  op is `resume`, fired automatically by cron; no mechanism exists
+  to classify a cycle's needed lifecycle op at session entry — the
+  orchestrator implicitly does "resume" by reading the cycle issue
+  body and picking up where prior cycles left off, with fork/
+  replay/terminate decisions made ad-hoc mid-session if at all):
+  A↔C sub-pattern 6 (session-entry classification/routing ×
+  lifecycle-op selection) is the typed mechanism for v2 candidates
+  that adopt cluster A session-entry routing (sub-shapes 10 + 11)
+  AND cluster C lifecycle vocabulary
 
 **Phase 2 implication**: A↔C is the *typed-lifecycle* enabler. v2
 candidates with cluster A boundaries AND cluster C lifecycle ops but
@@ -3202,6 +3389,18 @@ every cluster C lifecycle op should name its cluster A boundary (e.g.,
 terminate fires at end-of-super-step on predicate match; fork fires at
 named checkpoint boundary). Orphan cluster C ops (no associated cluster
 A boundary) are smell of lifecycle-without-phase-discipline.
+
+The cycle 102 cluster A sub-shapes 10 + 11 (classifier-mediated
+dispatch + deterministic-decision-tree routing) introduce a NEW
+session-entry boundary type for A↔C (sub-pattern 6); v2 candidates
+that adopt session-entry routing AND adopt cluster C lifecycle ops
+inherit the typed lifecycle-op selection discipline. The session-
+entry routing is the *classification* of WHICH lifecycle op runs;
+cluster C provides the *vocabulary* of lifecycle ops to choose
+from. Sub-patterns 1, 5, and 6 together constitute three distinct
+A↔C trigger-types: predicate-fired mid-cycle (1), reactive-event
+between-cycles (5), classification-routed at session-entry (6).
+Phase 2 candidates can adopt any subset; v1 has none of the three.
 
 ### B↔C: storage operations on lifecycle-event boundaries
 
@@ -3506,11 +3705,35 @@ well. Concrete failure modes such candidates produce:
 
 The within-cluster sub-shape catalogues from cycle 70 provide
 WHAT mechanisms exist; the cross-cluster intersections from
-cycles 72 + 74 provide HOW mechanisms compose to produce emergent
+cycles 72 + 74 (extended cycle 104 with cycle 102 sub-shape
+absorption) provide HOW mechanisms compose to produce emergent
 architectural properties. v2 candidate evaluation can be sharpened
 by intersection coverage: how many of the seven cross-cluster
 intersection disciplines (A↔B, F↔H, D↔I, A↔C, B↔C, F↔I, E↔I) does
-the candidate's architecture explicitly address?
+the candidate's architecture explicitly address? Sub-pattern
+counts post-cycle-104: A↔B 6 / F↔H 7 / D↔I 5 / A↔C 6 / B↔C 5 /
+F↔I 5 / E↔I 4 = 38 sub-patterns total across 7 intersections (up
+from 34 pre-cycle-104; +4 from cycle 102 sub-shape absorption).
+
+**Cycle 104 absorption — session-entry as new boundary type.**
+Cycle 102 cluster A sub-shapes 10 + 11 (classifier-mediated
+dispatch + deterministic-decision-tree routing) introduce a
+session-entry boundary type that did not exist in the cycles
+72/74 cross-cluster intersection synthesis. Sub-patterns A↔B 6 +
+A↔C 6 establish session-entry as a NEW boundary type intersecting
+with both cluster B (classification-record write) and cluster C
+(lifecycle-op selection). v2 candidates that adopt cluster A
+session-entry routing inherit two simultaneous intersection
+disciplines (B-side classification-record persistence + C-side
+lifecycle-op selection); candidates that adopt cluster A
+session-entry routing without either intersection produce
+ephemeral classification (next-cycle re-derivation) and uniform
+lifecycle-op execution (resume-by-default regardless of
+classification). Cluster H sub-shapes 5 + 6 (feedback-signal-
+inference + evaluator-driven keep-discard) introduce quality-
+judgment-axis stratification mechanisms that intersect with
+cluster F sub-axes 6 + 7 (cost-tier + autonomy-mode) — F↔H
+sub-patterns 6 + 7 specify the stratification disciplines.
 
 **Cluster I substrate-correlation revisited.** Cycle 70's
 observation that cluster I is substrate-correlated to v1's
@@ -3525,9 +3748,31 @@ stratification, E↔I for typed-substrate enforcement). Phase 2
 candidates SHOULD weight cluster I patterns highly even at
 2-system convergence depth, AND they should weight all three
 cluster I intersections (D↔I, F↔I, E↔I) as part of the
-substrate-fit evaluation. v1 substrate's GitHub-Actions-multi-
-actor-with-audit shape correlates strongly with cluster I's
-canonical substrate; this is not a peripheral cluster for v2.
+substrate-fit evaluation.
+
+**Cycle 102 substrate-coverage extension (recalibration).** Cycle
+102 absorption extended cluster I's substrate-coverage from a
+single canonical substrate-correlated type (cloud-anchored
+multi-actor) to a 4-substrate-type map: cloud-anchored multi-actor
+(openclaw + OpenAI harness) + single-user personal-assistant (PAI
+via Claude Code permission system) + configuration-layer-over-CLI
+(omx via thin-wrapper-with-deep-hooks) + research-artifact
+substrate-absent (Voyager). The substrate-correlation reasoning
+recalibrates from "v1's substrate is uniquely correlated with
+cluster I's canonical substrate" to "v1's substrate is one of
+multiple correlated types where cluster I patterns transfer."
+Implication for Phase 2 candidates: cluster I substrate-fit
+weighting remains valid (cluster I patterns transfer to v1's
+substrate), but the correlation reasoning is no longer "v1 is
+uniquely positioned" — v1 inherits cluster I primitives the same
+way other harness-mediated substrates do. v1 substrate's
+GitHub-Actions-multi-actor-with-audit shape correlates strongly
+with cluster I's substrate as one of multiple correlated substrate
+types; this is not a peripheral cluster for v2, AND the
+recalibration removes the asymmetry-of-v1-uniqueness argument
+some Phase 2 weighting depended on. Candidates that adopt cluster
+I patterns should justify the adoption on substrate-correlation-
+generally, not on v1-uniquely.
 
 **Cluster C as lifecycle-vocabulary linchpin.** After cycle 74,
 cluster C now participates in two full intersections (A↔C and
