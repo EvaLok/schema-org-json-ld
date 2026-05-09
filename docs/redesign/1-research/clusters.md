@@ -51,28 +51,34 @@ software-development/game-environment, external-publishable/internal-tooling.
 Patterns surviving 6-system cross-substrate convergence are robustly
 transferable.
 
-## Cluster table (post cycle 69)
+## Cluster table (post cycle 101 — PAI + omx deep-dive absorption)
 
 | Cluster | Theme | Depth | Implications | Sub-shapes/sub-axes |
 |---|---|---|---|---|
-| A | Cycle-internal boundaries with state-write semantics | 6-system clean | 11 | 9 sub-shapes |
+| A | Cycle-internal boundaries with state-write semantics | 6-system clean (+ PAI + omx augmentation, cycles 100-101) | 11 + 2 NEW | 11 sub-shapes |
 | B | Cross-cycle artifact organization | 6-system clean | 10 | 9 sub-shapes |
 | D | Documentation honesty | 5-system clean (+ Voyager partial) | 11 | 9 sub-shapes |
-| F | Tool-suite stratification (multi-axis) | 5-system convergent | 8 | 8 sub-axes |
-| H | Post-session feedback / cross-session learning | 4-system convergent | 4 | 4 sub-shapes |
+| F | Tool-suite stratification (multi-axis) | 6-system convergent (+ PAI all-8-axes augmentation cycle 100; + omx substrate-edge augmentation cycle 101 with 3-system substrate-edge convergence omx+PAI+omc) | 8 + 1 NEW candidate | 8 sub-axes + 1 candidate sub-shape |
+| H | Post-session feedback / cross-session learning | 6-system convergent (+ PAI cycle 100, + omx cycle 101) | 4 + 2 NEW | 6 sub-shapes |
 | C | Lifecycle operations beyond resume | 4-system clean | 6 | 5 sub-shapes |
 | E | Typed boundary semantics | 3-system convergent | 3 | 2 sub-shapes |
 | G | Role-asymmetric context | 2-system convergent | 2 | 2 sub-shapes |
-| I | Harness-enforced security/policy boundaries | 2-system convergent (substrate-correlated) | 3 | 2 sub-shapes |
+| I | Harness-enforced security/policy boundaries | 2-system convergent (substrate-correlated; substrate-coverage extended cycles 100-101 to single-user personal-assistant + configuration-layer-over-CLI) | 3 | 2 sub-shapes |
 
 Clusters A, B, D are tied as the most-foregrounded clusters in the
 corpus (5+ system clean depth). Cluster F is the multi-axis-king
 (8 sub-axes — largest single-cycle sub-shape growth occurred when
-Voyager was mined cycle 69, +4 sub-axes). Cluster I is at lower
-2-system convergent depth but is *substrate-correlated* to v1's
-own substrate (cloud-anchored multi-actor with audit) — Phase 2
-candidates SHOULD weight cluster I patterns highly despite the low
-depth count.
+Voyager was mined cycle 69, +4 sub-axes; cycle 101 introduces 1
+candidate sub-shape, deterministic-post-processing-of-LLM-output,
+at 1-system evidence). Cluster I is at lower 2-system convergent
+depth but is *substrate-correlated* to v1's own substrate
+(cloud-anchored multi-actor with audit) — Phase 2 candidates
+SHOULD weight cluster I patterns highly despite the low depth
+count. Cycle 100-101 absorption (cycle 102 catalogue update)
+extends cluster A by 2 sub-shapes (classifier-mediated mode
+dispatch from PAI; deterministic-decision-tree from omx) and
+cluster H by 2 sub-shapes (feedback-signal-inference from PAI;
+evaluator-driven keep-discard from omx).
 
 **v1-substrate instantiation annotation work begun cycle 86
 (audit#454 M1 absorption); M2 self-management cost annotations
@@ -111,14 +117,17 @@ summary subsection** below the M5/P6 subsection documents the
 
 ## Cluster A: cycle-internal boundaries with state-write semantics
 
-`[6-system clean]` AutoGen + LangGraph + Cognition + openclaw +
-OpenAI harness + Voyager.
+`[6-system clean + 2-system augmentation cycles 100-101]` AutoGen +
+LangGraph + Cognition + openclaw + OpenAI harness + Voyager
+(original 6-system mining base, cycles 62-69) + PAI (cycle 100
+deeper-read absorption) + oh-my-codex (cycle 101 deeper-read
+absorption).
 
 The orchestrator's cycle has internal boundaries across which
 state-writes must respect explicit semantics. The principle —
 cycle-internal phasing has explicit semantics rather than implicit
-sequencing — is shared across all six systems; the mechanisms
-diverge widely. Sub-shapes (9) include super-step semantics with
+sequencing — is shared across all eight systems; the mechanisms
+diverge widely. Sub-shapes (11) include super-step semantics with
 per-channel reducer rules (LangGraph I-L1), phase-boundary state
 semantics (AutoGen I-3 + LangGraph I-L1 cross-system convergent,
 elevated cycle 65), termination predicates as cycle-internal phase
@@ -129,13 +138,19 @@ stuck-session watchdog as recovery-without-abort lifecycle
 operation (openclaw I-O5), sync invariants asserted at session
 init for dual-storage components with fail-fast remediation hint
 (Voyager I-V4), bounded retries with critic-feedback fed forward
-into next-attempt prompt (Voyager I-V7), and (cycle 68) process-
+into next-attempt prompt (Voyager I-V7), (cycle 68) process-
 isolation discipline at session level via ephemeral worktrees
-(OpenAI harness).
+(OpenAI harness), (cycle 100) classifier-mediated mode dispatch
+applied at task ingestion BEFORE executor acts (PAI
+PromptProcessing.hook.ts), and (cycle 101) deterministic-decision-
+tree routing as code-level control-flow primitive distinct from
+classifier-mediated and prompt-driven phasing variants
+(oh-my-codex PreToolUse hook routing logic).
 
-**Sub-cluster groupings (cycle 85 audit#454 D3 absorption).** The 9
-sub-shapes partition into four conceptually distinct sub-cluster
-groupings:
+**Sub-cluster groupings (cycle 85 audit#454 D3 absorption; cycle
+102 task-ingestion-routing extension absorbing PAI cycle 100 + omx
+cycle 101).** The 11 sub-shapes partition into five conceptually
+distinct sub-cluster groupings:
 
 - **Phase-boundary semantics** (4 sub-shapes): super-step semantics,
   phase-boundary state semantics, termination predicates, per-key
@@ -145,16 +160,25 @@ groupings:
 - **Concurrency / queuing** (1 sub-shape): lane-aware FIFO with
   per-session serialization
 - **Process isolation** (1 sub-shape): ephemeral worktrees
+- **Task-ingestion routing** (2 sub-shapes, NEW cycle 102):
+  classifier-mediated mode dispatch (PAI cycle 100),
+  deterministic-decision-tree routing (omx cycle 101)
 
-Distribution (4/3/1/1) signals: phase-boundary is structurally
-well-attested, recovery is well-attested, but concurrency and
-process-isolation are 1-sub-shape thin within cluster A. Future
-systems may elevate these to their own sub-cluster groupings or
+Distribution (4/3/1/1/2) signals: phase-boundary is structurally
+well-attested, recovery is well-attested, concurrency and
+process-isolation remain 1-sub-shape thin within cluster A, and
+task-ingestion routing is 2-sub-shape with mechanism diversity
+(LLM-mediated vs deterministic) introduced at cycles 100-101.
+Future systems may elevate the thin groupings to their own
 distinct clusters as corpus depth supports it. Phase 2 candidate
 evaluation should check coverage at the sub-cluster grouping level,
 not just at the cluster A level — a candidate covering only
 phase-boundary semantics is not equivalent to a candidate covering
-all four sub-cluster groupings.
+all five sub-cluster groupings. The task-ingestion routing
+grouping is architecturally distinct from phase-boundary semantics
+(applied at task entry, not at mid-cycle transitions); Phase 2
+candidates that adopt cluster A should evaluate task-ingestion
+routing separately from mid-cycle phasing.
 
 **v1-substrate instantiation (M1, cycle 86 audit#454 absorption) +
 self-management cost (M2, cycle 88 audit#454 absorption — retro
@@ -328,74 +352,169 @@ decision overhead. Cluster A M2 grades use the same LOW / MODERATE
    same v1 substrate property dual-cast across cluster lenses (per
    audit#454 D2 dual-cast classification).
 
-**Substrate-fit summary across cluster A's 9 sub-shapes:**
+*Task-ingestion routing sub-shapes (cycles 100-101 absorption):*
+
+10. **Classifier-mediated mode dispatch (PAI cycle 100)** —
+    substrate-fit ABSENT. PAI's `PromptProcessing.hook.ts` runs
+    Sonnet on every top-level prompt and writes
+    `MODE`/`TIER`/`REASON`/`SOURCE` BEFORE the executor sees the
+    prompt. Executor required to honor classifier output exactly:
+    "No regex fallback. No model judgment." Fail-safe: classifier
+    error → ALGORITHM E3. **Architecturally novel as a cycle-A
+    sub-shape**: distinct from existing sub-shapes 1-9 which are
+    all *mid-cycle* phase-transition primitives. Sub-shape 10 is
+    applied at *task ingestion* BEFORE the executor acts —
+    classifying incoming work into a mode/tier/source taxonomy
+    deterministically before any execution. v1 has no equivalent:
+    cycle-runner harness picks up `orchestrator-run` issues and
+    enters the orchestrator session; there is no pre-classification
+    of task type (research-absorption vs candidate-sharpening vs
+    schema-work vs housekeeping). Design work: Rust tool
+    `classify-cycle-task` runs at session start (or workflow YAML
+    entry-point), reads the cycle issue body + recent journal +
+    `input-from-eva` directives, emits a typed
+    `cycle-classification.json` (mode/tier/source/rationale),
+    orchestrator session reads classification at orientation step.
+    Substrate via Rust tool + Sonnet invocation (not Opus —
+    cost-tier per cluster F sub-axis 6). **Self-management cost:
+    MODERATE.** Classifier prompt evolves as new task-modes emerge;
+    classification taxonomy needs maintenance (mode list, tier
+    rules); per-cycle decision overhead is minimal once classifier
+    is in place (orchestrator reads classification, does not
+    re-classify). Cross-references cluster F sub-axis 2 (task-class
+    Playbook templates — once classified, a Playbook can be loaded)
+    and cluster F sub-axis 6 (cost-tier — Sonnet for classification,
+    Opus for execution).
+
+11. **Deterministic-decision-tree routing (oh-my-codex cycle 101)**
+    — substrate-fit ABSENT. omx's PreToolUse hook + planning-before-
+    execution arbitration use deterministic-decision-tree routing
+    rather than LLM-mediated classification: regex-and-set-
+    membership rules (e.g., `KEYWORDS_REQUIRING_INTENT`,
+    `should_retry_with_fallback` 9-signal list, `AUTO_COMPLETE_
+    TRANSITIONS` 7-state-pair set, `ALLOWED_OVERLAP_PAIRS`
+    set-membership) decide what runs next. **Distinct from
+    sub-shape 10 (classifier-mediated)**: no LLM invocation in the
+    routing decision; pure deterministic logic over typed inputs.
+    **Distinct from openclaw's prompt-driven phasing**: openclaw
+    declares phases in prompt and the model honors them; omx
+    encodes phase / route decisions in code that runs without
+    LLM judgment. Three architectural distinctions stack: (a)
+    deterministic-decision-tree (omx, sub-shape 11) — code-level
+    rules with no LLM; (b) classifier-mediated (PAI, sub-shape
+    10) — separate cheap-LLM call with strict structured output
+    consumed by executor; (c) prompt-driven phasing (openclaw,
+    sub-shape 2) — phase semantics declared in prompt and the
+    main LLM follows. v1 has no formal equivalent of any of the
+    three at cycle ingestion. Design work: Rust tool
+    `route-cycle-decision` reads `cycle-classification.json`
+    (from sub-shape 10) plus tool-specific decision-rule
+    declarations + emits next-action route. Substrate via Rust
+    tool + declarative rule registry per task-class. **Self-
+    management cost: LOW.** Once decision-tree rules are declared,
+    they execute without per-cycle decision cost; rule additions
+    are bounded events (new task-class, new transition); no
+    threshold calibration overhead because the rules are
+    typed-set-membership not learned-thresholds. Cross-
+    references cluster A sub-shape 10 (classifier-mediated
+    dispatch — combines as classify-then-route pipeline) and
+    cluster F sub-axis 2 (Playbook templates — decision-tree
+    rules are Playbook-shaped at code level).
+
+**Substrate-fit summary across cluster A's 11 sub-shapes:**
 - **STRONG (1):** process-isolation via ephemeral worktrees
 - **PARTIAL (2):** super-step semantics, per-key reducers
-- **ABSENT (6):** phase-boundary state semantics, termination
+- **ABSENT (8):** phase-boundary state semantics, termination
   predicates, stuck-session watchdog, sync invariants at init,
-  bounded retries with feedback, lane-aware FIFO
+  bounded retries with feedback, lane-aware FIFO,
+  classifier-mediated mode dispatch (10), deterministic-decision-
+  tree routing (11)
 
-The 6 ABSENT sub-shapes constitute the bulk of cluster A's
+The 8 ABSENT sub-shapes constitute the bulk of cluster A's
 substrate-design work for Phase 2 candidates. The 2 PARTIAL
 sub-shapes need design work but build on existing v1 patterns
 (implicit super-step boundary, implicit per-file reducer
 behavior). The 1 STRONG sub-shape (process-isolation) is
 inherited from the substrate; Phase 2 candidates should not
-assume it requires implementation.
+assume it requires implementation. The 2 NEW ABSENT sub-shapes
+(10 + 11, cycles 100-101) are *task-ingestion-routing* primitives
+distinct from the *mid-cycle phase-transition* primitives in
+sub-shapes 1-9; Phase 2 candidates can adopt one, both, or neither
+(see sub-cluster grouping update below).
 
-**Self-management cost summary across cluster A's 9 sub-shapes
-(M2 retro, cycle 88):**
-- **LOW (4):** termination predicates (3), stuck-session watchdog
-  (5), sync invariants at init (6), process-isolation (9)
-- **MODERATE (5):** super-step semantics (1), phase-boundary state
+**Self-management cost summary across cluster A's 11 sub-shapes
+(M2 retro, cycle 88; cycle 102 update for sub-shapes 10-11):**
+- **LOW (5):** termination predicates (3), stuck-session watchdog
+  (5), sync invariants at init (6), process-isolation (9),
+  deterministic-decision-tree routing (11)
+- **MODERATE (6):** super-step semantics (1), phase-boundary state
   semantics (2), per-key reducers (4), bounded retries with feedback
-  (7), lane-aware FIFO (8)
+  (7), lane-aware FIFO (8), classifier-mediated mode dispatch (10)
 - **HIGH (0):** none
 
-Cluster A self-management cost distribution (4 LOW + 5 MODERATE
-+ 0 HIGH) is bimodal LOW/MODERATE: substrate-handled mechanisms
-(watchdog, sync-check, predicate evaluation) cluster at LOW;
-declarative-registry mechanisms (reducer registry, state machine,
-lane queue) cluster at MODERATE. No HIGH-cost sub-shapes in cluster
+Cluster A self-management cost distribution (5 LOW + 6 MODERATE
++ 0 HIGH) remains bimodal LOW/MODERATE; the 2 NEW sub-shapes
+maintain the bimodal distribution (sub-shape 10 MODERATE because
+classifier prompt + taxonomy maintenance; sub-shape 11 LOW
+because typed-set-membership rules execute without per-cycle
+threshold calibration). No HIGH-cost sub-shapes in cluster
 A — design substrate offloads continuous-evaluation work to tools
 once the substrate is in place. Phase 2 candidates adopting most
 of cluster A inherit moderate per-cycle decision cost concentrated
 on declarative-registry maintenance (reducer choice per surface,
-state-machine schema, lane assignment per work-unit).
+state-machine schema, lane assignment per work-unit, classifier
+taxonomy).
 
 **Phase 2 evaluation use of these annotations:**
 
 - *Implementation effort* — weight by ABSENT count; cluster A's
-  6 ABSENT sub-shapes signal substantial Rust tool design work
+  8 ABSENT sub-shapes signal substantial Rust tool design work
   for any candidate adopting most of cluster A
 - *Substrate-design effort by sub-cluster grouping* — recovery
   operations have 3 ABSENT sub-shapes (largest substrate-design
   burden); phase-boundary semantics have 2 ABSENT + 2 PARTIAL
-  (next largest); concurrency-queuing has 1 ABSENT (single
+  (next largest); task-ingestion routing has 2 ABSENT (NEW grouping
+  cycle 102 — both new sub-shapes are ABSENT in v1, signaling the
+  cycle-ingestion classification + routing layer is wholly
+  unimplemented); concurrency-queuing has 1 ABSENT (single
   decision-point with 3 named options); process-isolation has
   0 ABSENT (free from substrate)
 - *"Free from substrate" inheritance* — candidates should
   explicitly acknowledge which mechanisms they inherit (don't
   need to design) versus which they implement; failure to do so
   is itself a Phase 2 evaluation flag for under-specification
-- *Self-management cost* (M2 retro added cycle 88) — Phase 2
-  candidates adopting cluster A inherit 4 LOW + 5 MODERATE per-cycle
-  cost; no HIGH-cost sub-shapes. Candidates favoring LOW-cost
-  sub-shapes (termination predicates + watchdog + sync-check +
-  process-isolation) minimize per-cycle overhead. The
-  declarative-registry-heavy alternative (reducer registry + state
-  machine + lane queue) inherits the MODERATE sub-shapes and is
-  the higher-decision-cost path.
+- *Self-management cost* (M2 retro added cycle 88; cycle 102
+  update for sub-shapes 10-11) — Phase 2 candidates adopting
+  cluster A inherit 5 LOW + 6 MODERATE per-cycle cost; no HIGH-cost
+  sub-shapes. Candidates favoring LOW-cost sub-shapes
+  (termination predicates + watchdog + sync-check + process-
+  isolation + deterministic-decision-tree routing) minimize per-
+  cycle overhead. The declarative-registry-heavy alternative
+  (reducer registry + state machine + lane queue + classifier
+  taxonomy) inherits the MODERATE sub-shapes and is the higher-
+  decision-cost path.
+- *Task-ingestion routing dispatch shape* (NEW cycle 102) —
+  classifier-mediated (sub-shape 10, MODERATE cost) and
+  deterministic-decision-tree (sub-shape 11, LOW cost) are
+  *combinable as a pipeline*: classifier emits typed
+  classification, decision-tree routes within the classified
+  mode. v1 currently lacks both; Phase 2 candidates that adopt
+  the pipeline gain pre-execution task typing without per-cycle
+  classification cost beyond the bounded Sonnet call.
 
 **Phase 2 implication**: cluster A is near-mandatory. v1's failure
 modes (stale-reference accumulation, abandonment cascade,
 chronic-category currency loop) all map to gaps in cycle-internal
 phasing — see sub-cluster grouping annotations in the v1-failure-mode
-mapping below. Sub-shape variety (9 across 4 sub-cluster groupings)
+mapping below. Sub-shape variety (11 across 5 sub-cluster groupings)
 gives Phase 2 candidates significant combinatoric room for
 differentiation, but candidates should be evaluated for coverage
 distribution across sub-cluster groupings, not just total sub-shape
-count.
+count. The cycle 102 task-ingestion routing extension (sub-shapes
+10 + 11) adds a fifth sub-cluster grouping that v1 has no
+equivalent for at all — the implementation effort delta from
+cluster A pre-cycle-102 to post-cycle-102 is +2 ABSENT sub-shapes
+(both new) plus the new sub-cluster grouping itself.
 
 ## Cluster B: cross-cycle artifact organization
 
@@ -1013,36 +1132,50 @@ substrate-fit annotation; M3 is cluster-spanning v1 strengths
 synthesis; M5/P6 is Phase 2 preservation criteria. Each layer
 serves a different Phase 2 evaluation purpose.
 
-## Cluster comparison summary (M-item integration arc, cycles 86-89)
+## Cluster comparison summary (M-item integration arc, cycles 86-89; cycle 102 absorption update)
 
 The M-item integration arc closes cycle 89 with all 9 clusters
 M1-annotated (substrate-fit) + M2-annotated (self-management cost),
 plus M3 v1 strengths layer (5 distinct strengths) and M5/P6 audit-
-as-peer preservation pattern. Aggregate distribution:
+as-peer preservation pattern. **Cycle 102 absorption update**: cluster A
+extends to 11 sub-shapes (sub-shapes 10 + 11 from PAI/omx); cluster H
+extends to 6 sub-shapes (sub-shapes 5 + 6 from PAI/omx). Cluster F
+gains a candidate sub-axis (output-shape stratification, 1-system
+evidence, awaiting 2-system convergence — NOT counted below until
+promoted). Cluster I gains substrate-coverage annotation but no new
+sub-shapes. Aggregate distribution:
 
 | Cluster | Sub-shapes | M1 STRONG | M1 PARTIAL | M1 ABSENT | M2 LOW | M2 MODERATE | M2 HIGH |
 |---------|------------|-----------|------------|-----------|--------|-------------|---------|
-| A — cycle-internal boundaries | 9 | 1 | 2 | 6 | 4 | 5 | 0 |
+| A — cycle-internal boundaries | 11 | 1 | 2 | 8 | 5 | 6 | 0 |
 | B — cross-cycle artifact organization | 9 | 1 | 6 | 2 | 3 | 4 | 2 |
 | C — lifecycle operations beyond resume | 5 | 0 | 2 | 3 | 1 | 3 | 1 |
 | D — documentation honesty | 9 | 2 | 6 | 1 | 4 | 5 | 0 |
 | E — typed boundary semantics | 2 | 0 | 2 | 0 | 0 | 2 | 0 |
-| F — tool-suite stratification | 8 | 0 | 3 | 5 | 2 | 4 | 2 |
+| F — tool-suite stratification | 8 (+1 candidate) | 0 | 3 | 5 | 2 | 4 | 2 |
 | G — role-asymmetric context | 2 | 1 | 1 | 0 | 1 | 1 | 0 |
-| H — post-session feedback | 4 | 0 | 2 | 2 | 0 | 2 | 2 |
+| H — post-session feedback | 6 | 0 | 2 | 4 | 1 | 3 | 2 |
 | I — harness-enforced policy | 2 | 1 | 1 | 0 | 1 | 1 | 0 |
-| **Total (9 clusters, 50 sub-shapes/sub-axes)** | **50** | **6** | **25** | **19** | **16** | **27** | **7** |
+| **Total (9 clusters, 54 sub-shapes/sub-axes; +1 candidate)** | **54** | **6** | **25** | **23** | **18** | **29** | **7** |
 
-**Substrate-fit distribution (M1 layer)**: 6 STRONG (12%) + 25
-PARTIAL (50%) + 19 ABSENT (38%). The PARTIAL plurality reflects v1's
+**Substrate-fit distribution (M1 layer)**: 6 STRONG (11%) + 25
+PARTIAL (46%) + 23 ABSENT (43%). The ABSENT count grew by 4 (cycle
+102 absorption: cluster A sub-shapes 10 + 11; cluster H sub-shapes
+5 + 6) while STRONG and PARTIAL counts held; ABSENT plurality is
+now within 3 percentage points of PARTIAL (it was 12 points behind
+in the cycle-89 baseline). The PARTIAL plurality still reflects v1's
 substrate providing structural foundation for many sub-shapes that
 require formalization (declarative scaffolding, registry tools)
-rather than substrate-design from scratch. The 19 ABSENT sub-shapes
+rather than substrate-design from scratch. The 23 ABSENT sub-shapes
 constitute the bulk of Phase 2 substrate-design work; the 6 STRONG
-sub-shapes are inherited free from substrate.
+sub-shapes are inherited free from substrate. **The 4 NEW ABSENT
+sub-shapes (cycle 102) are concentrated in cluster A task-ingestion
+routing + cluster H quality-judgment axes** — both are pre-execution
+or write-time mechanisms distinct from cluster A mid-cycle phasing
+or cluster H continuous-background aggregation.
 
-**Self-management cost distribution (M2 layer)**: 16 LOW (32%) +
-27 MODERATE (54%) + 7 HIGH (14%). The MODERATE plurality reflects
+**Self-management cost distribution (M2 layer)**: 18 LOW (33%) +
+29 MODERATE (54%) + 7 HIGH (13%). The MODERATE plurality reflects
 formalization-cost: most sub-shapes require ongoing schema /
 registry / convention discipline at moderate per-cycle decision
 overhead. The 7 HIGH-cost sub-shapes (cluster B sub-shapes 3 + 7;
@@ -1053,17 +1186,25 @@ branches, score-gated consolidation, continuous gardening) that
 require ongoing per-cycle threshold / rubric calibration. Phase 2
 candidates that include all HIGH-cost sub-shapes inherit substantial
 self-management cost; candidates that exclude them minimize it.
+**The 4 NEW sub-shapes (cycle 102) added 2 LOW + 2 MODERATE + 0
+HIGH** — confirming that the new task-ingestion-routing and
+quality-judgment-axis primitives are bounded-cost mechanisms (not
+HIGH-cost continuous-evaluation primitives).
 
-**Substrate-alignment ranking** (most-aligned to least-aligned):
+**Substrate-alignment ranking** (most-aligned to least-aligned;
+cycle 102 update — only cluster A and cluster H change tier
+positions; cluster A drops from 6th to 7th-effective-rank-by-ABSENT
+count, cluster H stays at 7th-effective-rank-by-ABSENT-count due to
++2 ABSENT but other clusters unchanged):
 
 1. Cluster D (2 STRONG + 6 PARTIAL + 1 ABSENT) — most aligned
 2. Cluster B (1 STRONG + 6 PARTIAL + 2 ABSENT)
 3. Cluster G (1 STRONG + 1 PARTIAL + 0 ABSENT) — tied
 4. Cluster I (1 STRONG + 1 PARTIAL + 0 ABSENT) — tied
 5. Cluster E (0 STRONG + 2 PARTIAL + 0 ABSENT) — all-PARTIAL
-6. Cluster A (1 STRONG + 2 PARTIAL + 6 ABSENT)
-7. Cluster H (0 STRONG + 2 PARTIAL + 2 ABSENT)
-8. Cluster C (0 STRONG + 2 PARTIAL + 3 ABSENT)
+6. Cluster C (0 STRONG + 2 PARTIAL + 3 ABSENT)
+7. Cluster H (0 STRONG + 2 PARTIAL + 4 ABSENT) — cycle 102 +2 ABSENT
+8. Cluster A (1 STRONG + 2 PARTIAL + 8 ABSENT) — cycle 102 +2 ABSENT
 9. Cluster F (0 STRONG + 3 PARTIAL + 5 ABSENT) — least aligned
 
 Cluster D is most substrate-aligned because v1's documentation
@@ -1071,24 +1212,32 @@ honesty (0-retrospective.md, journal entries, walkback artifacts,
 v1-failure-mode mapping) is already substantive. Cluster F is
 least substrate-aligned because v1 has minimal tool-suite
 stratification across the 8 sub-axes. The middle tier (clusters G,
-I, E, A, H, C) ranges from substrate-aligned-but-formalization-
-needed to substrate-design-needed. Cluster G and cluster I tie
-at 3rd because both have STRONG audit-as-peer / permission-policy
-substrate inheritance with only 1 PARTIAL formalization sub-shape
-each.
+I, E, A, C, H) ranges from substrate-aligned-but-formalization-
+needed to substrate-design-needed. **Cycle 102 update**: cluster A's
+ABSENT count grew from 6 to 8, making it 8th in the substrate-
+alignment ranking (previously 6th). Cluster H stays in the
+6-7th-tier band but with higher ABSENT count (was 7th; now 7th but
+with 2 more design-required sub-shapes). Cluster G and cluster I
+tie at 3rd because both have STRONG audit-as-peer / permission-
+policy substrate inheritance with only 1 PARTIAL formalization
+sub-shape each — unchanged by cycle 102 absorption.
 
 **Self-management cost ranking** (lowest to highest per-cycle
-decision overhead, by HIGH-count then MODERATE-count):
+decision overhead, by HIGH-count then MODERATE-count; cycle 102
+update — cluster A stays tied lowest; cluster H stays highest with
+new sub-shapes adding LOW + MODERATE not HIGH):
 
 1. Cluster D (4 LOW + 5 MODERATE + 0 HIGH) — tied lowest
-2. Cluster A (4 LOW + 5 MODERATE + 0 HIGH) — tied lowest
+2. Cluster A (5 LOW + 6 MODERATE + 0 HIGH) — tied lowest (cycle 102
+   +1 LOW + 1 MODERATE; rank held because +0 HIGH)
 3. Cluster G (1 LOW + 1 MODERATE + 0 HIGH)
 4. Cluster I (1 LOW + 1 MODERATE + 0 HIGH)
 5. Cluster E (0 LOW + 2 MODERATE + 0 HIGH)
 6. Cluster B (3 LOW + 4 MODERATE + 2 HIGH)
 7. Cluster C (1 LOW + 3 MODERATE + 1 HIGH)
 8. Cluster F (2 LOW + 4 MODERATE + 2 HIGH)
-9. Cluster H (0 LOW + 2 MODERATE + 2 HIGH) — highest
+9. Cluster H (1 LOW + 3 MODERATE + 2 HIGH) — highest (cycle 102
+   +1 LOW + 1 MODERATE; HIGH-count unchanged at 2; rank held)
 
 The cost-ranking does NOT match the substrate-fit-ranking exactly:
 cluster D is best on both axes (most substrate-aligned + lowest
@@ -1410,10 +1559,40 @@ real v1 strengths at zero cost.
 
 ## Cluster F: tool-suite stratification (multi-axis)
 
-`[5-system convergent]` openclaw + OpenAI harness + Cognition +
-AutoGen + Voyager. Cycle 69 added Voyager as the 5th system with
-the largest single-cycle sub-axis growth in the corpus (4 sub-axes
-→ 8 sub-axes).
+`[6-system convergent + 3-system substrate-edge convergence]`
+openclaw + OpenAI harness + Cognition + AutoGen + Voyager
+(original 5-system convergent base) + PAI (cycle 100 deeper-read
+absorption — all 8 sub-axes confirmed at code level) +
+substrate-edge convergence (cycle 101 deeper-read absorption):
+omx + PAI + oh-my-claudecode share a thin-wrapper-with-deep-hooks
+substrate posture for cluster F stratification.
+
+Cycle 69 added Voyager as the 5th system with the largest
+single-cycle sub-axis growth in the corpus (4 sub-axes → 8
+sub-axes); cycle 100 added PAI as the 6th system with all 8
+sub-axes confirmed at code level (Hooks/Skills/Tools/Agents quad
++ two-category capability taxonomy + Algorithm-versioning) — a
+density of stratification mechanisms unmatched by other corpus
+systems.
+
+**3-system substrate-edge convergence (cycle 101 absorption):**
+oh-my-codex (omx) + PAI + oh-my-claudecode (omc, first-pass
+cycle 99; deeper-read pending) share a *thin-wrapper-with-deep-
+hooks* substrate posture: each is a thin Markdown/TypeScript
+wrapper layer over an underlying CLI substrate (omx over Codex
+CLI; PAI over Claude Code CLI; omc over Claude Code CLI), with
+deep hook injection as the primary stratification mechanism. The
+3-system pattern is *substrate-correlated*: when a system runs
+over a CLI substrate that supports event-injection hooks
+(`UserPromptSubmit`, `PreToolUse`, `SessionEnd`,
+`WorkCompletionLearning`), cluster F stratification is
+hook-density-driven rather than role-or-capability-tier-driven.
+Phase 2 candidate implication: v1 runs on GitHub Actions, NOT on
+a Claude Code CLI substrate; the substrate-edge pattern is
+NOT directly transferable but the underlying principle (deep
+event-injection as stratification mechanism) is borrow-able if
+Phase 2 candidates introduce equivalent event-emission points
+in the cycle-runner harness.
 
 Tools, capabilities, models, terms, roles, and modes are stratified
 along multiple parallel discrimination axes. The meta-architectural-
@@ -1597,6 +1776,41 @@ in v1."
    primitives → skills → compositions promotion path needs
    per-skill maintenance; cross-layer references add cost.
 
+**Candidate sub-axis (cycle 101 absorption, 1-system evidence —
+awaiting 2-system convergence before promotion to full sub-axis):**
+
+9. **Output-shape stratification — deterministic-post-processing-
+   of-LLM-output (oh-my-codex `normalize_summary` allowlist)** —
+   substrate-fit ABSENT. omx-sparkshell's contract: model is
+   INSTRUCTED to produce sections `summary:`, `failures:`,
+   `warnings:`; `normalize_summary()` ENFORCES this at parse
+   time regardless of what the model emits — disallowed sections
+   are stripped, missing sections produce empty arrays. Distinct
+   from prompt-only contracts (PAI's prompt-driven output
+   format) and prompt-+-test contracts (omc's
+   `prompt-guidance-contract.test.ts` regex enforcement —
+   build-time test verification, not runtime parse-time
+   enforcement). The cluster F membership claim: this is *output-
+   shape stratification* — a stratification axis distinguishing
+   "raw LLM output" from "validated typed LLM output" with
+   deterministic enforcement at the boundary. Design work: Rust
+   tool `validate-llm-output-shape` accepts (LLM-output-text,
+   typed-shape-spec) and emits (validated-typed-output,
+   diagnostics); typed-shape-spec is per-call declarative; tool
+   strips disallowed elements + fills missing required elements
+   with declared defaults. Substrate via Rust tool + per-call
+   shape-spec parameter. **Self-management cost: LOW.** Shape-
+   spec authoring is bounded one-time per LLM-call-site;
+   enforcement happens at parse time without per-cycle decision
+   cost; missing-section + extra-section policies are declared
+   not learned. Status: **CANDIDATE — 1-system evidence at
+   cycle 101**; awaiting 2-system convergence (potential
+   pairing with Symphony's spec-first BEAM substrate or PAI's
+   DocIntegrity auto-derivation pattern, both pending deeper
+   reading) before promotion to full sub-axis (9). The candidate
+   status means Phase 2 candidates that adopt this pattern do
+   so on 1-system evidence and should weight accordingly.
+
 **Substrate-fit summary across cluster F's 8 sub-axes:**
 - **STRONG (0):** none
 - **PARTIAL (3):** version stratification (1), capability-tier
@@ -1676,14 +1890,24 @@ questions" below) is itself a Phase 2 candidate-shape discriminator.
 
 ## Cluster H: post-session feedback / cross-session learning
 
-`[4-system convergent]` Cognition + openclaw + OpenAI harness +
-Voyager. Cycle 69 confirmed cluster H upgrade from 3-system to
-4-system via H1 hypothesis (capability-accumulation as 4th
-sub-shape).
+`[6-system convergent]` Cognition + openclaw + OpenAI harness +
+Voyager (original 4-system convergent base, cycles 62-69) + PAI
+(cycle 100 deeper-read absorption — H2 hypothesis CONFIRMED) +
+oh-my-codex (cycle 101 deeper-read absorption — autoresearch
+ledger + evaluator-driven keep-discard).
+
+Cycle 69 confirmed cluster H upgrade from 3-system to 4-system
+via H1 hypothesis (capability-accumulation as 4th sub-shape);
+cycle 100 confirmed upgrade to 5-system via PAI's
+`WorkCompletionLearning.hook.ts` (SessionEnd structured artifacts)
++ `SatisfactionCapture.hook.ts` (UserPromptSubmit LLM-inferred
+implicit rating); cycle 101 confirmed upgrade to 6-system via
+oh-my-codex's autoresearch iteration ledger as cross-session
+artifact + evaluator-driven keep-discard at consolidation time.
 
 Artifacts produced at the end of a cycle / session serve as input
 for the next cycle / session — the system improves across cycles
-through structured feedback-loop artifacts. Four distinct sub-shapes
+through structured feedback-loop artifacts. Six distinct sub-shapes
 (rather than one canonical mechanism):
 
 - **Tight-cycle meta-feedback** — Cognition Session Insights
@@ -1701,13 +1925,41 @@ through structured feedback-loop artifacts. Four distinct sub-shapes
   (I-V5/I-V6/I-V10): successful cycles produce reusable
   *capabilities* (skills) for future cycles, not just meta-lessons —
   next cycle inherits *what to do* not just *what to think about*
+- **Feedback-signal-inference** — PAI
+  `SatisfactionCapture.hook.ts` (cycle 100): LLM infers implicit
+  satisfaction signal from user prompt content (frustration,
+  confirmation, redirection) on `UserPromptSubmit` event; signal
+  is structured (rating + rationale) and persisted to
+  `MEMORY/LEARNING/` for next-session input. Distinct from
+  explicit-rating mechanisms (Voyager critic feedback) and from
+  scoring-on-recall (openclaw dreaming) — the satisfaction signal
+  is *inferred from incidental utterance* rather than explicit
+  rating event or usage statistics
+- **Evaluator-driven keep-discard** — oh-my-codex autoresearch
+  iteration ledger + LLM evaluator (cycle 101): each autoresearch
+  iteration produces candidate findings with an evaluator score
+  (LLM critic judges quality + novelty); ledger persists across
+  invocations; subsequent invocations read prior ledger entries
+  and the evaluator decides keep-or-discard for each new finding
+  against the existing ledger. Distinct from score-gated
+  consolidation (openclaw dreaming uses recall-frequency +
+  query-diversity *usage* metrics post-hoc; evaluator-driven uses
+  LLM critic *quality* judgment at write time)
 
 **Phase 2 implication**: Phase 2 candidates have a *spectrum of
-mechanism choices* rather than one canonical shape. The four
+mechanism choices* rather than one canonical shape. The six
 sub-shapes are not mutually exclusive and can compose. The minimal
 v2 commitment is at least one cluster H mechanism (else no
-cross-session learning); the maximal commitment is all four
-(substantial implementation effort, rich learning surface).
+cross-session learning); the maximal commitment is all six
+(substantial implementation effort, rich learning surface). The
+2 NEW sub-shapes from cycles 100-101 introduce two distinct
+quality-judgment axes that did not exist in the 4-sub-shape
+catalogue: *implicit-vs-explicit feedback signal* (sub-shape 5
+infers the signal from utterance; existing sub-shapes assume
+explicit signal — score, recall, satisfaction-rating) and
+*write-time-vs-recall-time quality judgment* (sub-shape 6 judges
+quality at write time via LLM critic; existing sub-shape 2 judges
+quality at recall time via usage statistics).
 
 **M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
 
@@ -1782,53 +2034,143 @@ cross-session learning); the maximal commitment is all four
    metadata format); per-tool documentation discipline (each tool
    self-describes); index maintenance (tools added/deprecated tracked).
 
-**Substrate-fit summary across cluster H's 4 sub-shapes:**
+5. **Feedback-signal-inference (PAI `SatisfactionCapture.hook.ts`,
+   cycle 100 absorption)** — substrate-fit ABSENT. v1 has no
+   inference-based feedback signal; explicit Eva input
+   (`input-from-eva` issues, comments on cycle issues) is the only
+   feedback mechanism. PAI runs Sonnet on `UserPromptSubmit` events
+   to infer implicit satisfaction (frustration / confirmation /
+   redirection) from prompt content; the inferred rating is
+   structured and persisted to `MEMORY/LEARNING/`. **Architecturally
+   distinct from existing cluster H sub-shapes**: sub-shape 1
+   (meta-feedback) requires explicit reflection by the
+   orchestrator; sub-shape 2 (score-gated) requires usage statistics;
+   sub-shape 3 (gardening) requires quality rubrics; sub-shape 4
+   (capability-accumulation) requires successful-completion signal.
+   Sub-shape 5 *infers* the feedback signal from incidental
+   utterance — no explicit rating event, no usage metric, no
+   completion signal required. Design work: Rust tool
+   `infer-feedback-signal` runs Sonnet on each Eva-authored issue
+   body / comment / `input-from-eva` directive, emits a typed
+   `feedback-signal.json` (rating + rationale + signal-source),
+   persisted alongside cycle journals. Substrate via Rust tool
+   + Sonnet invocation (cost-tier consistent with cluster A
+   sub-shape 10 classifier-mediated dispatch). **Self-management
+   cost: MODERATE.** Inference prompt evolves as feedback-signal
+   types emerge; signal taxonomy needs maintenance (rating scale,
+   signal-source enumeration); per-cycle decision overhead is
+   minimal once tool is in place. NOT high-cost like sub-shapes
+   2-3 because the inference happens on bounded input (Eva
+   utterances per cycle) rather than continuous-background
+   gardening of all artifacts. Cross-references cluster A
+   sub-shape 10 (classifier-mediated dispatch — same Sonnet-on-
+   Eva-input substrate, different signal extracted).
+
+6. **Evaluator-driven keep-discard (oh-my-codex autoresearch
+   ledger + LLM evaluator, cycle 101 absorption)** — substrate-fit
+   ABSENT. v1 has no automatic keep-discard mechanism for
+   accumulating findings; manual orchestrator judgment per cycle
+   decides what gets absorbed into clusters.md / per-system
+   files / journal entries (the cycle 100/101 absorption work
+   itself is the canonical example of this manual mechanism).
+   omx's autoresearch system: each iteration produces candidate
+   findings with an LLM-evaluator score (quality + novelty
+   judgment); ledger persists across invocations; subsequent
+   invocations read prior ledger and the evaluator decides
+   keep-or-discard against existing entries. **Architecturally
+   distinct from sub-shape 2 (score-gated consolidation)**:
+   sub-shape 2 uses *post-hoc usage statistics* (recall-frequency,
+   query-diversity); sub-shape 6 uses *write-time LLM-critic
+   judgment* (quality, novelty against existing ledger). The two
+   mechanisms are *not redundant* — score-gated consolidates
+   based on actual usefulness; evaluator-driven gates based on
+   predicted quality. Design work: Rust tool
+   `evaluator-driven-consolidate` runs at cycle end, applies
+   LLM-critic prompt to candidate-finding artifacts (per-cycle
+   journal entries / absorption notes), decides keep-or-discard
+   against the persistent finding-ledger; ledger lives at
+   `docs/redesign/_findings-ledger/` or similar. Substrate via
+   Rust tool + LLM-evaluator invocation (cost-tier per cluster F
+   sub-axis 6: Sonnet for evaluation, not Opus). **Self-management
+   cost: LOW.** Evaluator prompt is bounded-effort one-time
+   authoring; ledger schema is bounded; per-cycle decision
+   overhead is minimal once tool runs (orchestrator only acts on
+   keep-discard verdicts when challenged). NOT high-cost like
+   sub-shapes 2-3 because the evaluation happens on per-cycle
+   bounded artifacts (this cycle's findings) not on
+   continuous-background sweeping of accumulated state.
+   Cross-references cluster A sub-shape 11 (deterministic-
+   decision-tree routing — same code-level rule-based decision
+   primitive applied to different domain).
+
+**Substrate-fit summary across cluster H's 6 sub-shapes:**
 - **STRONG (0):** none
 - **PARTIAL (2):** tight-cycle meta-feedback (1),
   capability-accumulation (4)
-- **ABSENT (2):** score-gated consolidation (2),
-  continuous-background gardening (3)
+- **ABSENT (4):** score-gated consolidation (2),
+  continuous-background gardening (3),
+  feedback-signal-inference (5),
+  evaluator-driven keep-discard (6)
 
-The 2 ABSENT sub-shapes (consolidation + gardening) are the
-substantial substrate-design work for Phase 2 candidates adopting
-cluster H. The 2 PARTIAL sub-shapes (meta-feedback + capability-
-accumulation) build on existing v1 patterns (prose journal,
-informal Rust tool accumulation) requiring formalization. Cluster H
-adds 0 STRONG sub-shapes to M3 v1 strengths layer.
+The 4 ABSENT sub-shapes constitute the substantial substrate-
+design work for Phase 2 candidates adopting cluster H. The 2
+PARTIAL sub-shapes (meta-feedback + capability-accumulation)
+build on existing v1 patterns (prose journal, informal Rust
+tool accumulation) requiring formalization. Cluster H adds 0
+STRONG sub-shapes to M3 v1 strengths layer. The 2 NEW ABSENT
+sub-shapes (5 + 6, cycles 100-101) are *quality-judgment-axis*
+mechanisms distinct from the *aggregation-window* mechanisms in
+sub-shapes 2-3; Phase 2 candidates can adopt one quality-judgment
+axis without adopting the continuous-background aggregation
+mechanisms.
 
-**Self-management cost summary across cluster H's 4 sub-shapes:**
-- **LOW (0):** none
-- **MODERATE (2):** tight-cycle meta-feedback (1),
-  capability-accumulation (4)
+**Self-management cost summary across cluster H's 6 sub-shapes
+(M2 retro, cycle 89; cycle 102 update for sub-shapes 5-6):**
+- **LOW (1):** evaluator-driven keep-discard (6)
+- **MODERATE (3):** tight-cycle meta-feedback (1),
+  capability-accumulation (4), feedback-signal-inference (5)
 - **HIGH (2):** score-gated consolidation (2),
   continuous-background gardening (3)
 
-Cluster H is the second cluster with HIGH-cost sub-shapes (after
-cluster B and cluster F). HIGH cost concentrates on continuous-
-background mechanisms (consolidation + gardening) that require
-ongoing per-cycle threshold/rubric calibration. The MODERATE-cost
-sub-shapes (meta-feedback + capability-accumulation) require
-per-cycle structured-tagging discipline but lower threshold
-calibration overhead.
+Cluster H remains a HIGH-cost-cluster with 2 HIGH sub-shapes
+concentrating on continuous-background mechanisms (consolidation
++ gardening) requiring ongoing per-cycle threshold/rubric
+calibration. The 2 NEW sub-shapes (5 + 6) do NOT add to the HIGH
+cost: feedback-signal-inference is MODERATE (taxonomy maintenance
+without continuous-background); evaluator-driven keep-discard is
+LOW (bounded per-cycle judgment without continuous calibration).
+Phase 2 candidates adopting sub-shapes 5 + 6 gain quality-judgment
+axes without inheriting the HIGH continuous-background cost
+profile.
 
 **Phase 2 evaluation use of cluster H annotations:**
 
-- *Continuous-background commitment* — 2 of 4 sub-shapes (sub-shape
+- *Continuous-background commitment* — 2 of 6 sub-shapes (sub-shape
   2 + 3) are HIGH cost and require continuous-background substrate.
   Phase 2 candidates that adopt these inherit a separate cron
   schedule for the consolidation/gardening process; candidates
-  that omit them lose cross-session learning beyond per-cycle
-  reflection.
+  that omit them lose long-window cross-session aggregation but
+  retain per-cycle and per-event mechanisms (sub-shapes 1 + 4 + 5
+  + 6).
 - *Minimum vs maximum cluster H commitment* — minimum (1
   PARTIAL sub-shape, e.g., formalize meta-feedback via structured
-  manifest) inherits MODERATE cost only; maximum (all 4 sub-shapes)
-  inherits 2 HIGH + 2 MODERATE cost.
+  manifest) inherits MODERATE cost only; maximum (all 6 sub-shapes)
+  inherits 2 HIGH + 3 MODERATE + 1 LOW cost.
 - *Capability-accumulation as Phase 2 candidate variable* — sub-shape
   4 (capability-accumulation) is the cluster H mechanism most aligned
   with the redesign mission ("system can study its own weaknesses,
   redesign its own infrastructure"). Phase 2 candidates that
   formalize capability-accumulation receive higher weight for
   redesign-mission alignment.
+- *Quality-judgment-axis dispatch shape* (NEW cycle 102) —
+  feedback-signal-inference (sub-shape 5) and evaluator-driven
+  keep-discard (sub-shape 6) introduce write-time and inference-time
+  quality judgment that the prior 4 sub-shapes did not provide.
+  Phase 2 candidates can compose: meta-feedback (sub-shape 1) +
+  evaluator-driven keep-discard (sub-shape 6) gives a write-time
+  quality gate without continuous-background machinery. Or:
+  feedback-signal-inference (sub-shape 5) + capability-accumulation
+  (sub-shape 4) gives implicit-feedback-driven capability promotion.
 
 ## Cluster C: lifecycle operations beyond resume
 
@@ -2174,24 +2516,76 @@ sub-shapes.
 
 ## Cluster I: harness-enforced security/policy boundaries
 
-`[2-system convergent, substrate-correlated]` openclaw + OpenAI
-harness. Two sub-shapes: permission-policy enforcement at the
-harness level decoupled from prompt-level rules (openclaw I-O1 —
-default-deny on multiple capability surfaces, before_tool_call.
-block-true terminal enforcement, plugin discovery/promotion gated
-by ClawHub security review) + quality-policy enforcement via
-mechanical linters with agent-readable error messages (OpenAI
-harness — golden principles mechanically checked).
+`[2-system convergent, substrate-correlated; substrate-coverage
+extended cycles 100-101]` openclaw + OpenAI harness (original
+2-system convergent base). Two sub-shapes: permission-policy
+enforcement at the harness level decoupled from prompt-level
+rules (openclaw I-O1 — default-deny on multiple capability
+surfaces, `before_tool_call.block-true` terminal enforcement,
+plugin discovery/promotion gated by ClawHub security review) +
+quality-policy enforcement via mechanical linters with agent-
+readable error messages (OpenAI harness — golden principles
+mechanically checked).
 
-Substrate observation: cluster I is *absent in research-artifact
-substrates* (Voyager runs locally with full environment access; no
-need for harness-enforced policy). Cluster I is correlated with
-cloud-anchored multi-actor environments. v1's substrate
-(GitHub-Actions-anchored multi-actor with audit) places it CLOSE
-to the cluster I correlation; Phase 2 candidates SHOULD weight
-cluster I patterns highly even at 2-system convergence depth,
-because the substrate alignment is strong (per audit#454 D1 / P2
-substrate-fit weighting).
+Substrate observation (cycle 69): cluster I is *absent in
+research-artifact substrates* (Voyager runs locally with full
+environment access; no need for harness-enforced policy). Cluster
+I is correlated with cloud-anchored multi-actor environments.
+v1's substrate (GitHub-Actions-anchored multi-actor with audit)
+places it CLOSE to the cluster I correlation; Phase 2 candidates
+SHOULD weight cluster I patterns highly even at 2-system
+convergence depth, because the substrate alignment is strong
+(per audit#454 D1 / P2 substrate-fit weighting).
+
+**Substrate-coverage extension (cycles 100-101 absorption):** the
+2-system convergent depth holds for the *cluster I sub-shape
+patterns* (permission-policy + quality-policy), but the
+*substrate-correlation observation* now sees additional substrate
+types beyond cloud-anchored multi-actor:
+
+- **Single-user personal-assistant substrate** (PAI cycle 100):
+  PAI runs on macOS / Linux with full local-environment access,
+  similar to research-artifact substrates. Yet PAI inherits
+  cluster I sub-shape 1 (permission-policy enforcement) via the
+  Claude Code permission system (`.claude/settings.json`,
+  per-tool allow/ask/deny). The *enforcement substrate* is
+  Claude Code's harness, not GitHub Actions; the *policy
+  surface* is per-user not multi-actor. **Cluster I extends to
+  personal-assistant substrate via Claude Code harness
+  enforcement** — substrate-correlation is therefore broader
+  than "cloud-anchored multi-actor" → it is "any substrate where
+  the harness exposes permission-policy enforcement primitives."
+  Implication: Phase 2 candidates can leverage Claude Code
+  permission system for orchestrator-side policy enforcement
+  (the cycle-runner harness already does this) independent of
+  GitHub Actions cloud substrate.
+- **Configuration-layer-over-CLI substrate** (oh-my-codex cycle
+  101): omx is a thin Markdown / TypeScript wrapper layer over
+  Codex CLI. Cluster I sub-shape 1 (permission-policy
+  enforcement) inherits Codex CLI's underlying policy surface
+  (sandbox modes, write-access restrictions); omx itself adds
+  policy via configuration files (TOML, JSON, allow-/deny-lists)
+  enforced at parse time. **Cluster I extends to
+  configuration-layer-over-CLI substrate via thin-wrapper-with-
+  deep-hooks pattern** — the wrapper layer adds policy on top
+  of the CLI's own policy substrate. Implication: Phase 2
+  candidates can stack policy layers (substrate-handled +
+  wrapper-handled) the way omx does, with declarative config-
+  file boundaries between layers.
+
+The 3 substrate types (cloud-anchored multi-actor + single-user
+personal-assistant + configuration-layer-over-CLI) plus the
+previously observed substrate-absent type (research-artifact,
+Voyager) give cluster I a **4-substrate-type coverage map**:
+substrate type determines WHICH cluster I primitives are
+substrate-inherited versus design-required, but the cluster I
+*pattern* (harness-enforced policy distinct from prompt-level
+discipline) is observable across all 3 substrate-correlated
+types. This strengthens the cycle 89 P2 substrate-fit weighting:
+v1's substrate isn't *unique* in cluster I correlation — multiple
+substrate types correlate with cluster I — but the substrate
+property determines mechanism choice (which sub-shape is
+substrate-inherited vs design-required).
 
 **M1 v1-substrate instantiation (cycle 89 audit#454 absorption)**:
 

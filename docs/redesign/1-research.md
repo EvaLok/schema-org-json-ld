@@ -639,28 +639,42 @@ enterprise/personal/research, software-development/game-environment,
 external-publishable/internal-tooling); patterns surviving 6-system
 cross-substrate convergence are robustly transferable.
 
-Quick-reference cluster table:
+Quick-reference cluster table (post cycle 102 — PAI + omx
+deep-dive absorption update):
 
 | Cluster | Theme | Depth | Implications | Sub-shapes/sub-axes |
 |---|---|---|---|---|
-| A | Cycle-internal boundaries with state-write semantics | 6-system clean | 11 | 9 sub-shapes |
+| A | Cycle-internal boundaries with state-write semantics | 6-system clean (+ PAI + omx augmentation, cycles 100-101) | 11 + 2 NEW | 11 sub-shapes |
 | B | Cross-cycle artifact organization | 6-system clean | 10 | 9 sub-shapes |
 | D | Documentation honesty | 5-system clean (+ Voyager partial) | 11 | 9 sub-shapes |
-| F | Tool-suite stratification (multi-axis) | 5-system convergent | 8 | 8 sub-axes |
-| H | Post-session feedback / cross-session learning | 4-system convergent | 4 | 4 sub-shapes |
+| F | Tool-suite stratification (multi-axis) | 6-system convergent (+ PAI all-8-axes augmentation cycle 100; + 3-system substrate-edge convergence omx+PAI+omc cycle 101) | 8 + 1 candidate | 8 sub-axes + 1 candidate |
+| H | Post-session feedback / cross-session learning | 6-system convergent (+ PAI cycle 100, + omx cycle 101) | 4 + 2 NEW | 6 sub-shapes |
 | C | Lifecycle operations beyond resume | 4-system clean | 6 | 5 sub-shapes |
 | E | Typed boundary semantics | 3-system convergent | 3 | 2 sub-shapes |
 | G | Role-asymmetric context | 2-system convergent | 2 | 2 sub-shapes |
-| I | Harness-enforced security/policy boundaries | 2-system convergent (substrate-correlated) | 3 | 2 sub-shapes |
+| I | Harness-enforced security/policy boundaries | 2-system convergent (substrate-correlated; substrate-coverage extended cycles 100-101 to single-user personal-assistant + configuration-layer-over-CLI) | 3 | 2 sub-shapes |
 
 Clusters A, B, D are tied as the most-foregrounded (5+ system
-clean depth). Cluster F is the multi-axis-king (8 sub-axes).
-Cluster I is at 2-system convergent depth but is
-*substrate-correlated* to v1's substrate (cloud-anchored
-multi-actor with audit); Phase 2 candidates SHOULD weight cluster I
-patterns highly despite the low depth count. v1 failure-mode
-mapping, sub-shape catalogues, and cross-cluster intersection
-patterns live in [`1-research/clusters.md`](1-research/clusters.md).
+clean depth; cluster A's depth augmented at cycles 100-101 with
+PAI + omx contributing 2 new task-ingestion-routing sub-shapes).
+Cluster F is the multi-axis-king (8 sub-axes; cycle 101 added 1
+candidate sub-axis at 1-system evidence). Cluster H jumped from
+4-system to 6-system convergent at cycles 100-101 with PAI
+contributing feedback-signal-inference and omx contributing
+evaluator-driven keep-discard. Cluster I is at 2-system convergent
+depth but is *substrate-correlated* to v1's substrate (cloud-
+anchored multi-actor with audit) plus 2 newly-observed substrate
+types (single-user personal-assistant via PAI; configuration-
+layer-over-CLI via omx); Phase 2 candidates SHOULD weight cluster
+I patterns highly despite the low depth count. **Cycle 102
+absorption update**: total catalogue grew from 50 sub-shapes
+(cycle 89 baseline) to 54 sub-shapes (+ 1 candidate sub-axis
+awaiting 2-system convergence); 4 NEW ABSENT sub-shapes from
+cluster A and cluster H; 2 NEW LOW + 2 NEW MODERATE
+self-management cost annotations; no new HIGH-cost sub-shapes.
+v1 failure-mode mapping, sub-shape catalogues, and cross-cluster
+intersection patterns live in
+[`1-research/clusters.md`](1-research/clusters.md).
 
 ## Phase 1 work plan (subject to evolution)
 
