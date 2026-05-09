@@ -227,6 +227,8 @@ Per-role decision counts above do NOT include cross-role coordination overhead:
 
 **B aggregate including coordination: ~34-67 decisions per cycle**, vs v1's ~40 baseline. **Lower bound is below v1; upper bound is ~1.7× v1.** The mitigation is real but conditional: B's aggregate is comparable to v1 in steady-state cycles and exceeds v1 only in inbound-heavy or branch-spawn-heavy cycles.
 
+**Note (cycle 106 sharpening):** the 9-23 estimate above conflates mechanical channel I/O with structural coordination decisions. Under the cycle 103 structural-decision-point rubric, coordination overhead decomposes into 5 types (A-E) with the mechanical type EXCLUDED from the structural unit. The structural component is ~6-15 per cycle in steady state (Types B+C structural-invariant floor + Types D+E character-dependent ceiling), bounded above by ~8 per cycle from structural-invariant Types alone. See [Coordination overhead decomposition section](#coordination-overhead-decomposition-cycle-106-specification-addressing-risk-2) below for the cycle 106 closure of Risk 2 specifying the decomposition, falsifiable bounds, coordination-ratio direction-check thresholds, and reducer-rule stability quantification.
+
 ### Counting protocol (cycle 103 specification, addressing Risk 8)
 
 **Background:** Risk 8 named the absence of a counting methodology as a measurement-level gap. B's central bet (per-role decision-class diversity reduction relative to v1's single-orchestrator) cannot be falsified without a reproducible counting unit and an external observer. The protocol specifies the methodology before measurement, matching the cycle 96 absorption discipline (verified denominator + chosen unit + hard threshold pre-agreed). This section closes Risk 8 at the specification level; Phase 3 prototype work executes the measurement.
@@ -342,6 +344,122 @@ Important: the 35-40 estimate is *under-the-rubric-applied-to-step-IDs* only. V1
 | Counting protocol must be specified before Phase 3 measurement | Cycle 103 specifies the protocol; measurement happens at Phase 3 prototype scaffolding |
 | Validation plan must produce a meaningful number | Hard refutation thresholds (PASS / PASS-WITH-NOTE / PARTIAL-FLAG / REFUTED) anchored on ratio-to-v1-baseline produce a defensible verdict |
 
+### Coordination overhead decomposition (cycle 106 specification, addressing Risk 2)
+
+**Background:** Risk 2 named coordination overhead's growth-under-revision as a structural-stability concern: the cycle 92 estimate (~9-23 per cycle) assumes typed-channel-map reducer-rules are stable. Cycle 103's counting protocol resolved how to measure aggregate cost (Risk 8) but left coordination-overhead's standalone direction observational — magnitude is bounded by the aggregate threshold, but no separate falsifiability mechanism distinguishes coordination-driven cost growth from per-role-driven cost growth. This section closes Risk 2 at the specification level by decomposing coordination overhead into mechanical-vs-structural types under the cycle 103 rubric, specifying a falsifiable per-cycle bound for structural coordination decisions, quantifying reducer-rule stability rather than assuming it, and specifying pre-agreed coordination-ratio direction-check thresholds. Per cycle 96 discipline-bar-too-low: thresholds are pre-agreed before measurement. Cycle 106 closure mirrors cycle 105 A Risk 3 closure shape (substrate-decomposition + falsifiable bound + verification procedure + status); the recurring shape is the third instance of the `risk-closure-at-specification-level` functional-class shape (NOVEL cycle 103 / TESTED cycle 105 / would-HARDEN cycle 106 if the pattern transfers).
+
+**Choice 1: Coordination overhead types as distinct quantities under the cycle 103 rubric.**
+
+The cycle 92 9-23 estimate combined channel-routing + super-step boundary state-sync + goal-coherence checks without separating mechanical from structural. Under the cycle 103 structural-decision-point unit, coordination overhead decomposes as:
+
+| Type | Description | Cycle 103 rubric classification | Cycle character dependence |
+|---|---|---|---|
+| A — Mechanical channel I/O | Typed-channel-map writes/reads; reducer mechanical applications | EXCLUDED (mechanical) | Independent of cycle character |
+| B — Super-step transition decisions | Planner decides "advance super-step or stay" per super-step boundary | INCLUDED (structural) | Bounded by structure (~3-5 per cycle) |
+| C — Goal-coherence judgments | Planner verifies executor / curator / reconciler outputs match plan-channel commitments | INCLUDED (structural) | Bounded by structure (1 per non-planner role per cycle) |
+| D — Branch-manager promotions | Fork-point / promotion / gardening decisions when branching is being considered | INCLUDED (structural) | Cycle-character-dependent (~0-3+ per cycle) |
+| E — Reducer-rule revisions | Decision to revise a typed-channel reducer rule mid-cycle (Axis 8 mechanical-enforcement evolution) | INCLUDED (structural) | Cycle-character-dependent (~0-1+ per cycle in steady state) |
+
+Under this decomposition, the cycle 92 9-23 estimate splits into:
+- Mechanical (Type A): ~3-8 per cycle — EXCLUDED from cycle 103 structural unit.
+- Structural-invariant (Types B+C): ~6-8 per cycle — bounded by structure.
+- Structural-character-dependent (Types D+E): ~0-7 per cycle — depends on cycle character.
+
+**Alternative considered and rejected:** treat coordination overhead as a single uncategorized number. Rejected because the 9-23 range conflates structural with mechanical, and the cycle 103 unit excludes mechanical. The decomposition makes the structural portion measurable under the same rubric used for per-role decision counts; without it, the coordination component cannot be cleanly compared against the aggregate threshold which is itself rubric-dependent.
+
+**Choice 2: Structural-invariant floor as a structurally-bounded property.**
+
+Types B + C are bounded by the architecture, not by cycle character:
+- Super-step transitions per cycle ≈ number of super-step boundaries the planner advances through. B's structure has ~3-5 super-steps per cycle (planner → executor → curator → reconciler with potential mid-cycle re-plan). Each transition is one structural decision.
+- Goal-coherence judgments per cycle ≈ 1 per non-planner role active that cycle. With 3 active non-planner roles (executor + curator + reconciler), 3 judgments per cycle.
+
+**Structural-invariant floor: ~6-8 structural coordination decisions per cycle**, bounded above by 8 even in maximally-active steady-state cycles.
+
+**Alternative considered and rejected:** count goal-coherence as 1 per role-artifact written to a channel rather than 1 per role. Rejected because a single role can write multiple artifacts in one super-step (executor's primary output + secondary diagnostic output); the goal-coherence judgment is per-role-output-bundle (planner reads the channel state at super-step boundary, evaluates fit-against-plan once per non-planner role's output bundle), not per-artifact. Counting per-artifact would inflate the floor without matching what the planner role actually decides.
+
+**Alternative considered and rejected:** treat the floor as variable based on whether planner re-plans mid-cycle. Rejected because mid-cycle re-planning (a Type B super-step transition decision) is already counted under Type B; treating it as floor-modifying double-counts.
+
+**Choice 3: Reducer-rule stability as a quantified property, not assumed.**
+
+Risk 2's "if reducer-rules are revised mid-cycle, coordination overhead grows substantially" is closed by making reducer-rule revisions a counted Type E:
+
+- Reducer-rule revisions count as Type E coordination decisions in the structural unit.
+- Per-cycle reducer-rule revision count is a tracked quantity at Phase 3 measurement.
+- **Pre-agreed bound: reducer-rule revisions ≤1 per cycle in steady state.** Higher rates in early Phase 3 cycles (rubric-still-evolving) are expected; sustained rates >1/cycle past cycle 5 of Phase 3 measurement indicate structural rubric-under-specification, which would itself flag B's coordination model as inadequately stable.
+
+**Alternative considered and rejected:** treat reducer-rule stability as a non-quantified assumption. Rejected because that's exactly the Risk 2 framing being closed — the assumption needs to be quantified to be falsifiable. An assumption that is never tested is not a risk-closure; it's risk-deferral.
+
+**Alternative considered and rejected:** set the steady-state revision bound at 0/cycle. Rejected because rubric evolution is expected during Phase 3 prototype refinement (cycles 1-5 of Phase 3 will surface rubric-under-specification through the inter-rater reliability check from cycle 103); ≤1/cycle allows for natural rubric-tightening without flagging every cycle as rubric-failure.
+
+**Choice 4: Per-coordination-decision logging at Phase 3 as the verification procedure.**
+
+Each Type B/C/D/E coordination decision emits a structured log entry:
+
+```jsonc
+{
+  "type": "super-step-transition" | "goal-coherence" | "branch-manager" | "reducer-rule-revision",
+  "role-of-origin": "planner" | "executor" | "curator" | "reconciler" | "coordination-contract",
+  "cause": "<cycle-event description>",
+  "cycle": <cycle-id>,
+  "super-step": <super-step-id>
+}
+```
+
+Phase 3 measurement counts log entries by type. Per-cycle structural coordination = sum of B+C+D+E counts per cycle. Per-cycle Type-E (reducer-rule revisions) is the standalone reducer-rule-stability metric.
+
+**Alternative considered and rejected:** rely on prompt-counting alone (no operational log). Rejected because reducer-rule revisions are operational events that don't show up in prompt-counting (the prompt enumerates rule-revision *capability*, not actual rule-revision events). Without the operational log, the Type-E count is inferred from prompt structure, which conflates "capability to revise" with "actual revisions" — the exact issue Risk 2 named.
+
+**Alternative considered and rejected:** instrument all tool invocations rather than coordination-specific logs. Rejected because the cycle 103 protocol's secondary unit (tool-invocation log) already serves the per-role decision-count sanity-check; coordination-specific logs are tighter (only structural coordination decisions, not all tool calls) and don't introduce new instrumentation conflicting with the cycle 103 secondary.
+
+**Choice 5: Coordination-overhead direction-check thresholds (independent of aggregate).**
+
+Independent of the cycle 103 aggregate threshold, coordination overhead is observed via the **coordination ratio** = (structural coordination decisions per cycle) / (aggregate decisions per cycle):
+
+- **Coordination ratio ≤30%**: direction-validated. Coordination is a minority of aggregate; per-role specialization is the dominant cost source.
+- **Coordination ratio ∈ (30%, 50%]**: direction-supported. Coordination is significant but not dominant; B's per-role mitigation is partially offset by coordination cost but the central bet still holds.
+- **Coordination ratio > 50%**: direction-refuted. Coordination dominates aggregate; B's per-role mitigation is offset by coordination cost; central bet is undermined regardless of aggregate verdict.
+
+This direction-check is independent of the cycle 103 aggregate threshold. Combined readings provide diagnostic resolution:
+
+| Aggregate verdict | Coordination ratio | Diagnostic |
+|---|---|---|
+| PASS | ≤30% | B fully validated (low aggregate AND coordination well-bounded) |
+| PASS-WITH-NOTE | >50% | aggregate tolerable but coordination dominates — B's per-role mitigation largely offset by coordination cost; central bet weakened |
+| REFUTED | ≤30% | per-role costs cause refutation, not coordination — diagnostic for which mitigation hypothesis to revise |
+| REFUTED | >50% | coordination dominates AND aggregate fails — strongest path to drop B; coordination-overhead is the cause |
+
+**Alternative considered and rejected:** absolute thresholds (e.g., ≤15 structural coordination decisions per cycle). Rejected because absolute thresholds depend on rubric choice (the same rubric ambiguity that cycle 103 resolved by ratio-based aggregate thresholds); ratio-based coordination thresholds inherit cycle 103's robustness to rubric-absolute-count drift. The rubric choice affects both numerator and denominator equally, so the ratio is more rubric-robust than absolute counts.
+
+**Alternative considered and rejected:** no standalone coordination check, relying only on aggregate threshold. Rejected per cycle 105+ plan: "magnitude is bounded by aggregate threshold but standalone direction is observational." Without the standalone check, when aggregate fires PARTIAL-FLAG/REFUTED you cannot distinguish coordination-driven cost growth from per-role-driven cost growth — losing critical diagnostic information for revising the candidate.
+
+**Choice 6: Reducer-rule revision rate as a separate stability check.**
+
+Independent of both the aggregate threshold and the coordination ratio, reducer-rule revisions per cycle are tracked as a structural-stability metric:
+
+- **Steady-state rate ≤1/cycle past cycle 5 of Phase 3 measurement**: reducer-rule stability assumption holds; Risk 2's "if revised, grows substantially" antecedent is empirically rare.
+- **Steady-state rate ∈ (1, 2]/cycle**: reducer-rule stability assumption is weakened; Risk 2's antecedent fires occasionally; coordination overhead growth from Type E is bounded but non-trivial.
+- **Steady-state rate >2/cycle**: reducer-rule stability assumption is refuted; Risk 2's antecedent fires frequently; coordination overhead growth from Type E is structural, not occasional.
+
+The "past cycle 5 of Phase 3 measurement" qualifier is load-bearing: cycles 1-5 of Phase 3 are expected to surface rubric-under-specification via the inter-rater reliability check (cycle 103 protocol); rule revisions during those cycles are rubric-tightening, not steady-state coordination cost. Cycle 5 is conservative — actual steady state may emerge faster, but the bound is named conservatively to avoid premature stability claims.
+
+**Alternative considered and rejected:** measure reducer-rule revision rate from cycle 1 of Phase 3 with no warm-up. Rejected because the cycle 103 protocol explicitly admits a rubric-tightening period (the inter-rater reliability check itself is the mechanism for rubric refinement); treating cycle 1 measurements as steady-state would conflate rubric-evolution with coordination-instability, contaminating the Type E measurement.
+
+### Risk 2 status post-cycle-106
+
+- **Direction continues to hold** by construction: coordination overhead grows substantially under reducer-rule revision (Type E firing) OR heavy-cycle character (Type D firing). The mechanism Risk 2 named is real.
+- **Magnitude refined** from "9-23 per cycle (mechanical+structural conflated, no falsifiability)" to:
+  - Structural-invariant floor: ≤8 per cycle (Types B+C, bounded by structure).
+  - Structural-character-dependent ceiling: +0-7 per cycle (Types D+E, cycle-character-dependent).
+  - Total structural coordination: ~6-15 per cycle (steady state) / ~9-25 per cycle (heavy cycles).
+  - Reducer-rule revisions: ≤1/cycle in steady state (pre-agreed bound).
+- **Mitigation specification:**
+  1. Cycle 103 structural-decision-point rubric applied to coordination contracts (Choice 1).
+  2. Per-coordination-decision logging at Phase 3 (Choice 4).
+  3. Coordination-ratio direction-check thresholds (Choice 5).
+  4. Reducer-rule revision-rate stability check (Choice 6).
+- **Mitigation specification is now concrete enough for Phase 3 prototype validation** (the falsifiable bounds and ratios are measurable).
+- **Operational closure deferred to Phase 3 prototype** when the per-coordination-decision logging meets actual cross-role coordination work and the reducer-rule revision rate is observed across ≥5 measurement cycles.
+
 ### Validation plan (cycle 93+ Phase 3 prototype work)
 
 The estimates above are derived from candidate-authored decision-class enumeration, not yet validated by Phase 3 prototype. Cycle 93+ Phase 3 prototype effort should:
@@ -349,8 +467,10 @@ The estimates above are derived from candidate-authored decision-class enumerati
 1. Author smallest-viable 4-role driver (`role-driver` + `channel-router` + `super-step-boundary` Rust crates).
 2. Run a single end-to-end cycle on a known workload (e.g., a candidate-sharpening cycle similar to cycle 92's substantive focal).
 3. Count actual per-role decision points per role; compare against ~6-15 per-role estimate.
-4. Count actual coordination overhead; compare against ~9-23 estimate.
+4. Count actual structural coordination overhead via per-coordination-decision logs (cycle 106 protocol Choice 4); decompose by type (B/C/D/E); compare structural-invariant floor against the ≤8/cycle bound, total against the ~6-15/cycle steady-state range / ~9-25/cycle heavy-cycle range.
 5. Compare aggregate against v1 baseline measurement on the same workload.
+6. Compute coordination ratio = (structural coordination decisions) / (aggregate decisions) per cycle; verify against cycle 106 thresholds (≤30% direction-validated / 30-50% direction-supported / >50% direction-refuted).
+7. Track reducer-rule revision rate (Type E count per cycle); past cycle 5 of measurement, verify against cycle 106 stability bound (≤1/cycle steady-state).
 
 **Hard refutation thresholds (added cycle 103 per Counting protocol section, replacing the previous soft "promotes to PASS-WITH-NOTE" / "weakens" language flagged as inadequate per cycle 96 absorption methodology):** P3 verdict is determined by the protocol's aggregate threshold:
 
@@ -366,7 +486,7 @@ These are pre-agreed thresholds that do not depend on the orchestrator's own ass
 ### Risks named at the structural level
 
 - **Risk 1:** the per-role decision-class enumeration is incomplete (lower bound). Per-role decisions about *how to structure the sub-task* are not enumerated (assumed embedded in tool / skill invocation contracts); if the orchestrator session for any role makes ~5 additional per-cycle structural decisions, aggregate grows by ~20.
-- **Risk 2:** coordination overhead estimate (~9-23 per cycle) assumes typed-channel-map reducer-rules are stable; if reducer-rules are revised mid-cycle (Axis 8 mechanical-enforcement evolves over time), coordination overhead grows substantially.
+- **Risk 2 (CLOSED at specification level cycle 106):** coordination overhead estimate (~9-23 per cycle) assumes typed-channel-map reducer-rules are stable; if reducer-rules are revised mid-cycle (Axis 8 mechanical-enforcement evolves over time), coordination overhead grows substantially. **Cycle 106 closes Risk 2 at the specification level** — see the [Coordination overhead decomposition section](#coordination-overhead-decomposition-cycle-106-specification-addressing-risk-2) above. The closure decomposes coordination overhead into 5 types under the cycle 103 rubric (Type A excluded as mechanical; Types B+C as structural-invariant floor ≤8/cycle; Types D+E as structural-character-dependent), specifies per-coordination-decision logging at Phase 3 with type/role-of-origin/cause schema, specifies pre-agreed coordination-ratio direction-check thresholds (≤30% direction-validated / 30-50% direction-supported / >50% direction-refuted) independent of the cycle 103 aggregate threshold, and quantifies reducer-rule stability via a ≤1/cycle revision-rate bound in steady state past cycle 5 of Phase 3 measurement. Risk 2 remains *open at the operational level* until Phase 3 prototype measurement observes the rates; the specification-level closure is the cycle 106 deliverable.
 - **Risk 3:** goal-coherence enforcement requires planner to evaluate executor / curator / reconciler outputs; this is itself a substantive decision-class that may exceed the ~3 per cycle estimate when goals are ambiguous or sub-tasks diverge.
 - **Risk 4:** the per-role decision count assumes each role's session is single-pass (one invocation per super-step). If sub-tasks require iteration within a role's super-step (e.g., executor needs to revisit a structural decision after curator review), per-role decision count multiplies.
 - **Risk 5:** the aggregate-comparable-to-v1 claim depends on per-role agents NOT also doing v1's coordination work (substantive-focal selection, sibling-pattern recognition, honest reflection). If those decision-classes leak across role boundaries (e.g., curator does its own honest reflection in addition to planner's coordination), aggregate inflates.
