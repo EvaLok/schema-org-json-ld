@@ -78,7 +78,7 @@ cross-system synthesis below cross-validates patterns across systems.
 | System | Read mechanism | Status / depth | File |
 |---|---|---|---|
 | openclaw | Orchestrator-direct (cycle 14) + Copilot deeper read (cycle 43, [PR #2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809)) | Deep-dive | [`systems/openclaw.md`](1-research/systems/openclaw.md) |
-| PAI | Orchestrator-direct (cycle 14) | First-pass: README | [`systems/pai.md`](1-research/systems/pai.md) |
+| PAI | Orchestrator-direct (cycle 14) + Copilot deeper read (cycle 71, [PR #2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875) absorbed cycle 100) | Deep-dive (v5.0.0; 9-lens code-level read; H1/H2/H3 verdicts; 17-principle table) | [`systems/pai.md`](1-research/systems/pai.md) |
 | AutoGen | Copilot dispatch (cycles 15-16, [PR #2763](https://github.com/EvaLok/schema-org-json-ld/pull/2763)) | Deep-dive | [`systems/autogen.md`](1-research/systems/autogen.md) |
 | Voyager | Orchestrator-direct (cycle 17) | Code-level: agents + prompts | [`systems/voyager.md`](1-research/systems/voyager.md) |
 | LangGraph | Copilot dispatch (cycles 18-20, [PR #2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)) | Deep-dive | [`systems/langgraph.md`](1-research/systems/langgraph.md) |
@@ -95,13 +95,18 @@ pending deeper second-pass reads or adversarial-on-adversarial review.
 
 ## Cross-system observations
 
-Eight systems read at depth: openclaw, PAI (cycle 14); AutoGen
+Nine systems read at depth: openclaw (cycle 14 + cycle-43 deeper read,
+PR [#2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809)); PAI
+(cycle 14 + cycle-71 deeper read absorbed cycle 100, PR
+[#2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875)); AutoGen
 (cycles 15-16, PR [#2763](https://github.com/EvaLok/schema-org-json-ld/pull/2763));
 Voyager (cycle 17); LangGraph (cycles 18-20, PR
 [#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768));
 Cognition Devin (cycle 26, PR [#2780](https://github.com/EvaLok/schema-org-json-ld/pull/2780));
 OpenAI harness-engineering (cycle 26, PR [#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783));
-oh-my-codex (cycle 26, PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)).
+oh-my-codex (cycle 26, PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784));
+plus Symphony first-pass (cycle 98) and oh-my-claudecode first-pass
+(cycle 99) pending deeper-read elevation to deep-dive parity.
 Observations below cross-validate where 3+ systems converge on the
 same pattern shape. The 3+ threshold was originally calibrated
 against 5 systems (60% bar); with 8 systems now read at depth, the
@@ -661,12 +666,13 @@ patterns live in [`1-research/clusters.md`](1-research/clusters.md).
 ### Required reads remaining
 
 Both required reads have had a first-pass review (README + VISION.md
-where available). Deeper reads queued:
+where available). Deeper reads complete:
 
-- openclaw: directory survey, architecture pages, key source files
-  (gateway core, session management, plugin loading, memory slot)
-- PAI: `Tools/`, `Packs/`, `.claude/`, `Releases/v4.0.3/`, the
-  scientific-method loop in code
+- openclaw: deeper read landed cycle 43 ([PR #2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809))
+- PAI: deeper read landed cycle 100 ([PR #2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875))
+  — 9-lens code-level reading of v5.0.0 (`Tools/`, `Packs/`, `.claude/`,
+  `Releases/v5.0.0/`, the scientific-method loop in code) with H1/H2/H3
+  hypothesis verdicts and 17 founding-principle verification table
 
 ### Further systems to study
 
@@ -745,12 +751,12 @@ Cycle 34+: dispatch options, in approximate priority order
    orchestrator-direct).
 3. Anthropic engineering posts (orchestrator-direct).
 4. Eva directives #2774 (oh-my-claudecode) and #2775 (openai/symphony).
-5. Deeper second-pass orchestrator-direct on openclaw and PAI (cycle 16
-   noted that the deliverable-size asymmetry biases cross-system
-   synthesis toward the system with the richest evidence base; bringing
-   openclaw and PAI to closer parity with AutoGen's deep-dive depth is
-   an alternative use of cycles before committing to cross-system
-   synthesis claims).
+5. Deeper second-pass on openclaw and PAI — both have now landed:
+   openclaw deeper read at cycle 43 ([PR #2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809));
+   PAI deeper read at cycle 100 ([PR #2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875)).
+   The deliverable-size asymmetry the cycle-16 read flagged is now
+   resolved — both required reads sit at deep-dive parity with the
+   external-system corpus.
 
 The dispatch sequence is tentative. Phase 1 reading priority should
 adjust based on cycle capacity and any patterns that emerge as
