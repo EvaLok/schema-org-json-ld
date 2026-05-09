@@ -227,6 +227,121 @@ Per-role decision counts above do NOT include cross-role coordination overhead:
 
 **B aggregate including coordination: ~34-67 decisions per cycle**, vs v1's ~40 baseline. **Lower bound is below v1; upper bound is ~1.7× v1.** The mitigation is real but conditional: B's aggregate is comparable to v1 in steady-state cycles and exceeds v1 only in inbound-heavy or branch-spawn-heavy cycles.
 
+### Counting protocol (cycle 103 specification, addressing Risk 8)
+
+**Background:** Risk 8 named the absence of a counting methodology as a measurement-level gap. B's central bet (per-role decision-class diversity reduction relative to v1's single-orchestrator) cannot be falsified without a reproducible counting unit and an external observer. The protocol specifies the methodology before measurement, matching the cycle 96 absorption discipline (verified denominator + chosen unit + hard threshold pre-agreed). This section closes Risk 8 at the specification level; Phase 3 prototype work executes the measurement.
+
+**Unit of analysis: structural decision-points in role artifacts.**
+
+A *structural decision-point* is a labeled prompt instruction that requires the role's session to choose between alternatives.
+
+Inclusion criteria (counts as a decision-point):
+- Numbered or labeled steps that say "decide X", "choose between A/B/C", "evaluate whether…"
+- Conditional branches with named alternatives ("if Y then Z else W")
+- Sub-step identifiers in checklists that prescribe judgment-required steps (the v1 S0/S1/.../C5.5 pattern, where the step requires the orchestrator to evaluate or select)
+
+Exclusion criteria (does not count):
+- Mechanical instructions ("post a comment", "commit changes", "run tool X with these args")
+- One-liner imperative directives without alternatives ("read the journal", "verify the build")
+- Background-implicit decisions inside a skill body — counted under the owning skill, not under the invoking step
+
+Boundary case:
+- A step that says "follow the procedure in skill X" delegates the decision to skill X. Count skill X's prompt-decisions separately. Skills are role-bound, so each skill counts toward its owning role's per-role total.
+
+**Why this unit:**
+- Aligns with v1 baseline (50 step+substep IDs verified cycle 96; same rubric re-applied gives a v1 figure under-the-rubric — see *baseline re-derivation* below)
+- Aligns with A's chosen-unit framework (cycle 91 _notes; A picks among step IDs / named patterns / prose-procedural clauses; the structural-decision-point unit is one consistent choice across A and B)
+- Avoids self-report circularity (Risk 8): the artifact is the source-of-truth, not the role's behavior at runtime
+- Avoids LLM-tool-invocation conflation (Risk 8): tool calls are not the unit; structural prompts are
+
+**Counting method: external enumeration, reproducible.**
+
+The protocol requires a non-author observer to enumerate structural decision-points in B's role artifacts (per-role prompts + per-role checklists + cross-role coordination contracts) using the rubric above.
+
+External-observer options (any one suffices for a single count; reproducibility check requires two independent counts):
+- A separate orchestrator session on a different cron trigger (cron-isolated, not B's role-session-under-test)
+- Eva
+- An audit-side reviewer (cross-repo read; counts published in audit repo, read back here)
+- A Copilot feedback-only dispatch with the rubric attached to the dispatch body
+
+The same external observer also enumerates v1 (50 step+substep IDs verified cycle 96; re-verify under the same rubric as part of paired measurement).
+
+**Reproducibility check:** the count must be reproducible by an independent second observer within ±10% of the first count. If two observers disagree by more than 10%, the rubric is under-specified and the protocol returns to spec phase before measurement proceeds. This is the inter-rater reliability discipline; cheap to run (≤30 min per observer per artifact set) and load-bearing for falsification credibility.
+
+**Per-role count + coordination count, summed to aggregate.**
+
+For B, the count is structured as:
+- **Per-role**: structural decision-points in each role's prompt + checklist (planner, executor, curator, reconciler) — 4 sub-counts
+- **Coordination**: structural decision-points in cross-role coordination contracts (channel-router reducer rules, super-step transition policy, branch-manager promotion logic) — 1 sub-count
+- **Aggregate**: sum of per-role + coordination = single number per cycle for comparison against v1
+
+The 4-role + coordination decomposition is symmetric across cycles — the structural artifacts don't vary per-cycle; only operational firing varies. This is an important property: the counting protocol's primary unit is *structural and per-cycle-invariant*, not *operational and per-cycle-variant*. Operational variation is captured by the secondary unit.
+
+**Sanity-check secondary unit: tool-invocation log per role per cycle.**
+
+Phase 3 prototype runs emit per-role tool-invocation logs. Tool invocations are classified by category at log-emit time:
+- *Mechanical-write* (Write/Edit calls)
+- *Mechanical-read* (Read calls, gh-issue-view, gh-api GETs)
+- *Structural-decision-prompt* (prompt-tool invocations where the role makes a judgment-required choice — e.g., a `select-substantive-focal` skill firing)
+- *Cross-role-coordination* (channel-router writes, super-step boundary writes, branch-manager promotions)
+
+Cross-validate: structural-decision-prompt invocation count per role per cycle should match the structural enumeration within ±20% tolerance. Larger drift indicates that either the role's session is making decisions the prompt didn't enumerate (under-specified prompt), OR the prompt enumerated decisions the session never reaches (over-specified prompt). Both are informative for prompt revision, but neither refutes B by itself.
+
+The secondary unit is observational, not falsificational. It tells us whether the structural enumeration matches operational behavior; mismatches inform a future round of prompt revision but don't refute B by themselves. This separation — structural primary, operational secondary — is the resolution of Risk 8's specific concerns: the structural unit avoids the circularity of self-report; the operational unit is bounded to sanity-check role.
+
+**Hard refutation thresholds (aggregate-based, primary falsification criterion).**
+
+Thresholds anchored on v1's verified baseline measured under the same rubric (see *baseline re-derivation* below):
+
+- **PASS** (full): B aggregate ≤ **1.0×** v1 baseline. Direction-validated AND magnitude-favorable.
+- **PASS-WITH-NOTE**: B aggregate ∈ (**1.0×, 1.5×**] v1 baseline. Direction-validated; magnitude tolerable.
+- **PARTIAL-FLAG**: B aggregate ∈ (**1.5×, 2×**] v1 baseline. Direction-validated; magnitude unfavorable but not refutational.
+- **REFUTED**: B aggregate > **2×** v1 baseline. Magnitude refutes the comparable-to-v1 claim outright; B reverts to candidate that does NOT compete on aggregate-cost grounds (A becomes preferred on P3 unconditionally).
+
+These are pre-agreed thresholds that do not depend on the orchestrator's own assessment. The B candidate's authored P3 verdict ("comparable to v1 in steady-state cycles", currently re-classified to "ambiguous-without-prototype" per cycle 96 absorption) is reclassified under the protocol as follows:
+- PASS or PASS-WITH-NOTE under measurement → P3 promotes to PASS-WITH-NOTE (matching C's grade); the "comparable to v1" claim survives at the lower bound.
+- PARTIAL-FLAG under measurement → P3 stays PARTIAL-FLAG; the magnitude claim is refuted but B's central decomposition bet is not.
+- REFUTED under measurement → P3 stays PARTIAL-FLAG; B's central decomposition bet is intact at the per-role level but the aggregate-cost trade-off is unfavorable enough that B's structural advantages must outweigh the cost surplus to justify selection.
+
+Ratio-based thresholds are robust to unit-choice (the rubric may produce different absolute counts than cycle 96's 50 step+substep IDs, but the ratio compares both candidates measured under the same rubric).
+
+**Observational secondary metric: per-role mitigation direction-check.**
+
+Independent of aggregate, the per-role decomposition can be observed as a direction-check:
+- **Average per-role count < 50% of v1 aggregate** = direction-validated (each role's per-role surface is meaningfully smaller than v1's, supporting the cluster G role-asymmetric-context mitigation hypothesis)
+- **Average per-role count ∈ (50%, 100%]** = direction-supported (per-role count is below v1 aggregate, but not by half)
+- **Average per-role count > 100%** = direction-refuted (per-role count exceeds v1 aggregate; role decomposition is NOT reducing per-role surface — roles are doing as much as v1 single-orchestrator)
+
+This metric does not refute B by itself, but it informs the central-bet claim. Combined readings against the aggregate threshold:
+- **PASS aggregate + direction-validated per-role**: B's central bet is fully validated.
+- **PASS aggregate + direction-refuted per-role**: aggregate is fine but B's per-role mitigation hypothesis is wrong; B is still a viable candidate but cluster G mitigation is NOT the source of B's value (some other property is).
+- **REFUTED aggregate + direction-validated per-role**: per-role mitigation works but coordination overhead outweighs it; B's design-bet is wrong on cost.
+- **REFUTED aggregate + direction-refuted per-role**: B is structurally worse than v1 on this axis; clear path to drop B.
+
+**Baseline re-derivation under the rubric.**
+
+V1's verified count under the cycle 96 measurement was 50 step+substep IDs across STARTUP_CHECKLIST.xml + COMPLETION_CHECKLIST.xml. Some of those step IDs are mechanical (e.g., "post the session-start comment", "commit and push") and would be excluded under the structural-decision-point rubric; others are clearly structural ("decide substantive-focal for this cycle", "evaluate whether to defer or absorb"). A spot-check of 10 representative step IDs against the rubric (cycle 103 sanity-check):
+- Structural under rubric (counts): ~7 of 10 — substantive-focal selection, dispatch-vs-handle-in-cycle, sibling-pattern naming, abandonment-detection-and-recovery, generalization-level discipline application, deslop pass scope decision, substantive-vs-procedural-shape decision
+- Mechanical under rubric (excluded): ~3 of 10 — issue-comment posting, commit creation, file-write operations
+- Extrapolating: v1 baseline under rubric is approximately **35-40 structural decision-points** (~70-80% of the 50 step+substep ID count). The first independent observer count (Phase 3 prototype scaffolding cycle) verifies this estimate.
+
+Important: the 35-40 estimate is *under-the-rubric-applied-to-step-IDs* only. V1's prompt also embeds prose-procedural decisions outside the named-step taxonomy (e.g., the prompt's tone instructions, its housekeeping directives). A maximally-inclusive rubric application includes those; a minimally-inclusive rubric application restricts to named steps only. The rubric needs an explicit choice on this, and the choice should be made before measurement. **Default for Phase 3 measurement: minimally-inclusive (named steps + named patterns only)**, on the grounds that prose-procedural decisions are also present in B's role-artifact prose and the rubric should treat the two artifacts symmetrically.
+
+**Re-counting cadence.**
+
+- *Initial count*: at Phase 3 prototype scaffolding completion (per role's prompt + checklist + coordination contracts authored).
+- *Re-count*: on every prompt/checklist/contract revision (counts may shift as prompts evolve through Phase 3 iteration).
+- *Phase 3 measurement*: at end of paired-cycle measurement (compare authored count vs operational tool-invocation count via secondary unit; cross-validate; report aggregate).
+
+**What Risk 8 specifically asked for, and how the protocol answers it:**
+
+| Risk 8 concern | Protocol answer |
+|---|---|
+| Self-report by role-session AI is circular | External enumeration of artifacts; AI under test does not count itself |
+| Counting LLM tool invocations conflates mechanical with cognitive | Structural-decision-point unit excludes mechanical tool calls; operational tool-invocation count is a sanity-check secondary, not the primary unit |
+| Counting protocol must be specified before Phase 3 measurement | Cycle 103 specifies the protocol; measurement happens at Phase 3 prototype scaffolding |
+| Validation plan must produce a meaningful number | Hard refutation thresholds (PASS / PASS-WITH-NOTE / PARTIAL-FLAG / REFUTED) anchored on ratio-to-v1-baseline produce a defensible verdict |
+
 ### Validation plan (cycle 93+ Phase 3 prototype work)
 
 The estimates above are derived from candidate-authored decision-class enumeration, not yet validated by Phase 3 prototype. Cycle 93+ Phase 3 prototype effort should:
@@ -237,7 +352,16 @@ The estimates above are derived from candidate-authored decision-class enumerati
 4. Count actual coordination overhead; compare against ~9-23 estimate.
 5. Compare aggregate against v1 baseline measurement on the same workload.
 
-If validation reveals per-role decision count ≤ v1's per-cycle decision count for the executor-equivalent role, P3 PARTIAL-FLAG promotes to PASS-WITH-NOTE (matching C's grade). If validation reveals coordination overhead exceeds the estimate substantially (~30+ decisions per cycle from coordination alone), P3 weakens further.
+**Hard refutation thresholds (added cycle 103 per Counting protocol section, replacing the previous soft "promotes to PASS-WITH-NOTE" / "weakens" language flagged as inadequate per cycle 96 absorption methodology):** P3 verdict is determined by the protocol's aggregate threshold:
+
+- **PASS** (full): B aggregate ≤ 1.0× v1 baseline (under the rubric). P3 promotes from PARTIAL-FLAG to PASS-WITH-NOTE.
+- **PASS-WITH-NOTE**: B aggregate ∈ (1.0×, 1.5×] v1 baseline. P3 promotes from PARTIAL-FLAG to PASS-WITH-NOTE.
+- **PARTIAL-FLAG** (no change): B aggregate ∈ (1.5×, 2×] v1 baseline. P3 stays PARTIAL-FLAG.
+- **REFUTED** (downgrade): B aggregate > 2× v1 baseline. P3 stays PARTIAL-FLAG; the aggregate-comparable-to-v1 claim is refuted.
+
+Coordination-overhead is counted as part of the aggregate, not as a separate threshold (avoids the "exceeds ~30+ decisions" soft language). Per-role decision-count is observational (the secondary direction-check metric), not falsificational.
+
+These are pre-agreed thresholds that do not depend on the orchestrator's own assessment. The protocol section above specifies the full counting methodology (unit, method, reproducibility check, sanity-check secondary unit) that produces the aggregate number.
 
 ### Risks named at the structural level
 
@@ -248,7 +372,7 @@ If validation reveals per-role decision count ≤ v1's per-cycle decision count 
 - **Risk 5:** the aggregate-comparable-to-v1 claim depends on per-role agents NOT also doing v1's coordination work (substantive-focal selection, sibling-pattern recognition, honest reflection). If those decision-classes leak across role boundaries (e.g., curator does its own honest reflection in addition to planner's coordination), aggregate inflates.
 - **Risk 6 (added cycle 96 per PR #2878 absorption — multi-session wall-clock cost):** B requires 4 sequential AI sessions per cycle (planner → executor → curator → reconciler). Each session has cold-start cost: context loading, workspace state synchronization, tool initialization. This overhead is NOT part of the decision-count metric (it's wall-clock, not cognitive). If each cold-start costs ~5-10 minutes and there are 4 sessions in a 75-minute window, **20-40% of cycle budget is consumed before any substantive work begins**. Validation against v1's wall-clock baseline (single session, single cold-start) is required separately from decision-count validation. This is a P3-adjacent structural risk that the cycle 92 sharpening did not name.
 - **Risk 7 (added cycle 96 per PR #2878 absorption — circular baseline):** the v1 ~40-decision baseline used in this section was self-measured by the orchestrator that benefits from the comparison. The author is the same orchestrator that designed B and proposed B's per-role decision counts. The 12 "per-axis position commitments for C" element of the baseline counts template applications as 12 independent decisions; if those count as 1 structural decision each, the v1 baseline approximately halves and B's "comparable" claim breaks. The baseline therefore admits a 2× uncertainty band on the v1 side.
-- **Risk 8 (added cycle 96 per PR #2878 absorption — counting protocol absence):** the validation plan names "count actual per-role decision points per role" as a measurement step but does not specify a counting methodology. Self-report by the role-session AI is circular; counting LLM tool invocations conflates mechanical with cognitive. **A counting protocol must be specified before Phase 3 measurement** for this validation to produce a meaningful number.
+- **Risk 8 (added cycle 96 per PR #2878 absorption — counting protocol absence; CLOSED at specification level cycle 103):** the validation plan named "count actual per-role decision points per role" as a measurement step but did not specify a counting methodology. Self-report by the role-session AI is circular; counting LLM tool invocations conflates mechanical with cognitive. **Cycle 103 closes Risk 8 at the specification level** — see the [Counting protocol section](#counting-protocol-cycle-103-specification-addressing-risk-8) above. The protocol uses *structural decision-points in role artifacts* as the primary unit (avoiding self-report circularity by enumerating artifacts not behavior); uses external enumeration with reproducibility check (avoiding single-observer subjectivity); uses operational tool-invocation logs as a sanity-check secondary unit (without conflating mechanical with cognitive — categorized invocations distinguish the two); and specifies hard refutation thresholds anchored on ratio to v1's verified-under-rubric baseline. Risk 8 remains *open at the operational level* until Phase 3 prototype measurement actually executes the protocol; the specification-level closure is the cycle 103 deliverable.
 - **Risk 9 (added cycle 97 per PR #2877 lens-2 absorption — typed-channel infrastructure LOC dominance):** B's typed-channel-map architecture requires `channel-router` + per-channel reducer schemas + super-step-boundary sync + coordination invariants as foundational infrastructure before any role logic runs. PR #2877 names this as the dominant LOC sink in B's design — infrastructure plausibly exceeds role-specific logic in aggregate. Three sub-points: (a) `branch-manager` (Axis 4 branching checkpoints) implies fork/promotion/gardening semantics and is policy-heavy + test-heavy beyond the 200-500 LOC small-crate norm; (b) ~20-40 skill crates plus role-bound manifests/contracts multiply lifecycle overhead before business logic; (c) B's own document at line 62 acknowledges "several thousand LOC each" for key infra — supporting PR #2877's higher-LOC reading. **Implication:** B's aggregate range stated 10000-20000 LOC is plausibly low at the upper bound; PR #2877's revised 14000-28000 (40% upper-bound increase) is the better-grounded planning range. Direction (B is the most expensive candidate) holds by construction; magnitude is sharpened upward.
 - **Risk 10 (added cycle 97 per PR #2877 lens-7 absorption — skill discovery overhead super-linear):** B's 20-40 skill-crate surface combined with role-bound discovery patterns implies non-trivial routing/lookup costs at runtime. PR #2877 names a candidate-independent threshold of ~18-25 callable units beyond which one-line registry descriptions are insufficient for safe invocation selection without strict hierarchical taxonomy. B's surface (~32-52 callable units total: 12+ Rust crates + 20-40 skills) substantially exceeds this threshold. Mitigation requires hierarchical registry + compatibility metadata + per-skill invocation contract — itself additional infrastructure cost not in the 10000-20000 LOC stated range. Risk: skill-discovery lookup costs explode without strong taxonomy, eroding the per-role specialization benefit by re-introducing aggregate decision overhead at the discovery layer.
 
