@@ -223,6 +223,43 @@ If validation reveals ≥ 50% extraction is achievable in the chosen unit, P3 PA
 - **Risk 1:** the named-step taxonomy in v1 STARTUP/COMPLETION is one unit of analysis (50 step+substep IDs measured); other units (named patterns spanning multiple steps; prose-procedural clauses) may give different denominators. The choice of denominator is itself a candidate-claim decision, not a measurement.
 - **Risk 2:** the boundary between deterministic-extractable and judgment-required is fuzzy for some steps (e.g., "post session-start comment with templated content" is deterministic in template but judgment-required in what to fill in). Any extraction-percentage estimate assumes deterministic-extractable cases dominate; if judgment-required cases dominate, extraction is lower regardless of denominator chosen.
 - **Risk 3:** the v2 prompt's tool-registry reference may grow substantially as the tool count grows (cluster B's per-component-state files alone require ~5 dedicated tool descriptions). Aggregate v2 prompt size is sensitive to tool count. **Cycle 97 sharpening (PR #2877 lens-7):** coordination grows super-linearly past ~15-25 callable units; PR #2877 names ~18-25 as a candidate-independent threshold beyond which one-line registry descriptions are insufficient for safe invocation selection. v2 callable surface (~9 new crates plus retained v1 callable subset) approaches this threshold; cumulative v1 + v2 surface (47 crates total) likely exceeds it. Mitigation: hierarchical registry + compatibility metadata if surface grows beyond ~15 actively-orchestrator-called tools.
+
+  **Cycle 105 second-iteration sharpening (post-cycle-102/104 substrate absorption):** three new candidate-distinguishing tool-adoption decisions surface from cycle 102 cluster A sub-shapes 10+11 (task-ingestion routing) and cluster H sub-shapes 5+6 (feedback inference / evaluator-driven keep-discard), with cycle 104 A↔B-6 making the cluster B coordinated-write target explicit. The substrate-absorption frame consolidates these as concrete tool-count deltas under three adoption choices A could make.
+
+  | Adoption decision | Tool delta if adopted | Self-management cost |
+  |---|---|---|
+  | Cluster A sub-shape 10 (classifier-mediated dispatch, PAI) | +1 (`classify-cycle-task`) | MODERATE — classifier prompt + taxonomy maintenance |
+  | Cluster A sub-shape 11 (deterministic-decision-tree routing, omx) | +1 (`route-cycle-decision`) | LOW — typed-set-membership rules execute without per-cycle calibration |
+  | A↔B-6 cluster B coordinated write (cycle 104) | +0 to +2 — classification-record + route-record file targets absorbed by per-component-state writer if shared, else dedicated tools | LOW — append-only writes at session-entry boundary |
+  | Cluster H sub-shape 5 (feedback-signal-inference, PAI) | +1 (`infer-feedback-signal`) | MODERATE — inference-prompt evolution as feedback-shapes emerge |
+  | Cluster H sub-shape 6 (evaluator-driven keep-discard, omx) | +1 (`evaluator-driven-consolidate`) | MODERATE — evaluator-rubric maintenance |
+
+  **Trajectory bounds:**
+  - Cycle 90 baseline: ~9 v2 crates standalone
+  - Adoption-floor (none of the new sub-shapes): ~9 v2 crates
+  - Classify-then-route pipeline only (10 + 11 + minimal A↔B-6 absorption into existing per-component-state writer): ~11 v2 crates
+  - Full adoption (10 + 11 + dedicated A↔B-6 writers + 5 + 6): ~14-15 v2 crates standalone
+
+  **Cross-reference to PR #2877 lens-7 thresholds:**
+  - ~15 callable units: registry one-liners begin to fail (lower edge of super-linear band)
+  - ~18-25: super-linear coordination across registry surface
+  - At full-adoption upper bound (~15 v2 crates), A's standalone surface is at the lower edge of the registry-one-liner failure threshold; combined v1+v2 surface (cycle 97 baseline 47 + ~5 added) reaches ~52, comfortably above super-linear threshold
+
+  **Active-callable vs total-inventory distinction (cycle 105 addition):** the orchestrator-CALLABLE surface and the v2 crate INVENTORY are structurally distinct quantities under A's Axis 13 medium-harness extraction. The 15-tool registry-one-liner threshold applies to the CALLABLE surface (the set of tools whose names/contracts the orchestrator-prompt enumerates and the orchestrator selects among), not the inventory. A's medium-harness can absorb cycle 102/104 sub-shape tools INTERNALLY into orchestration-hub crates:
+
+  - **Boot-phase internalizes** `classify-cycle-task` + `route-cycle-decision` + cluster B classification-record write. The orchestrator sees only `boot-phase` output: a `cycle-context.json` artifact bundling resolved task classification + route + boundary state. The orchestrator does not invoke `classify-cycle-task` or `route-cycle-decision` directly; they execute as boot-phase internal pipeline stages.
+  - **Close-phase internalizes** `infer-feedback-signal` + `evaluator-driven-consolidate` (running on the just-completed cycle's artifacts). The orchestrator sees a `cycle-feedback-summary.json` output from close-phase, not the inference-and-consolidation tool surface.
+
+  Under this framing, A's orchestrator-callable surface stays ≤9 across the full sub-shape adoption window (`boot-phase`, `close-phase`, `phase-transition-check`, `wiki-search`, `cycle-history-append`, `gardening-sweep`, `detect-abandoned-cycles`, `prompt-contract-check`, `tool-registry`). The internalized sub-shape tools grow the inventory to ~15 but stay below the orchestrator's selection threshold.
+
+  **Mitigation specification (cycle 105 sharpening of cycle 97 "hierarchical registry + compatibility metadata"):**
+
+  1. **Two-tier registry:** orchestrator-callable tier (≤12 actively-orchestrator-invoked tools) + harness-internal tier (sub-shape-specific tools called by orchestration-hub crates). The orchestrator-prompt references only the callable tier; harness-internal tools are documented in the registry for transparency / debug / audit but not surfaced to orchestrator selection.
+  2. **By-cluster registry grouping:** registry output groups callable tools by cluster (A / B / F / H / I / cross-cutting) rather than alphabetical, per PR #2877 lens-7 framing. Reduces selection-among-N to selection-among-N-per-cluster.
+  3. **Compatibility metadata as I/O typed declarations:** each tool manifest declares input/output JSON shape (e.g., `consumes: cycle-issue.body, recent-journal-entries`; `produces: cycle-classification.json`). Allows orchestrator to discover tool fit by data-shape rather than by name disambiguation.
+  4. **Active-callable bound as candidate-claim:** A commits to keeping orchestrator-callable tools at ≤12 across all sub-shape adoptions; further sub-shape additions beyond cycle 102/104's substrate require harness-internalization to maintain the bound. Falsifiable at Phase 3 prototype: count the orchestrator-prompt's tool-name references and verify ≤12 after cycle 102/104 substrate adoption.
+
+  **Risk 3 status post-cycle-105:** direction continues to hold (tool-registry growth is bounded by structural decision: harness-internalization of sub-shape tools); magnitude refined from "v2 callable surface (~9 new crates) approaches threshold" to "v2 INVENTORY may reach 13-15 with full sub-shape adoption, but orchestrator-CALLABLE surface stays ≤12 by harness-internalization discipline." Mitigation specification is now concrete enough for Phase 3 prototype validation (the falsifiable bound is measurable). Operational closure deferred to Phase 3 prototype when the active-callable boundary discipline meets actual extraction work.
 - **Risk 4:** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress.
 
 These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (which is now indeterminate without re-grounded baselines) but not the *direction* (medium-harness extraction reduces procedural surface — structurally plausible regardless of denominator). **P3 PASS direction continues to hold on structural argument; magnitude is currently indeterminate and awaits Phase 3 prototype measurement against verified baselines.** Per cycle 96 absorption: the cycle 91 sharpening's "magnitude is sharpened to ~40-50% rather than ~50%" conclusion was internally inconsistent with the README tracker's "~50-62%" label, and both rested on overcounted denominators; the README-tracker entry has been revised in this absorption pass.
