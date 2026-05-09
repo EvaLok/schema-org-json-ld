@@ -84,7 +84,7 @@ cross-system synthesis below cross-validates patterns across systems.
 | LangGraph | Copilot dispatch (cycles 18-20, [PR #2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768)) | Deep-dive | [`systems/langgraph.md`](1-research/systems/langgraph.md) |
 | Cognition Devin | Copilot dispatch (cycle 26, [PR #2780](https://github.com/EvaLok/schema-org-json-ld/pull/2780)) + deeper read (cycle 41, [PR #2804](https://github.com/EvaLok/schema-org-json-ld/pull/2804)) | Deep-dive | [`systems/cognition-devin.md`](1-research/systems/cognition-devin.md) |
 | OpenAI harness-engineering | Copilot dispatch (cycle 26, [PR #2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783)) + deeper read (cycle 41, [PR #2805](https://github.com/EvaLok/schema-org-json-ld/pull/2805)) | Deep-dive | [`systems/openai-harness.md`](1-research/systems/openai-harness.md) |
-| oh-my-codex | Copilot dispatch (cycle 26, [PR #2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)) | **Stub** — cycle-63 deeper read in flight ([#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833); supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782)) | [`systems/oh-my-codex.md`](1-research/systems/oh-my-codex.md) |
+| oh-my-codex | Copilot dispatch (cycle 26, [PR #2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784)) + deeper read (cycle 63, [PR #2874](https://github.com/EvaLok/schema-org-json-ld/pull/2874) absorbed cycle 101) | Deep-dive (commit `d1863f72`; 9-lens code-level read; 3 corrections + 7 confirmations + 9 NEW patterns; 5-crate Rust workspace, 5 MCP servers verified) | [`systems/oh-my-codex.md`](1-research/systems/oh-my-codex.md) |
 | openai/symphony | Copilot dispatch (cycle 77, [PR #2873](https://github.com/EvaLok/schema-org-json-ld/pull/2873) absorbed cycle 98) | **First-pass** — spec + impl-shape; deeper-read queue documented | [`systems/symphony.md`](1-research/systems/symphony.md) |
 | oh-my-claudecode | Copilot dispatch (cycle 75, [PR #2876](https://github.com/EvaLok/schema-org-json-ld/pull/2876) absorbed cycle 99) | **First-pass** — surface architecture + hooks/lifecycle + .omc state model + 22-pattern mapping; deeper-read queue documented | [`systems/oh-my-claudecode.md`](1-research/systems/oh-my-claudecode.md) |
 
@@ -95,7 +95,7 @@ pending deeper second-pass reads or adversarial-on-adversarial review.
 
 ## Cross-system observations
 
-Nine systems read at depth: openclaw (cycle 14 + cycle-43 deeper read,
+Ten systems read at depth: openclaw (cycle 14 + cycle-43 deeper read,
 PR [#2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809)); PAI
 (cycle 14 + cycle-71 deeper read absorbed cycle 100, PR
 [#2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875)); AutoGen
@@ -104,7 +104,8 @@ Voyager (cycle 17); LangGraph (cycles 18-20, PR
 [#2768](https://github.com/EvaLok/schema-org-json-ld/pull/2768));
 Cognition Devin (cycle 26, PR [#2780](https://github.com/EvaLok/schema-org-json-ld/pull/2780));
 OpenAI harness-engineering (cycle 26, PR [#2783](https://github.com/EvaLok/schema-org-json-ld/pull/2783));
-oh-my-codex (cycle 26, PR [#2784](https://github.com/EvaLok/schema-org-json-ld/pull/2784));
+oh-my-codex (cycle 26 + cycle-63 deeper read absorbed cycle 101, PR
+[#2874](https://github.com/EvaLok/schema-org-json-ld/pull/2874));
 plus Symphony first-pass (cycle 98) and oh-my-claudecode first-pass
 (cycle 99) pending deeper-read elevation to deep-dive parity.
 Observations below cross-validate where 3+ systems converge on the
@@ -686,7 +687,7 @@ identifications. Order not yet committed.
 | Voyager | Long-running self-improving Minecraft agent; skill library accumulation | Orchestrator-direct (the paper is short) | Cycle 17 read; per-system file [`systems/voyager.md`](1-research/systems/voyager.md) |
 | Cognition Devin writeups | Autonomous coding agent; production deployment patterns | Orchestrator-direct (blog posts, not a repo) | Deep-dive landed (cycle 41, [PR #2804](https://github.com/EvaLok/schema-org-json-ld/pull/2804); supersedes closed cycle-26 dispatch [#2779](https://github.com/EvaLok/schema-org-json-ld/issues/2779)) |
 | OpenAI harness-engineering | Internal harness writeup; mechanical-enforcement and entropy-as-engineering-concern patterns | Copilot research-only dispatch | Deep-dive landed (cycle 41, [PR #2805](https://github.com/EvaLok/schema-org-json-ld/pull/2805); supersedes closed cycle-26 dispatch [#2781](https://github.com/EvaLok/schema-org-json-ld/issues/2781)) |
-| oh-my-codex | Configuration layer + hook harness over Codex CLI; densest cross-system citation footprint | Copilot research-only dispatch | Stub from cycle-26 dispatch; cycle-63 deeper read in flight [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833) (supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782)) |
+| oh-my-codex | Configuration layer + hook harness over Codex CLI; densest cross-system citation footprint | Copilot research-only dispatch | Deep-dive landed (cycle 101, [PR #2874](https://github.com/EvaLok/schema-org-json-ld/pull/2874); supersedes closed cycle-26 dispatch [#2782](https://github.com/EvaLok/schema-org-json-ld/issues/2782); cycle-63 dispatch [#2833](https://github.com/EvaLok/schema-org-json-ld/issues/2833) closed alongside PR per absorption convention) |
 | Semantic Kernel | Microsoft's agent SDK; planner/skills split | Copilot research-only dispatch (lower priority) | Pending |
 | Anthropic engineering posts | Claude Code, agent SDK, internal tooling experience | Orchestrator-direct | Pending |
 | openai/symphony | Per Eva directive [#2775](https://github.com/EvaLok/schema-org-json-ld/issues/2775) | Copilot research-only dispatch (cycle 77, [#2851](https://github.com/EvaLok/schema-org-json-ld/issues/2851)) | First-pass landed (cycle 98, [PR #2873](https://github.com/EvaLok/schema-org-json-ld/pull/2873)); per-system file [`systems/symphony.md`](1-research/systems/symphony.md) |
@@ -751,12 +752,16 @@ Cycle 34+: dispatch options, in approximate priority order
    orchestrator-direct).
 3. Anthropic engineering posts (orchestrator-direct).
 4. Eva directives #2774 (oh-my-claudecode) and #2775 (openai/symphony).
-5. Deeper second-pass on openclaw and PAI — both have now landed:
+5. Deeper second-pass on openclaw and PAI — both have landed:
    openclaw deeper read at cycle 43 ([PR #2809](https://github.com/EvaLok/schema-org-json-ld/pull/2809));
-   PAI deeper read at cycle 100 ([PR #2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875)).
+   PAI deeper read at cycle 100 ([PR #2875](https://github.com/EvaLok/schema-org-json-ld/pull/2875));
+   oh-my-codex deeper read at cycle 101 ([PR #2874](https://github.com/EvaLok/schema-org-json-ld/pull/2874)).
    The deliverable-size asymmetry the cycle-16 read flagged is now
    resolved — both required reads sit at deep-dive parity with the
-   external-system corpus.
+   external-system corpus, and the cycle-26-vintage oh-my-codex
+   dispatch has been elevated from stub to deep-dive parity. Eva-named
+   reads (oh-my-claudecode, openai/symphony) remain at first-pass
+   pending elevation.
 
 The dispatch sequence is tentative. Phase 1 reading priority should
 adjust based on cycle capacity and any patterns that emerge as
