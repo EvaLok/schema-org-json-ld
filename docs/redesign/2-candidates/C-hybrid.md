@@ -229,6 +229,148 @@ C's central bet — that reconcile-mode + plans-as-artifacts carry their weight 
 
 **Magnitude:** structural enumeration suggests improvements are real but the absolute magnitudes (4pp / 3-4 cycle / 5-13pp) are estimates from cycle observation not Phase 3 prototype measurement. Magnitude validation requires running paired cycles (A-style boot-poll vs C-style reconcile-mode) on the same workload.
 
+### Plan-authoring discipline taxonomy (cycle 107 specification, addressing Risk 2)
+
+**Background:** Risk 2 named C's conditional-improvement concern: F4 stale-detection-lag improvement (~3-4 cycle reduction) is conditional on cycles producing structured plans. Cycles that don't author plans inherit A's F4 behavior — the improvement degrades to ~0pp on those cycles. The cycle 92 sharpening identified the conditional but did not specify (a) which cycle-types must author/update plans, (b) what compliance rate counts as "discipline holds", (c) how compliance is measured non-circularly. This section closes Risk 2 at the specification level by decomposing cycles into a 5-type taxonomy with per-type plan-discipline expectations, specifying compliance-rate thresholds as ratio-based per cycle 103/106 pattern (now extended from quantity-ratios to discipline-compliance rates), specifying per-cycle classification annotation + external-observer reproducibility check + CI sweep as the verification mechanism, and treating the taxonomy itself as subject to a warm-up window per cycle 106 NOVEL shape #24. Per cycle 96 discipline-bar-too-low: thresholds are pre-agreed before measurement. Cycle 107 closure mirrors cycle 103/105/106 closure shape (substrate-decomposition + falsifiable bound + verification procedure + status); the recurring shape is the **fourth instance of the `risk-closure-at-specification-level` functional-class shape**, and the **first instance applying it to a discipline-conditional risk-shape type** (vs the 3 prior closures of quantity-bounded risk-shape types). Transfer test: does shape #21 hold across risk-shape types in addition to risk-domain types?
+
+**Choice 1: Cycle-type taxonomy as 5-type substrate-decomposition.**
+
+Cycles vary substantially in what plan-discipline applies. The cycle 92 risk treated "cycles authoring plans" as a binary observation without specifying which cycles count. Under the cycle-type taxonomy:
+
+| Type | Description | Plan-discipline expectation | Cycle character dependence |
+|---|---|---|---|
+| 1 — Substantive-novel | Initiates new direction, new structural change, or multi-cycle research/build arc | Plan-authoring REQUIRED (new active plan created OR existing draft elevated to active) | High-load cycle character |
+| 2 — Substantive-iteration | Refines existing plan, sharpens an existing candidate-claim, deepens an existing closure | Plan-update REQUIRED (active plan touched within cycle) | Steady-state cycle character |
+| 3 — Bounded-mechanical | Output is mechanical (tracker updates, restructure, mechanical edits) covered by no plan or by a parent plan | Plan-update OPTIONAL (update parent plan if applicable; no new plan required) | Mechanical cycle character |
+| 4 — Reactive-only | Substantive output is responding to external arrivals (Eva input, audit critique, dispatch return) | Plan-update REQUIRED on affected plan, OR technical-debt promotion if arrival triggers walkback | External-arrival-dependent |
+| 5 — No-substantive | Bottleneck-blocked; no substantive work possible | NO-PLAN annotation REQUIRED (positive declaration) | Bottleneck-dependent |
+
+Looking at cycles 90-106 retrospectively (Phase 2 stretch): ~4 Type-1 (cycles 90, 91, 93, 94) + ~13 Type-2 (cycles 92, 95-106) + 0 Type-3/4/5 in the 17-cycle window. Phase 1 cycles 14-89 included substantial Type-3 (bounded-mechanical: cycles 23, 32, 33, 46, 56, 60, 61) and Type-4 (reactive-only: cycles 7, 27, 31, 41, 43, 85) populations.
+
+**Alternative considered and rejected:** treat plan-discipline as binary (cycles either author or don't). Rejected because the binary observation conflates substantive-novel (where plan-authoring is the discipline) with bounded-mechanical (where it isn't expected). Without the taxonomy, the "discipline holds" claim is uninterpretable — a high authoring rate could mean discipline is good OR could mean the cycle-distribution is skewed toward Type 1.
+
+**Alternative considered and rejected:** classify cycles only at retrospective analysis (no per-cycle classification). Rejected because retrospective classification is not falsifiable — classifying after seeing whether the plan was authored creates self-fulfilling categorization. Per-cycle classification at session-end (before knowing the prototype-level discipline-rate) is the falsifiability requirement.
+
+**Choice 2: Per-cycle-type compliance rate as ratio-based bound.**
+
+Per cycle 103/106 ratio-based threshold pattern, compliance rates extend the ratio discipline from quantity-ratios to discipline-compliance rates:
+
+- **Type 1 (substantive-novel) compliance rate**: % of Type-1 cycles authoring or elevating a plan
+  - ≥90% steady-state → discipline holds
+  - 70-90% → discipline at risk; investigation triggered
+  - <70% → discipline refuted; cycle 92 conditional fires (F4 improvement degrades to A baseline)
+- **Type 2 (substantive-iteration) compliance rate**: % of Type-2 cycles updating an active plan
+  - ≥90% steady-state → discipline holds
+  - 70-90% → discipline at risk
+  - <70% → discipline refuted
+- **Type 3 (bounded-mechanical)**: no compliance bound; observational only
+- **Type 4 (reactive-only) compliance rate**: % of Type-4 cycles updating affected plan or promoting
+  - ≥80% steady-state → discipline holds (lower bar than Type 1/2; reactive cycles may legitimately have no affected plan if arrival is fully novel)
+  - 60-80% → discipline at risk
+  - <60% → discipline refuted
+- **Type 5 (no-substantive) annotation rate**: % of Type-5 cycles with explicit NO-PLAN annotation
+  - ≥95% → discipline holds (annotation IS the only discipline for Type 5)
+  - <95% → discipline refuted
+
+**Alternative considered and rejected:** uniform compliance rate across all types (e.g., ≥90% everywhere). Rejected because Type 4's "discipline holding" admits more legitimate exception cases (fully-novel arrivals) than Type 1/2; a uniform threshold would be either too lenient on Type 1/2 or too strict on Type 4. The asymmetry is structurally grounded.
+
+**Alternative considered and rejected:** absolute count thresholds (e.g., "at least N plan-authoring cycles per N cycles"). Rejected because absolute counts depend on the cycle-type distribution; a stretch of mostly Type-3 bounded-mechanical cycles would fail an absolute count without indicating any actual discipline failure. Ratio-based thresholds (per cycle 103) are robust to distribution shifts.
+
+**Choice 3: Stale-active-plan promotion lag as separate quantitative bound.**
+
+Independent of plan-authoring/update compliance rates, stale-active-plan promotion lag is the F4 metric directly grounding the cycle 92 "~3-4 cycle reduction in detection lag" claim:
+
+- **Stale detection: triggered when an active plan has not been updated in N cycles** (N = 5 by default; configurable per plan)
+- **Promotion-lag bound: ≤3 cycles steady-state** between detected staleness and orchestrator decision (promote-to-completed | promote-to-technical-debt | mark-active-with-justification)
+- **Pre-agreed thresholds:**
+  - Promotion lag ≤3 cycles → F4 stale-detection-lag improvement validated (matches cycle 92 estimate)
+  - 4-6 cycles → F4 improvement supported (within reasonable bounds; cycle 92 claim weakened)
+  - >6 cycles → F4 improvement refuted (degrades to A's gardening-sweep behavior)
+
+**Alternative considered and rejected:** auto-promote stale active plans without orchestrator decision. Rejected because auto-promotion without judgment loses the discipline benefit (technical-debt directory becomes a dump of forgotten plans rather than a structured anti-pattern catalog per M3 Strength 2 EXTENDED). The orchestrator-decision-required step is the discipline.
+
+**Alternative considered and rejected:** weaker promotion-lag bound (≤5 cycles). Rejected because cycle 92's claim was "~3-4 cycle reduction in detection lag"; a ≤5 cycle bound matches A's baseline performance, voiding the C-vs-A improvement claim and making the cycle 92 claim non-falsifiable.
+
+**Choice 4: Per-cycle classification annotation + external-observer reproducibility check + CI sweep as verification procedure.**
+
+Each cycle session-end produces a structured classification annotation:
+
+```jsonc
+{
+  "cycle": <cycle-id>,
+  "cycle-type": 1 | 2 | 3 | 4 | 5,
+  "plan-authoring-activity": "authored" | "elevated" | "updated" | "no-plan-needed" | "no-substantive",
+  "active-plans-touched": [<plan-id>, ...],
+  "stale-active-plans-detected": [{plan-id, last-updated-cycle, decision}, ...]
+}
+```
+
+To address self-classification circularity (parallel to cycle 103's self-report-by-role-session-AI concern on B's counting protocol), the verification procedure has three layers:
+
+1. **Per-cycle annotation by orchestrator** (primary; logged at session-end via `cycle-type-annotation` Rust tool).
+2. **External-observer reproducibility check at Phase 3 measurement** — an external classifier (Eva, audit-orchestrator, or independent Copilot dispatch) re-classifies a sample (≥20% of cycles) without seeing the orchestrator's annotation. Inter-rater disagreement >20% indicates classification-rubric-stability concern; ≤10% is the steady-state acceptance threshold (matching cycle 103's inter-rater reliability check pattern).
+3. **CI sweep (`cycle-type-annotation-check`)** verifies each cycle has a classification annotation; missing annotations are themselves a discipline-failure signal counted toward Type 5 non-compliance.
+
+**Alternative considered and rejected:** rely on orchestrator self-classification alone (no external observer). Rejected because that's exactly the cycle 96 self-report-circularity concern — the orchestrator that authored the plan-discipline taxonomy is the same orchestrator measuring compliance. Self-classification is the primary signal; external-observer is the falsifiability mechanism.
+
+**Alternative considered and rejected:** rely on session-end summary text (no structured annotation). Rejected because session-end summaries are unstructured prose; aggregating compliance rates from prose requires LLM-classification per cycle, which is itself a discipline-rubric-stability concern and substantially more expensive.
+
+**Choice 5: Cycle-type taxonomy stability as warm-up-window discipline (cycle 106 shape #24 transfer).**
+
+The cycle-type taxonomy may itself be unstable in early Phase 3 cycles as observed cycle-distributions diverge from the 5-type design. This is a direct application of cycle 106 NOVEL shape #24 (`risk-closure-with-warm-up-window`):
+
+- **Steady-state taxonomy stability past cycle 5 of Phase 3 measurement**: ≤10% of cycles classified into "other" or "boundary case"
+- **Higher rates in cycles 1-5 (taxonomy-tightening period)** are expected; sustained "other" rate >10% past cycle 5 indicates the 5-type taxonomy is under-specified
+
+The discipline transfers: pre-agreed warm-up window (cycles 1-5) + pre-agreed post-warm-up threshold (≤10% other-rate steady-state). Shape #24 promotes from NOVEL@1 (cycle 106) to TESTED@2 (cycle 107).
+
+**Alternative considered and rejected:** measure taxonomy stability from cycle 1 with no warm-up. Rejected per cycle 106 reasoning (rubric-tightening period is structurally expected; no-warm-up conflates rubric-evolution with structural-instability).
+
+**Alternative considered and rejected:** treat the taxonomy as fixed (no stability check). Rejected because the taxonomy is candidate-authored — a guess about cycle-distributions — and Phase 3 may surface cycle-types not in the 5-type design. Without the stability check, the compliance-rate measurement is uninterpretable when "other" rates are high. The stability check is the meta-falsifiability that makes the closure honest.
+
+**Choice 6: Discipline-conditional rubric-fragility separate diagnostic.**
+
+Discipline-conditional closures depend more heavily on substrate-decomposition correctness than quantity-bounded closures (where rubric is the dependency). The cycle-type taxonomy IS the rubric for compliance — if it's wrong, the compliance rate is uninterpretable. This is structurally distinct from cycle 103/106 quantity-bounded closures where rubric ambiguity affects both numerator and denominator equally (ratio-robust): for discipline-conditional, rubric ambiguity affects WHICH cycles are expected-to-comply but not WHICH cycles complied — a one-sided ambiguity that ratio-based bounds don't fully resolve.
+
+**Diagnostic table (combining compliance rate with taxonomy stability):**
+
+| Compliance rate (Type 1+2) | Taxonomy stability (other-rate) | Diagnostic |
+|---|---|---|
+| ≥90% | ≤10% steady-state | Discipline holds; F4 improvement validated |
+| ≥90% | >10% steady-state | Compliance rate uninterpretable; taxonomy is wrong (revise taxonomy before reading compliance) |
+| 70-90% | ≤10% steady-state | Discipline at risk; investigation triggered (likely cycle-distribution skew or genuine discipline weakness) |
+| <70% | ≤10% steady-state | Discipline refuted; F4 improvement degrades to A baseline; cycle 92 conditional fires |
+| <70% | >10% steady-state | Discipline AND taxonomy both refuted; cycle 92 conditional fires AND closure shape requires revision |
+
+**Alternative considered and rejected:** treat compliance rate alone as sufficient (no taxonomy-stability check). Rejected because high "other" rate masks discipline failure: a 95% compliance rate measured over only 60% of cycles (40% other-classified) reflects cherry-picked compliance rather than discipline. The two-dimensional diagnostic preserves discipline-vs-taxonomy distinction.
+
+**Alternative considered and rejected:** combine taxonomy stability into compliance rate (e.g., count "other" cycles as non-compliant). Rejected because that conflates two failure modes (taxonomy-wrong vs discipline-failed) into one rate, losing diagnostic resolution. The two-axis diagnostic is more informative for revising the candidate after Phase 3 measurement.
+
+### Risk 2 status post-cycle-107
+
+- **Direction continues to hold** by construction: F4 improvement is conditional on plan-discipline holding. The mechanism Risk 2 named is real.
+- **Magnitude refined** from "F4 improvement is conditional on cycles producing structured plans" to:
+  - 5-type cycle taxonomy with per-type plan-discipline expectations (Choice 1).
+  - Per-type compliance rates as ratio-based thresholds: Type 1+2 ≥90% steady-state / Type 4 ≥80% steady-state / Type 5 NO-PLAN annotation ≥95% (Choice 2).
+  - Stale-active-plan promotion lag ≤3 cycles steady-state (Choice 3) — directly grounds cycle 92's "~3-4 cycle reduction" claim.
+  - Per-cycle classification annotation + external-observer reproducibility ≥80% / inter-rater disagreement ≤10% steady-state + CI sweep as verification procedure (Choice 4).
+  - Cycle-type taxonomy stability ≤10% other-rate steady-state past cycle 5 of measurement (Choice 5; warm-up window per cycle 106 shape #24).
+  - Discipline-conditional rubric-fragility diagnostic table (Choice 6) preserves discipline-vs-taxonomy failure distinction.
+- **Mitigation specification:**
+  1. Cycle-type taxonomy applied per-cycle (Choice 1).
+  2. Per-cycle classification annotation logged at session-end + CI sweep + external-observer reproducibility check (Choice 4).
+  3. Per-type compliance rate measurement at Phase 3 (Choice 2).
+  4. Stale-active-plan promotion lag tracking (Choice 3).
+  5. Cycle-type taxonomy stability check past warm-up (Choice 5).
+  6. Combined-readings diagnostic for discipline-vs-taxonomy fragility (Choice 6).
+- **Mitigation specification is now concrete enough for Phase 3 prototype validation** (the taxonomy is applied per-cycle from prototype cycle 1; compliance rates are measurable by cycle 5+ steady state).
+- **Operational closure deferred to Phase 3 prototype** when:
+  - The cycle-type taxonomy meets actual cycle-distribution observations across ≥10 prototype cycles.
+  - Per-type compliance rates are observed and compared against the cycle 107 thresholds.
+  - Stale-active-plan promotion lag is measured against ≤3 cycles bound.
+  - External-observer inter-rater disagreement is measured against ≤10% bound.
+- **Shape #21 transfer verdict:** the structural form transfers (substrate-decomposition + falsifiable bound + verification + status); the methodological extensions are within-shape sub-applications, not new shapes. **Shape #21 promotes from HARDENED-at-3-instances (cycle 106) to HARDENED-at-4-instances (cycle 107)** — now spanning substantively different *risk-shape types* (3 quantity-bounded + 1 discipline-conditional) in addition to substantively different *risk-domain types* (meta-counting / tool-registry / coordination-stability / plan-authoring-discipline). Each candidate (A/B/C) now has at least one second-iteration sharpening closure, balancing falsifiability completeness across the three. **Shape #24 (`risk-closure-with-warm-up-window`) promotes from NOVEL@1 (cycle 106) to TESTED@2 (cycle 107)** via the cycle-type taxonomy stability check (Choice 5).
+
 ### Validation plan (cycle 93+ Phase 3 prototype work)
 
 The estimates above are derived from cycle observation (cycles 75-91 cold-reader + boot-phase failure modes) and structural-enumeration of A's vs C's mode-topology, not yet validated by Phase 3 prototype paired-cycle measurement. Cycle 93+ Phase 3 prototype effort should:
@@ -238,13 +380,17 @@ The estimates above are derived from cycle observation (cycles 75-91 cold-reader
 3. Run paired cycles: A-prototype (3-mode boot/work/close) vs C-prototype (4-mode boot/reconcile/work/close) on the same workload (e.g., a candidate-sharpening cycle similar to cycle 92). **Workload-confounding caveat (added cycle 96 per PR #2878 missing-risk for C):** "same workload" is not achievable in practice — real cycles have variable inbound events (Eva responses, audit critique landings, dispatch outputs). Paired-cycle measurement therefore requires either (a) replaying a recorded inbound stream synthetically against both prototypes, or (b) running paired cycles on consecutive cron triggers (so inbound state is identical at boot) and accepting that one-cycle-old vs current state still differs.
 4. Measure F2/F4/F11 metrics across paired cycles; compare against estimates above.
 5. **Hard refutation thresholds (added cycle 96 per PR #2878 Finding 18 — external falsification criterion, replacing the previous "within 50% of estimate-magnitude" threshold flagged as too permissive):** central-bet is validated if BOTH F4 stale-detection-lag improvement is **≥ 1 cycle** AND F11 detection-rate improvement is **≥ 3pp**. Either condition failing reverts the candidate to "A + plans-as-artifacts" (drop reconcile-mode). Both conditions failing refutes C's central bet outright. F2 reliability is held aside per the "ambiguous-without-prototype" re-classification above; if F2 produces a measurable improvement ≥ 2pp at paired-cycle measurement (above noise floor), it joins the central-bet validation; otherwise it is excluded from the validation criterion.
+6. **Plan-authoring discipline measurement (added cycle 107 per cycle 107 closure — Choices 1-2):** classify each prototype cycle into one of 5 types per Choice 1 taxonomy at session-end; aggregate compliance rates per Choice 2 thresholds. C's F4 improvement validation requires Type 1+2 compliance rate ≥90% steady-state past cycle 5 of measurement; Type 4 ≥80%; Type 5 NO-PLAN annotation ≥95%.
+7. **Stale-active-plan promotion lag tracking (added cycle 107 per Choice 3):** measure cycles between detected staleness (active plan not updated in ≥5 cycles) and orchestrator decision (promote-to-completed | promote-to-technical-debt | mark-active-with-justification). Verify against ≤3 cycle bound; this is the cycle 92 "~3-4 cycle reduction" claim's direct measurement.
+8. **External-observer reproducibility check (added cycle 107 per Choice 4):** at Phase 3 measurement, an external classifier (Eva, audit-orchestrator, or independent Copilot dispatch) re-classifies a sample (≥20% of prototype cycles) without seeing orchestrator self-classification. Inter-rater disagreement >10% steady-state indicates classification-rubric-stability concern.
+9. **Cycle-type taxonomy stability check (added cycle 107 per Choice 5 — warm-up window pattern):** track "other"-rate (cycles falling outside the 5-type taxonomy). Past cycle 5 of measurement, verify ≤10% other-rate steady-state. Higher rates trigger taxonomy revision before reading compliance rates per Choice 6 diagnostic.
 
 If validation reveals all three improvements are real, C's PASS-WITH-NOTE on P3 holds. If F2 improvement is null (~0pp reliability difference) but F4 + F11 hold, C's distinctness from A still holds via plans-as-artifacts (Axis 5) but reconcile-mode (Axis 7 + Axis 12) is weakened — the candidate may consolidate to "A + plans-as-artifacts" rather than full middle-path.
 
 ### Risks named at the structural level
 
 - **Risk 1:** the F2 improvement estimate (~4pp reliability) is small enough that prototype measurement may be within noise. If cycle counts during Phase 3 prototype are bounded (~10-20 paired cycles), F2 improvement may not be statistically distinguishable from A's baseline. F4 + F11 improvements are larger magnitude and more measurably distinguishable.
-- **Risk 2:** plan-lifecycle requires plan-authoring discipline — if cycles don't author plans (e.g., absorption cycles, dispatch-poll cycles), the lifecycle is empty and F4 improvement is 0pp. The candidate's F4 improvement is conditional on cycles producing structured plans; cycles that don't (steady-state cycles) inherit A's F4 behavior.
+- **Risk 2 (CLOSED at specification level cycle 107):** plan-lifecycle requires plan-authoring discipline — if cycles don't author plans (e.g., absorption cycles, dispatch-poll cycles), the lifecycle is empty and F4 improvement is 0pp. The candidate's F4 improvement is conditional on cycles producing structured plans; cycles that don't (steady-state cycles) inherit A's F4 behavior. **Cycle 107 closes Risk 2 at the specification level** — see the [Plan-authoring discipline taxonomy section](#plan-authoring-discipline-taxonomy-cycle-107-specification-addressing-risk-2) above. The closure decomposes cycles into a 5-type taxonomy with per-type plan-discipline expectations (Type 1 substantive-novel REQUIRED / Type 2 substantive-iteration REQUIRED / Type 3 bounded-mechanical OPTIONAL / Type 4 reactive-only REQUIRED-or-promotion / Type 5 no-substantive NO-PLAN-annotation REQUIRED), specifies pre-agreed compliance-rate thresholds as ratio-based (Type 1+2 ≥90% direction-validated / 70-90% at-risk / <70% refuted; Type 4 ≥80%; Type 5 ≥95% annotation), specifies stale-active-plan promotion lag ≤3 cycles steady-state directly grounding the cycle 92 "~3-4 cycle reduction" claim, specifies per-cycle classification annotation with structured JSON schema + external-observer reproducibility check at Phase 3 + CI sweep as the three-layer verification procedure (addressing self-classification circularity per cycle 96 lesson), specifies cycle-type taxonomy stability ≤10% other-rate steady-state past cycle 5 of measurement (warm-up window per cycle 106 shape #24 — promotes shape #24 NOVEL@1 → TESTED@2), and provides a combined-readings diagnostic distinguishing discipline-failure from taxonomy-wrongness (the discipline-conditional rubric-fragility distinction that quantity-bounded closures don't carry). Risk 2 remains *open at the operational level* until Phase 3 prototype measurement observes the rates across ≥10 prototype cycles; the specification-level closure is the cycle 107 deliverable.
 - **Risk 3:** reconcile-mode adds ~10min budget to cycle window (per Axis 9 per-mode runtime budget). If reconcile-mode handlers process inbound events efficiently, the budget is mostly idle (overhead without proportional benefit). If inbound events are heavy (audit critique landing + Eva-response + dispatch-PR-merge in same cycle), reconcile-mode may exceed budget and slip detection to next cycle anyway — degrading the F11 improvement.
 - **Risk 4:** the F11 detection-rate-improvement estimate (~5-13pp) is from cycle 75-83 cold-reader observation, which itself was an iteration on A-style behavior. Phase 3 prototype paired-cycle measurement may reveal the cold-reader cycle was already capturing most missed mutations, and reconcile-mode's marginal improvement is smaller than estimated.
 - **Risk 5:** plan-lifecycle CI (`plan-lifecycle-check`) adds CI surface that needs ongoing attention (similar to A's prompt-contract-check risk, but at a different layer). If plan-lifecycle CI invariants drift (e.g., new plan-lifecycle state added without paired CI update), F4 detection legibility degrades to A's implicit baseline.
