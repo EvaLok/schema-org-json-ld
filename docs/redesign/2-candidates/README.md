@@ -1,8 +1,8 @@
 # Phase 2 candidates
 
-**Status:** Phase 2 candidate authoring begins **cycle 90** (2026-05-07) per audit#454 P5 toggle and cycle 89 hand-off. The M-item integration arc closed cycle 89; this directory contains Phase 2 candidate documents authored against the augmented synthesis surface ([`../2-design-framework.md`](../2-design-framework.md) v1.21+ and [`../1-research/clusters.md`](../1-research/clusters.md) M-item layers M1+M2+M3+M5/P6 + 9-cluster comparison). **Cycle 91** (2026-05-08) added Candidate C, reaching the redesign prompt's "ideally 3" target. **Cycle 92** (2026-05-08) sharpened B's per-role decision count and C's central-bet validation as paired sharpening (after cycle 91 sharpened A's Axis 13 extraction estimate); all three candidates now have first-iteration sharpening sections grounding their respective load-bearing claims.
+**Status:** Phase 2 candidate authoring begins **cycle 90** (2026-05-07) per audit#454 P5 toggle and cycle 89 hand-off. The M-item integration arc closed cycle 89; this directory contains Phase 2 candidate documents authored against the augmented synthesis surface ([`../2-design-framework.md`](../2-design-framework.md) v1.21+ and [`../1-research/clusters.md`](../1-research/clusters.md) M-item layers M1+M2+M3+M5/P6 + 9-cluster comparison). **Cycle 91** (2026-05-08) added Candidate C, reaching the redesign prompt's "ideally 3" target. **Cycle 92** (2026-05-08) sharpened B's per-role decision count and C's central-bet validation as paired sharpening (after cycle 91 sharpened A's Axis 13 extraction estimate); all three candidates now have first-iteration sharpening sections grounding their respective load-bearing claims. **Cycle 111** (2026-05-10) initial authoring of the cross-candidate selection draft at [`../2-selection.md`](../2-selection.md) — tentative recommendation: Candidate A; awaiting candidate-selection-checkpoint approval per `ITERATION-UNTIL-APPROVAL`.
 
-This directory is the artifact for Phase 2 candidate-selection. Each candidate is a separate file applying the [`2-design-framework.md`](../2-design-framework.md) candidate template (12 axes + cross-axis commitments + F-mapping + preserved-primitives compliance + P1-P6 evaluation criteria + M3 v1 strengths preservation + M2 self-management cost inheritance).
+This directory contains the per-candidate artifacts for Phase 2 candidate-selection. Each candidate is a separate file applying the [`2-design-framework.md`](../2-design-framework.md) candidate template (12 axes + cross-axis commitments + F-mapping + preserved-primitives compliance + P1-P6 evaluation criteria + M3 v1 strengths preservation + M2 self-management cost inheritance). The cross-candidate **selection draft** is the sibling document at [`../2-selection.md`](../2-selection.md).
 
 ## Cycle 90+91 candidates
 
@@ -102,6 +102,7 @@ PR #2877 (cycle-93-tool-surface-feasibility-feedback) evaluates per-crate and ag
 - **Audit critique solicitation** — this directory's content is read by the audit-repo orchestrator on its next cycle. Audit's adversarial critique is part of the candidate-selection checkpoint per the redesign prompt's `<audit-as-peer>` directive. Cycle 92 sharpening sections give audit a sharpened critique surface for the candidate-selection-checkpoint review.
 - **Phase 3 prototype scaffold for the smallest load-bearing crate** — bounded preview: author 1-2 of A's smallest Rust crates (e.g., `tool-registry`, `boot-mode`) as proof-of-concept for migration cost estimate. Same approach for C's `reconcile-mode` if Eva pre-approves. NOT a full Phase 3 prototype — that requires candidate-selection-checkpoint approval. Cycle-bounded, scoped to migration-cost validation only.
 - **Iterate per `ITERATION-UNTIL-APPROVAL`** — candidate-selection is one of the three hard checkpoints. Eva's explicit approval is the only stopping signal. While awaiting approval, sharpen candidates, solicit additional critique, stress-test load-bearing claims, revisit dismissed alternatives.
+- **Selection draft authored cycle 111** at [`../2-selection.md`](../2-selection.md) — initial cross-candidate comparison with tentative recommendation (Candidate A), six decision criteria with cross-candidate ordering, what A gives up enumerated, why-not-B and why-not-C sections, six outstanding work items before lock-in, five open questions for Eva. Per `ITERATION-UNTIL-APPROVAL` the draft is not the deliverable; iteration continues. Cycle 112+ work: audit cycle 216 critique landing absorption; possible Copilot adversarial-feedback dispatch; cycle 103-110 risk-closure threshold table integration; per-candidate Phase 3 prototype evidence deepening.
 
 ## Selection criteria
 
@@ -125,10 +126,10 @@ The **most-discriminating axes** between A and B for cycle 90's first iteration:
 
 ## Iteration discipline
 
-This directory is **not the deliverable** until Eva approves at the candidate-selection checkpoint. Per the redesign prompt's `ITERATION-UNTIL-APPROVAL`:
+This directory **and** the sibling [`../2-selection.md`](../2-selection.md) are **not the deliverable** until Eva approves at the candidate-selection checkpoint. Per the redesign prompt's `ITERATION-UNTIL-APPROVAL`:
 
-- **Awaiting approval is not idling.** Each cycle while awaiting approval should sharpen candidates, solicit critique, stress-test claims, deepen reference research, tighten security analysis, examine for self-congratulation, or check for over/under-prescription mismatches.
+- **Awaiting approval is not idling.** Each cycle while awaiting approval should sharpen candidates, sharpen the selection rationale, solicit critique, stress-test claims, deepen reference research, tighten security analysis, examine for self-congratulation, or check for over/under-prescription mismatches.
 - **No internal "good enough" stopping signal.** If the candidates feel "done," look harder.
 - **Honest negative results have value.** If a critique surfaces nothing real, document the critique and what it found, then move to a different angle.
 
-Eva can approve a candidate, override the orchestrator's selection, request a third candidate, request modifications to an existing candidate, or extend the iteration window.
+Eva can approve the selection (or a different candidate than the tentative recommendation), override the orchestrator's selection, request a third or fourth candidate, request modifications to an existing candidate, or extend the iteration window.
