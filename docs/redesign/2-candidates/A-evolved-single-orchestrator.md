@@ -214,6 +214,12 @@ The estimates above are derived from v1 prompt structure analysis, not yet valid
 3. **Decide and document the unit of analysis** (step IDs vs named patterns vs prose-procedural clauses) BEFORE measuring extraction percentage. Per cycle 96 absorption Risk 0, the choice of unit is a candidate claim itself, not a measurement.
 4. Measure extraction in the chosen unit against the verified v1 baseline (50 step IDs, 1,289 prompt+checklist lines).
 5. **Hard refutation threshold (added cycle 96 per PR #2878 Finding 18 — external falsification criterion):** if the chosen unit measures < **30%** extraction with judgment-surface preservation intact, P3 is **reclassified to PARTIAL-FLAG regardless of direction-validation status**. This is a pre-agreed threshold that does not depend on the orchestrator's own assessment. Between 30% and 50%, P3 is PASS-WITH-NOTE. At ≥ 50%, P3 is full PASS. Specifying this threshold in advance is the discipline absent from the cycle 91 sharpening's soft "weakens" language.
+6. **Per-extension-event logging (added cycle 109 per Risk 4 closure):** instrument each prompt-extension event from Phase 3 cycle 1 with the JSONC schema in Choice 4. Type 1/2/4/5 require paired-tool field populated; Type 3 requires explicit `paired-tool: null` + decision-rationale. Per-cycle log produces direct evidence of extension-discipline compliance.
+7. **Procedural-surface ratio P measurement (added cycle 109):** compute P = (procedural steps in prompt) / (total prompt step + named-tool count) per-cycle starting Phase 3 cycle 1. Pre-agreed thresholds P ≤ 0.3 / (0.3, 0.5] / >0.5. The unit-of-analysis decision (step 3) determines what counts as a "step" in P's numerator and denominator; P is rubric-symmetric within the chosen unit.
+8. **Per-type compliance rate measurement (added cycle 109):** measure per-type compliance rates from Phase 3 cycle 5+ steady-state. Type 1: 100% (any unpaired Type 1 = contract violation, raised at CI). Type 2: ≥95% direction-validated / 80-95% at-risk / <80% refuted. Type 3: ≤10% later-reclassification rate. Type 4: ≥90% documented + ≥80% re-extracted within window. Type 5: ≥80% reclassified-or-paired within ≤5 cycles.
+9. **Drift-window D as secondary derived metric (added cycle 109):** measure drift-window D for Type 2/4/5 extensions. D ≤ 3 (Type 2) / D ≤ 5 (Type 4) / D > 5 = aged extension, reclassify or accept ratio regression. D is informational, not refutational; aggregate refutation reads from P (Choice 2) regardless of per-extension D.
+10. **Extension-classification rubric stability (added cycle 109):** rubric tightening expected cycles 1-5 (warm-up window per cycle 107/108 shape #24). Past cycle 5, inter-rater disagreement ≤10% steady-state. Combined-readings diagnostic (Choice 6) preserves Risk-1 (unit-of-analysis) vs Risk-4 (extension-discipline) distinction at refutation level.
+11. **CI sweep extension (added cycle 109):** extend `prompt-contract-check` to `prompt-extension-pairing-check` — verify Type 1/2 extensions have paired tools at commit time and Type 4/5 follow-up windows are tracked. Missing paired-tool for Type 1/2 fails CI; Type 4/5 follow-up window expiration raises advisory.
 
 If validation reveals ≥ 50% extraction is achievable in the chosen unit, P3 PASS is grounded. Between 30-50%, P3 is PASS-WITH-NOTE. Below 30%, P3 fails outright and the candidate's substrate-bet (medium-harness adequately extracts procedural surface) is refuted; design reverts to either fat-harness Axis 13 or larger v2 prompt.
 
@@ -260,9 +266,148 @@ If validation reveals ≥ 50% extraction is achievable in the chosen unit, P3 PA
   4. **Active-callable bound as candidate-claim:** A commits to keeping orchestrator-callable tools at ≤12 across all sub-shape adoptions; further sub-shape additions beyond cycle 102/104's substrate require harness-internalization to maintain the bound. Falsifiable at Phase 3 prototype: count the orchestrator-prompt's tool-name references and verify ≤12 after cycle 102/104 substrate adoption.
 
   **Risk 3 status post-cycle-105:** direction continues to hold (tool-registry growth is bounded by structural decision: harness-internalization of sub-shape tools); magnitude refined from "v2 callable surface (~9 new crates) approaches threshold" to "v2 INVENTORY may reach 13-15 with full sub-shape adoption, but orchestrator-CALLABLE surface stays ≤12 by harness-internalization discipline." Mitigation specification is now concrete enough for Phase 3 prototype validation (the falsifiable bound is measurable). Operational closure deferred to Phase 3 prototype when the active-callable boundary discipline meets actual extraction work.
-- **Risk 4:** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress.
+- **Risk 4 (CLOSED at specification level cycle 109):** maintaining the prompt-contract-check CI invariant (`prompt-contract-check` ensures named contracts in the prompt remain present and that no procedural step is added without a paired tool fix) requires ongoing attention; if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress. **Cycle 109 closure** decomposes prompt-extension events into a 5-type taxonomy (Type 1 bounded-mechanical / Type 2 novel-deterministic-procedural / Type 3 novel-judgment-surface / Type 4 tool-deprecation-driven / Type 5 emergency-hot-fix) under shape #21's substrate-decomposition element + procedural-surface ratio P as primary falsifiable bound (P ≤ 0.3 direction-validated / (0.3, 0.5] at-risk / >0.5 refuted) + per-type compliance rates (Type 1 100% / Type 2 ≥95% / Type 3 ≤10% reclassification / Type 4 ≥90% documented + ≥80% re-extracted / Type 5 ≥80% reclassified-or-paired within ≤5 cycles) + drift-window (cycles between extension event and paired-tool follow-up) as secondary derived metric per cycle 108 two-tier discipline + three-layer verification (per-extension-event log + external-observer reproducibility + CI sweep `prompt-extension-pairing-check`) + warm-up window for extension-classification rubric stability + combined-readings diagnostic preserving cycle 91 unit-of-analysis Risk 1 vs Risk 4 distinction. See [Extension-discipline taxonomy section below](#extension-discipline-taxonomy-cycle-109-specification-addressing-risk-4) for full detail.
 
 These risks are bounded — none threaten the candidate's substrate-bet directly. They threaten the *magnitude* of the P3 reduction (which is now indeterminate without re-grounded baselines) but not the *direction* (medium-harness extraction reduces procedural surface — structurally plausible regardless of denominator). **P3 PASS direction continues to hold on structural argument; magnitude is currently indeterminate and awaits Phase 3 prototype measurement against verified baselines.** Per cycle 96 absorption: the cycle 91 sharpening's "magnitude is sharpened to ~40-50% rather than ~50%" conclusion was internally inconsistent with the README tracker's "~50-62%" label, and both rested on overcounted denominators; the README-tracker entry has been revised in this absorption pass.
+
+### Extension-discipline taxonomy (cycle 109 specification, addressing Risk 4)
+
+Per cycle 105/106/107/108 closure pattern (substrate-decomposition + falsifiable bound + verification + status), Risk 4 is closed at the specification level. Cycle 91 framing identified the conditional ("if Phase 3+ prototype extends the prompt, ratio may regress") but did not specify (a) what counts as a prompt extension that requires paired-tool extraction vs orchestrator judgment, (b) what compliance rate counts as "extraction-discipline holds" per extension type, (c) how compliance is measured non-circularly given the orchestrator both authors extensions and self-reports compliance.
+
+A Risk 4 is the **second discipline-conditional risk closure** after C Risk 2 (cycle 107). Both share structure: a discipline (extraction pairing / plan authoring) that applies to a subset of events (extension events / cycles producing plans) with rubric-asymmetric ambiguity (rubric tightening affects WHICH events count as expected-to-comply, but each event's compliance is separately observable). Closure follows cycle 107's structure with substrate-content adapted to extension-discipline.
+
+**Deferral arc:** 18 cycles (cycle 91 framing → cycle 109 closure). Compares to cycle 105's 8-cycle arc (97 → 105), cycle 106's 14-cycle arc (92 → 106), cycle 107's 15-cycle arc (92 → 107), and cycle 108's 16-cycle arc (92 → 108). The 18-cycle gap reflects A Risk 4's closure dependence on cycle 107 discipline-conditional substrate (warm-up window + rubric-fragility diagnostic) + cycle 108 two-tier metric discipline (drift-window as secondary derived) + cycle 91 unit-of-analysis Risk 1 (the rubric for what "step" means inside P). Closure-of-X depends on closure-of-prerequisites-of-X; cycle 109's 18-cycle arc is the longest of the 6 closures, absorbing 3 prior closures' substrate.
+
+#### Choice 1: 5-type extension taxonomy as substrate-decomposition
+
+Prompt extensions vary in what discipline applies. Designed 5-type taxonomy:
+
+| Type | Description | Trigger | Discipline | Compliance bar |
+|---|---|---|---|---|
+| 1 bounded-mechanical | New tool reference / contract name added to prompt | Tool added to v2 inventory | Paired tool MUST exist before extension committed | 100% (any unpaired Type 1 is contract violation) |
+| 2 novel-deterministic-procedural | New deterministic procedural pattern not in v1 or current prompt | Phase 3+ pattern emergence | Paired tool extraction REQUIRED at extension OR within drift-window ≤3 cycles | ≥95% steady-state |
+| 3 novel-judgment-surface | New orchestrator-judgment surface (not deterministic) | Novel-situation response | NO paired tool required (judgment correctly NOT extracted) | ≤10% later-reclassification to Type 2 |
+| 4 tool-deprecation-driven | v2 tool removed; prompt absorbs missing capability | Tool deprecation | Re-extraction-or-permanence-decision documented at deprecation; if procedure absorbed, paired-tool follow-up required within ≤5 cycles | ≥90% documented; ≥80% re-extracted within window |
+| 5 emergency / hot-fix | Constraint accretion under time pressure | Incident response | Paired-tool follow-up required within ≤5 cycles, OR Type 5 reclassified to Type 2/3/4 | ≥80% reclassified-or-paired within ≤5 cycles |
+
+**Alternatives rejected:**
+- Binary extension-discipline (extensions either pair or don't) — conflates Type 1 with Type 3/5; loses the discipline-applicability distinction.
+- 3-type simpler taxonomy (deterministic / judgment / emergency) — collapses Type 1+2 (both deterministic but different time discipline) and Type 4+5 (both reactive but different cause).
+- Retrospective-only classification — not falsifiable; classifying after seeing prompt growth is circular.
+
+**Substrate partition:** discipline-applicable Types 1 + 2 + 4 + 5 (paired-tool requirement applies; ~80% of expected extension volume) + discipline-non-applicable Type 3 (judgment-surface; pairing would itself violate CORE-DESIGN-PRINCIPLE; ~20% of expected volume). Type 3 is the discipline-conditional analog to cycle 107 Type 5 (NO-PLAN annotation IS the discipline) and cycle 106 mechanical Type A exclusion (mechanical operations excluded from structural unit).
+
+#### Choice 2: Procedural-surface ratio P as primary falsifiable bound (rubric-symmetric)
+
+Per cycle 103/106/108 ratio-based threshold pattern:
+
+P = (procedural steps in prompt) / (total prompt step + named-tool count)
+
+Pre-agreed thresholds:
+- P ≤ 0.3 (≥70% extracted to tools): direction-validated; medium-harness extraction discipline holds
+- P ∈ (0.3, 0.5]: at-risk; second-iteration prompt examination needed
+- P > 0.5: refuted; medium-harness extraction discipline failed; A's central bet undermined
+
+P depends on the unit-of-analysis decision (Risk 1 from cycle 91 sharpening — step IDs vs named patterns vs prose-procedural clauses). P is rubric-symmetric in the cycle 108 sense: rubric tightening affects both numerator (procedural steps) and denominator (total step + tool count) equally. If "step" is redefined upward (only mechanical-action steps count), procedural-step count drops AND total-step count drops; ratio is rubric-robust within the chosen unit.
+
+**Alternatives rejected:**
+- Absolute step count as primary — depends on prompt size; a longer prompt can have more procedural steps without violating extraction discipline. Ratio is more interpretable.
+- Type-1-specific compliance rate as primary — captures one type's discipline only; misses Type 2/4/5 drift modes.
+- Aggregate prompt line count — rubric-asymmetric (formatting changes affect lines without changing procedural surface).
+
+#### Choice 3: Drift-window as secondary derived metric (cycle 108 two-tier discipline transfer)
+
+For Type 2/4/5 extensions, drift-window D = (cycles between extension event and paired-tool follow-up extraction OR reclassification). Per cycle 108 Choice 3 two-tier primary-vs-secondary-derived metric discipline:
+
+- D ≤ 3 cycles for Type 2: aggregate drift bounded; consistent with Type 2 ≥95% compliance
+- D ∈ (3, 5] for Type 4: bounded under window
+- D > 5 for Type 4/5: extension has aged into permanent absorption; reclassify or accept ratio regression
+
+D is **secondary derived (informational)**, NOT primary falsificational, because:
+- D depends on auxiliary measurements (extension timing + paired-tool follow-up timing — both separately measured).
+- Procedural-surface ratio P (Choice 2) already captures aggregate extraction discipline regardless of per-extension drift.
+
+Cycle 108 two-tier metric discipline promotes from NOVEL@1 → **TESTED@2 (cycle 109)**. The methodological pattern (when a metric depends on auxiliary measurements, demote to secondary derived to avoid refutation conflation) holds at second instance with substrate-content adapted from iteration-multiplier (cycle 108) to drift-window (cycle 109).
+
+**Alternatives rejected:**
+- Make drift-window primary falsifiable — conflates extension event count with paired-tool follow-up timing; refutation on D alone would not distinguish "many extensions, fast follow-up" from "few extensions, slow follow-up" (diagnostically equivalent under D, structurally distinct under per-type compliance rates).
+- Omit drift-window entirely — loses diagnostic resolution for Type 4/5 reactive extensions; binary "paired or not" misses the time-pressure interaction.
+
+#### Choice 4: Three-layer verification (cycle 103/107/108 transfer)
+
+Per-extension-event log schema:
+```jsonc
+{
+  "extension-type": 1 | 2 | 3 | 4 | 5,
+  "prompt-section": "<section name>",
+  "trigger-cause": "<cycle-event description>",
+  "cycle": <cycle-id>,
+  "paired-tool": "<tool name>" | null,
+  "paired-tool-status": "exists" | "follow-up-required-by-cycle-N" | "not-required",
+  "drift-window-start-cycle": <cycle-id> | null,
+  "drift-window-end-cycle": <cycle-id> | null,
+  "decision-rationale": "<why this extension type vs another>"
+}
+```
+
+Three-layer verification (inheriting cycle 103/107/108 pattern intact):
+1. Per-extension-event logging by orchestrator at extension time (primary).
+2. External-observer reproducibility check at Phase 3 measurement (≥20% sample re-classified by Eva, audit, or independent Copilot dispatch; inter-rater disagreement ≤10% steady-state past cycle 5 of measurement).
+3. CI sweep (`prompt-extension-pairing-check` — extends `prompt-contract-check` to verify Type 1/2 extensions have paired tools at commit time and Type 4/5 follow-up windows are tracked).
+
+Three-layer verification at HARDENED-at-4 across 4 closure types (cycle 103 counting protocol, cycle 107 plan-authoring discipline, cycle 108 iteration events, cycle 109 extension events). Now appears in 4 of 6 closures (cycle 105 used substrate-absorption-tool-count delta as the unit; cycle 106 used per-coordination-decision logging without the three-layer pattern explicitly named — it implicitly applies). Promoted from "shape #21 sub-element" candidate (cycle 108 observation 3) toward functional-class shape #25 candidate.
+
+**Alternatives rejected:**
+- Self-classification alone — exact cycle 96 self-report-circularity concern; orchestrator self-grading on whether its own extension was Type 1 vs Type 2 is the same shape as B's self-counting concern.
+- Manual tracking via journal entries — unstructured, not CI-checkable, classification-quality varies cycle-to-cycle.
+- Instrument every prompt commit (full diff classification) rather than extension-specific events — introduces classification overhead on non-extension commits (typo fixes, formatting); per cycle 106 mechanical-vs-structural reasoning, mechanical edits should be excluded from the structural unit.
+
+#### Choice 5: Extension-classification rubric stability as warm-up window discipline (cycle 107/108 shape #24 transfer)
+
+Direct application of cycle 107/108 shape #24:
+- Warm-up window: cycles 1-5 of Phase 3 measurement. Extension-classification rubric is being tightened (what counts as Type 1 paired vs Type 2 novel-deterministic; whether tool-deprecation-with-replacement-tool-added is Type 4 or natural Type 1; whether emergency hot-fix that gets reclassified as Type 3 judgment-surface counts as Type 5 success or Type 3 misclassification).
+- Steady-state: past cycle 5 of measurement. Per-type compliance rates apply. Inter-rater disagreement on extension type ≤10% expected.
+- Combined-readings against rubric stability: see Choice 6.
+
+Shape #24 promotes HARDENED@3 (cycle 108 iteration-event-classification stability) → **HARDENED@4 (cycle 109 extension-classification stability)** spanning 4 protocol-stability types: measurement-bound stability (cycle 106 reducer-rule revision rate) + rubric stability (cycle 107 cycle-type taxonomy other-rate) + classification stability (cycle 108 iteration-event inter-rater disagreement) + extension-rubric stability (cycle 109 extension-event inter-rater disagreement).
+
+Critical methodological observation: cycle 109 is **rubric-asymmetric** like cycle 107 (discipline-conditional rubric-fragility) — rubric tightening affects WHICH extensions count as expected-to-comply (Type 1 vs Type 3 boundary) but each extension's pairing/non-pairing is separately observable. Cycle 108 was rubric-symmetric (quantity-bounded). Shape #24 (warm-up window) applies to both rubric-symmetric and rubric-asymmetric, but the diagnostic structure differs — see Choice 6.
+
+**Alternatives rejected:**
+- Measure extensions from cycle 1 with no warm-up — conflates rubric-evolution with extension-discipline-instability per cycle 106/107/108 reasoning.
+- Treat extension-classification rubric as fixed (no stability check) — without stability check, Type-distribution and per-type compliance rates are uninterpretable when classification disagreement is high.
+
+#### Choice 6: Combined-readings diagnostic preserving cycle 91 unit-of-analysis Risk 1 vs Risk 4 distinction (discipline-conditional rubric-fragility diagnostic transfer)
+
+Per cycle 107 Choice 6 discipline-conditional rubric-fragility diagnostic, this is the **second instance** of the discipline-conditional rubric-fragility pattern. A Risk 4 has the same one-sided rubric ambiguity as C Risk 2: rubric tightening affects WHICH events count as expected-to-comply (Type 1/2/4/5 vs Type 3 boundary; or Type 2 vs Type 4 distinction) but each event's compliance is separately observable.
+
+Both Risk 1 (cycle 91 unit-of-analysis) and Risk 4 (extension-discipline) manifest at refutation as P > 0.5. Without combined-readings, refutation at P cannot distinguish causes. Per cycle 107 Choice 6 pattern, a 4-quadrant matrix:
+
+| Procedural-surface ratio P | Extension-rubric stability (other-rate past cycle 5) | Diagnostic |
+|---|---|---|
+| P ≤ 0.3 | ≤ 10% other-rate | A direction validated; extraction-discipline holds |
+| P ≤ 0.3 | > 10% other-rate | Compliance is cherry-picked over a rubric-unstable subset; revise extension taxonomy before reading P-value (possibly Risk 1: unit-of-analysis is wrong) |
+| P > 0.5 | ≤ 10% other-rate | Risk 4 fires; extraction-discipline failed; magnitude refuted (rubric is sound) |
+| P > 0.5 | > 10% other-rate | Both Risk 1 and Risk 4 fire; A's central bet refuted; revisit candidate or accept >0.5 ratio |
+
+Discipline-conditional rubric-fragility diagnostic promotes from NOVEL@1 (cycle 107 plan-authoring substrate) → **TESTED@2 (cycle 109 extension-discipline substrate)**. The diagnostic structure (combined-readings table preserving discipline-vs-rubric-stability distinction) holds across two different discipline-conditional risk substrates. Methodological observation: the two-axis combined-readings table appears to be the natural diagnostic shape for discipline-conditional rubric-fragility — one axis is the primary falsifiable bound (compliance rate / P), the other is rubric-stability (other-rate / inter-rater disagreement).
+
+**Alternatives rejected:**
+- Procedural-surface ratio P alone — high "other" rate masks discipline failure (cherry-picked compliance over a rubric-unstable subset).
+- Combine taxonomy stability into P (count "other" as Type-2 non-compliant) — conflates two failure modes; loses diagnostic resolution for revising the candidate post-Phase-3.
+- Use cycle 108's combined-readings (per-role decision count × iteration events) — orthogonal metrics; doesn't apply to extension-discipline substrate where the relevant axes are P and rubric-stability.
+
+### Risk 4 status post-cycle-109
+
+- **Direction continues to hold** by construction.
+- **Magnitude refined** from "if Phase 3+ prototype extends the prompt to address novel situations, the procedural-surface ratio may regress" to: 5-type extension taxonomy / per-type compliance rates / procedural-surface ratio P bounded ≤0.3/0.5 / drift-window D as secondary derived metric / three-layer verification / warm-up-window extension-classification stability / combined-readings diagnostic preserving Risk-1-vs-Risk-4 distinction.
+- **Mitigation specification is now concrete enough for Phase 3 prototype validation** (extension events logged from cycle 1 of Phase 3; per-type compliance rates measurable by cycle 5+ steady state; P measurable per-cycle).
+- **Operational closure deferred** to Phase 3 prototype when extension-event logging meets actual prompt-evolution events AND inter-rater disagreement on extension type ≤10% steady-state AND per-type compliance rates measured across ≥10 measurement cycles AND drift-window D measured for Type 2/4/5 extensions.
+- **Shape #21 transfer verdict:** structural form transfers (substrate-decomposition + falsifiable bound + verification + status); cycle 109 instance is the second discipline-conditional application of shape #21 (after cycle 107 plan-authoring discipline). **Shape #21 promotes HARDENED-at-5 → HARDENED-at-6** spanning 6 risk-domain types (meta-counting-protocol / tool-registry-growth / coordination-stability / plan-authoring-discipline / per-role-iteration / extension-discipline) AND 2 risk-shape types (4 quantity-bounded + 2 discipline-conditional). Methodological observation: the 4-element closure structure (substrate + bound + verification + status) is robust across both quantity-bounded and discipline-conditional risk-shape types AND across multiple instances of each.
+- **Shape #24 transfer verdict:** cycle 109 extension-classification stability is the **fourth stability type** after measurement-bound (cycle 106) + rubric (cycle 107) + classification (cycle 108). **Shape #24 promotes HARDENED@3 → HARDENED@4** spanning 4 protocol-stability types.
+- **Discipline-conditional rubric-fragility diagnostic** (cycle 107 NOVEL@1) promotes **NOVEL@1 → TESTED@2** at second instance with substrate-content adapted from plan-authoring (C Risk 2) to extension-discipline (A Risk 4).
+- **Two-tier primary-vs-secondary-derived metric discipline** (cycle 108 NOVEL@1) promotes **NOVEL@1 → TESTED@2** at second instance with substrate-content adapted from iteration-multiplier (B Risk 4) to drift-window (A Risk 4).
+- **Candidate-rotation-balance-discipline** (cycle 107 NOVEL@1) promotes **NOVEL@1 → TESTED@2** by cycle 109 honoring the cycle 108 _notes-named rotation commitment (A Risk 4 chosen over higher-priority B-side targets to balance closure distribution toward A:2 / B:3 / C:1).
 
 ## Cycle 93+94 prototype scaffolding: migration-cost validation
 
