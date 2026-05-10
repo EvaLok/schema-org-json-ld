@@ -460,6 +460,129 @@ The "past cycle 5 of Phase 3 measurement" qualifier is load-bearing: cycles 1-5 
 - **Mitigation specification is now concrete enough for Phase 3 prototype validation** (the falsifiable bounds and ratios are measurable).
 - **Operational closure deferred to Phase 3 prototype** when the per-coordination-decision logging meets actual cross-role coordination work and the reducer-rule revision rate is observed across ≥5 measurement cycles.
 
+### Per-role iteration decomposition (cycle 108 specification, addressing Risk 4)
+
+**Background:** Risk 4 named the single-pass-per-super-step assumption as a magnitude concern: the cycle 92 per-role decision count estimate (~6-15 per role) assumes each role's session is invoked once per super-step. If within-super-step iteration occurs (e.g., curator review forces executor re-invocation), per-role decision count multiplies. Cycle 103 resolved measurement methodology (Risk 8) and cycle 106 quantified coordination overhead (Risk 2) — but per-role iteration's standalone direction is observational; aggregate cost growth from iteration cannot be cleanly distinguished from per-role decision-class enumeration error (Risk 1) or coordination overhead growth (Risk 2). This section closes Risk 4 at the specification level by decomposing within-super-step iteration into 5 trigger types under B's architectural elements, specifying a falsifiable per-cycle iteration-event bound, specifying pre-agreed iteration-multiplier-vs-aggregate ratio thresholds, and specifying a combined-readings diagnostic to distinguish Risk 4 firing from Risk 1 firing. Per cycle 96 discipline-bar-too-low: thresholds are pre-agreed before measurement. Cycle 108 closure mirrors cycle 105 / 106 / 107 closure shape (substrate-decomposition + falsifiable bound + verification procedure + status); the recurring shape is the fifth instance of the `risk-closure-at-specification-level` functional-class shape (NOVEL cycle 103 / TESTED cycle 105 / HARDENED cycle 106 / HARDENED-at-4 cycle 107 spanning different risk-shape types / would-HARDEN-at-5 cycle 108 if the pattern transfers to the per-role-iteration risk-domain type).
+
+**Choice 1: Within-super-step iteration as decomposed 5-trigger substrate under B's architectural elements.**
+
+The cycle 92 estimate's "single-pass per super-step" assumption combined all within-super-step iteration into a single uncategorized concern. Under B's architectural elements (curator-review, goal-coherence-judgment, reconciler-arrival, plan-lifecycle, branch-spawn), within-super-step iteration decomposes as:
+
+| Type | Description | Trigger | Iterating role(s) | Cycle character dependence |
+|---|---|---|---|---|
+| α — Curator-review-driven | Curator's review (post-executor super-step) surfaces structural issue forcing executor re-invocation | Curator score-gating per cluster H sub-shape 2 | Executor (or other reviewed role) | Bounded by structure (curator runs ≤1× per cycle) |
+| β — Goal-coherence redirect | Planner's goal-coherence judgment (per super-step boundary) surfaces incoherence forcing upstream role re-invocation | Goal-coherence judgment fires | Executor / curator / reconciler (whichever produced incoherent output) | Bounded by structure (≤3 super-step boundaries per cycle) |
+| γ — Reconciler-triggered re-iteration | Inbound event arrives mid-cycle (Eva response, audit post, dispatch return); reconciler emits typed-delta forcing planner re-plan + dependent role re-iteration | External arrival | Planner + dependent (executor / curator) | Cycle-character-dependent (~0 in quiet cycles, ~1-3 in heavy inbound cycles) |
+| δ — Plan-lifecycle re-iteration | Plan-promotion decision (active → completed/technical-debt) triggers planner re-plan + executor re-iteration on the affected substantive-focal | Plan-state transition | Planner + executor | Bounded by structure (≤1 promotion/cycle per cycle 107 stale-promotion lag bound) |
+| ε — Branch-spawn re-iteration | Planner spawns branch (Axis 4 branching checkpoints); branch and main both progress, requiring per-role parallel iteration on the branch | Branch-spawn decision | Executor + curator (on the spawned branch) | Cycle-character-dependent (~0 in steady-state cycles, ~1-2 in branch-spawn cycles per cycle 92 estimate) |
+
+Under this decomposition, within-super-step iteration types are partitioned into:
+- Structural-invariant (Types α + β): ≤4 events/cycle bound by structure (curator runs once + ≤3 goal-coherence judgments).
+- Structural-character-dependent (Types γ + δ + ε): ~0-6 events/cycle, depends on inbound volume + plan-lifecycle activity + branch-spawn cycle character.
+
+**Alternative considered and rejected:** treat within-super-step iteration as a single uncategorized "iteration overhead" number. Rejected because conflating curator-review iteration (structural, predictable) with reconciler-triggered iteration (bursty, external) loses the diagnostic resolution needed to distinguish steady-state-iteration-acceptable from heavy-iteration-cycles. The decomposition makes the iteration-driver mechanism legible at Phase 3 measurement.
+
+**Alternative considered and rejected:** include intra-LLM-session backtracking (token-level revision within a single role-session pass) as a 6th type. Rejected because Risk 4's framing is explicit about *cross-super-step* iteration — within-pass token-level revision is part of the role's single-pass cognitive work and already counted under that role's per-cycle decision count. Including intra-pass revision would inflate the count without matching what Risk 4 named.
+
+**Choice 2: Per-cycle iteration event count as primary falsifiable bound.**
+
+Iteration events are the rubric-stable primary metric (an iteration event is structurally distinguishable: a role's session is re-invoked within the same super-step, OR a role's super-step output is reverted and re-authored). Per-cycle iteration event count = sum of α + β + γ + δ + ε events per cycle.
+
+- **Steady-state ≤3 events/cycle**: direction-validated. Risk 4's "if iteration occurs" antecedent fires rarely; per-role single-pass assumption holds approximately.
+- **Steady-state ∈ (3, 6] events/cycle**: at-risk. Iteration occurs occasionally; per-role decision count is non-trivially multiplied; B's central bet weakened but not refuted.
+- **Steady-state >6 events/cycle**: refuted. Iteration is structural; per-role decision count is structurally multiplied; B's central bet undermined.
+
+The "steady-state" qualifier inherits cycle 106 / 107 warm-up window discipline (see Choice 5 below).
+
+**Alternative considered and rejected:** ratio-based bound (iteration events / per-role decisions) as primary. Rejected because per-role decision counts vary substantially across cycles (planner ~6-10 / executor ~10-15 / curator ~6-12 / reconciler ~3-7 per cycle 92), making the ratio sensitive to the denominator's cycle-character variation. An absolute count is rubric-stable AND cycle-character-stable for the structural-invariant subset (Types α + β bounded by structure ≤4); cycle-character variation is captured separately in Types γ + δ + ε counts. Counting events directly avoids the multiplier-modeling complication where iteration multiplier depends on per-event-decision-count which is itself a separate measurement.
+
+**Choice 3: Iteration multiplier as secondary derived metric (informational, not falsificational).**
+
+For relating iteration events to aggregate cost growth, iteration multiplier M = (aggregate decisions including iteration events) / (aggregate decisions assuming single-pass).
+
+- M ≤1.3: aggregate cost growth from iteration is bounded; consistent with steady-state ≤3 events/cycle if average per-event decision-count is ~3-5.
+- M ∈ (1.3, 1.8]: aggregate cost growth from iteration is significant but bounded.
+- M >1.8: aggregate cost growth from iteration is substantial; iteration drives aggregate cost growth.
+
+Multiplier is **secondary derived (informational)**, not primary falsificational, because:
+- M depends on per-event-decision-count which varies by event type (α executor re-pass ~10-15 decisions; γ planner re-plan ~6-10 decisions; ε branch-spawn ~variable).
+- The multiplier is downstream of the iteration-event count and per-event-decision-count; refutation thresholds on M would conflate two separate measurements.
+- Cycle 103's aggregate threshold (≤1×, ≤1.5×, ≤2×) already captures aggregate cost growth from any source; M provides diagnostic resolution for *whether iteration is the cost source* but not standalone refutation.
+
+**Alternative considered and rejected:** make iteration multiplier the primary falsifiable metric. Rejected because the multiplier conflates iteration-event count with per-event-decision-count; refutation on M alone would not distinguish "many small iterations" from "few large iterations" — diagnostically equivalent under the multiplier, structurally distinct under the event-count primary.
+
+**Choice 4: Per-iteration-event logging at Phase 3 as the verification procedure (three-layer pattern from cycles 103 / 107).**
+
+Each iteration event emits a structured log entry:
+
+```jsonc
+{
+  "type": "curator-review" | "goal-coherence-redirect" | "reconciler-trigger" | "plan-lifecycle" | "branch-spawn",
+  "triggering-role": "planner" | "executor" | "curator" | "reconciler",
+  "iterating-role": "planner" | "executor" | "curator" | "reconciler",
+  "trigger-cause": "<cycle-event description>",
+  "cycle": <cycle-id>,
+  "super-step-of-trigger": <super-step-id>,
+  "super-step-of-iteration": <super-step-id>,
+  "decision-count-of-iteration": <integer>
+}
+```
+
+Three-layer verification (inheriting cycles 103 / 107 pattern intact):
+1. **Per-iteration-event logging by role-session (primary)**: each role-session writes log entry on its own iteration; structured-decision-points-in-role-artifacts provides the cross-check for whether the iteration's decision count matches the log entry.
+2. **External-observer reproducibility check at Phase 3 measurement**: ≥20% sample of iteration events re-classified by Eva, audit, or independent Copilot dispatch; inter-rater disagreement on event type ≤10% steady-state past cycle 5 of measurement (cycle 107 warm-up).
+3. **CI sweep (`iteration-event-log-coverage-check`) verifying iteration-event log coverage**: each cycle's role-session re-invocations must have a corresponding iteration-event log entry; missing entries flag the role-session for review (count toward Type 5 non-compliance per cycle 107 protocol).
+
+**Alternative considered and rejected:** rely on prompt-counting alone (no operational log). Rejected per the cycle 106 reasoning on Type-E reducer-rule revisions: iteration events are operational events that don't show up in prompt-counting (the prompt enumerates iteration *capability*, not actual iteration events). Inferring from prompt structure conflates "capability to iterate" with "actual iterations."
+
+**Alternative considered and rejected:** instrument all role-session invocations rather than iteration-specific logs. Rejected because the cycle 103 protocol's secondary unit (tool-invocation log) already serves the per-role decision-count sanity-check; iteration-specific logs are tighter (only iteration events, not all session invocations) and don't introduce new instrumentation conflicting with the cycle 103 secondary.
+
+**Choice 5: Iteration-event-classification rubric stability as warm-up window discipline (cycle 107 shape #24 transfer).**
+
+Direct application of cycle 107 NOVEL@1 → TESTED@2 shape #24 (`risk-closure-with-warm-up-window`):
+- **Warm-up window: cycles 1-5 of Phase 3 measurement.** During this window, the iteration-event-classification rubric is being tightened (what counts as a Type α event vs an intra-pass continuation; whether a Type γ triggered by audit-post-text-processing counts as iteration or as initial reading). Higher iteration-event rates in cycles 1-5 are expected and not refutational.
+- **Steady-state: past cycle 5 of measurement.** The bound (≤3 events/cycle for direction-validated; (3, 6] at-risk; >6 refuted) applies. Inter-rater disagreement on event type ≤10% expected steady-state.
+- **Combined-readings against rubric stability:** if past cycle 5, inter-rater disagreement remains >10%, the iteration-event rubric is under-specified; bounds become uninterpretable until rubric is tightened. This is the cycle 107 discipline-conditional rubric-fragility diagnostic mode (NOVEL@1 cycle 107) applied to iteration-event rubric — but the iteration-event count itself is rubric-symmetric (numerator and denominator are both events; rubric tightening affects both equally), so this is a quantity-bounded application of shape #24, NOT a discipline-conditional rubric-fragility instance. Shape #21 cycle 108 is quantity-bounded; cycle 107's discipline-conditional pattern remains NOVEL@1.
+
+Shape #24 promotes from TESTED@2 (cycle 107 cycle-type taxonomy stability) to **HARDENED@3 (cycle 108 iteration-event-classification stability)**. The shape's structural form (pre-agreed warm-up window cycles 1-5 + pre-agreed post-warm-up bound + protocol stability check) holds across measurement-bound stability (cycle 106 reducer-rule revision rate) AND rubric stability (cycle 107 cycle-type taxonomy other-rate) AND classification stability (cycle 108 iteration-event inter-rater disagreement).
+
+**Alternative considered and rejected:** measure iteration events from cycle 1 with no warm-up. Rejected per cycles 106 / 107 reasoning: iteration-event classification has an early refinement period; treating cycle 1 measurements as steady-state would conflate rubric-evolution with iteration-instability, contaminating the measurement.
+
+**Choice 6: Combined-readings diagnostic preserving Risk-1-vs-Risk-4 distinction.**
+
+Risk 1 (per-role decision-class enumeration incomplete) and Risk 4 (single-pass assumption) both manifest as aggregate cost growth above the cycle 92 estimate. Without a combined-readings diagnostic, refutation of B's central bet at the aggregate level cannot distinguish "per-role decision classes were under-enumerated" from "iteration events drive multiplication." Per cycle 107 Choice 6 combined-readings pattern, a 4-quadrant matrix preserves the Risk-1-vs-Risk-4 distinction:
+
+| Per-role decision count vs cycle 92 estimate | Iteration events per cycle | Diagnostic |
+|---|---|---|
+| Within range (~6-15 per role) | ≤3 events/cycle | B fully validated (Risk 1 holds AND Risk 4 holds) |
+| Within range | >6 events/cycle | Risk 4 fires; per-role enumeration is correct but iteration drives aggregate growth — revise iteration-event protocol or accept higher aggregate |
+| Above range (>15 per role) | ≤3 events/cycle | Risk 1 fires; per-role enumeration was incomplete but iteration assumption holds — revise per-role decision-class enumeration |
+| Above range | >6 events/cycle | Both Risk 1 and Risk 4 fire; B's central bet refuted from multiple sources — revisit candidate or accept aggregate >2× v1 |
+
+**Alternative considered and rejected:** treat aggregate cost as the only metric. Rejected because aggregate alone cannot distinguish Risk 1 from Risk 4 — a refuted aggregate verdict would not localize the cause. The combined-readings diagnostic is required for diagnostic resolution at Phase 3.
+
+**Alternative considered and rejected:** use coordination ratio (cycle 106 Choice 5) to capture iteration. Rejected because coordination ratio measures cross-role coordination overhead (Type B/C/D/E coordination decisions per cycle 106 decomposition), not within-super-step iteration. The two are orthogonal — a cycle can have low coordination overhead (clean super-step boundaries) AND high iteration (curator review forces multiple executor re-invocations). They need separate metrics.
+
+### Risk 4 status post-cycle-108
+
+- **Direction continues to hold** by construction: within-super-step iteration multiplies per-role decision count when iteration events fire (Type α curator-review or β goal-coherence-redirect or γ reconciler-trigger or δ plan-lifecycle or ε branch-spawn). The mechanism Risk 4 named is real.
+- **Magnitude refined** from "if sub-tasks require iteration, per-role decision count multiplies" to:
+  - 5-trigger decomposition (α curator-review / β goal-coherence-redirect / γ reconciler-trigger / δ plan-lifecycle / ε branch-spawn).
+  - Structural-invariant floor: ≤4 events/cycle bound by structure (Types α + β).
+  - Structural-character-dependent ceiling: ~0-6 events/cycle (Types γ + δ + ε).
+  - Pre-agreed event-count thresholds: ≤3/cycle direction-validated / (3, 6] at-risk / >6 refuted (steady-state past cycle 5 of measurement).
+  - Iteration multiplier (secondary derived): M ≤1.3 informational / M ∈ (1.3, 1.8] significant / M >1.8 substantial.
+- **Mitigation specification:**
+  1. 5-trigger iteration decomposition under B's architectural elements (Choice 1).
+  2. Per-cycle iteration event count as primary falsifiable bound (Choice 2).
+  3. Iteration multiplier as secondary derived metric (Choice 3).
+  4. Per-iteration-event logging at Phase 3 with three-layer verification (Choice 4).
+  5. Iteration-event-classification rubric stability with warm-up window discipline (Choice 5; shape #24 HARDENED@3 transfer).
+  6. Combined-readings diagnostic preserving Risk-1-vs-Risk-4 distinction (Choice 6).
+- **Mitigation specification is now concrete enough for Phase 3 prototype validation** (the falsifiable event-count bounds and combined-readings matrix are measurable from cycle 1 of Phase 3, with rubric stability checked steady-state past cycle 5).
+- **Operational closure deferred to Phase 3 prototype** when the per-iteration-event logging meets actual cross-super-step iteration events AND inter-rater disagreement on event type is ≤10% steady-state AND iteration event counts are observed across ≥10 measurement cycles (sufficient sample for steady-state past cycle 5).
+- **Shape #21 transfer verdict:** structural form transfers (substrate-decomposition + falsifiable bound + verification + status); the cycle 108 instance is the fifth quantity-bounded application of shape #21, joining cycles 103 (meta-counting-protocol HOW), 105 (tool-registry-growth WHAT), 106 (coordination-overhead-stability WHEN/WHY), and the 4th instance type of cycle 107 (plan-authoring-discipline WHEN/HOW — discipline-conditional). **Shape #21 promotes HARDENED-at-4 → HARDENED-at-5** spanning 5 different risk-domain types AND 2 risk-shape types (4 quantity-bounded + 1 discipline-conditional). Methodological observation: the 4-element closure structure (substrate + bound + verification + status) is robust across both quantity-bounded and discipline-conditional risk-shape types.
+
 ### Validation plan (cycle 93+ Phase 3 prototype work)
 
 The estimates above are derived from candidate-authored decision-class enumeration, not yet validated by Phase 3 prototype. Cycle 93+ Phase 3 prototype effort should:
@@ -471,6 +594,10 @@ The estimates above are derived from candidate-authored decision-class enumerati
 5. Compare aggregate against v1 baseline measurement on the same workload.
 6. Compute coordination ratio = (structural coordination decisions) / (aggregate decisions) per cycle; verify against cycle 106 thresholds (≤30% direction-validated / 30-50% direction-supported / >50% direction-refuted).
 7. Track reducer-rule revision rate (Type E count per cycle); past cycle 5 of measurement, verify against cycle 106 stability bound (≤1/cycle steady-state).
+8. Count actual within-super-step iteration events via per-iteration-event logs (cycle 108 protocol Choice 4); decompose by trigger type (α/β/γ/δ/ε); compare against per-cycle iteration event bounds (≤3/cycle direction-validated / (3, 6] at-risk / >6 refuted) past cycle 5 of measurement.
+9. Compute iteration multiplier M = (aggregate decisions including iteration) / (aggregate decisions assuming single-pass) per cycle as secondary derived metric (cycle 108 Choice 3).
+10. Run combined-readings diagnostic (cycle 108 Choice 6): cross-tabulate per-role decision count vs cycle 92 estimate × iteration events per cycle to distinguish Risk 1 firing from Risk 4 firing.
+11. Verify iteration-event-classification rubric stability past cycle 5 of measurement: inter-rater disagreement on event type ≤10% steady-state (cycle 108 Choice 5; shape #24 warm-up window).
 
 **Hard refutation thresholds (added cycle 103 per Counting protocol section, replacing the previous soft "promotes to PASS-WITH-NOTE" / "weakens" language flagged as inadequate per cycle 96 absorption methodology):** P3 verdict is determined by the protocol's aggregate threshold:
 
@@ -488,7 +615,7 @@ These are pre-agreed thresholds that do not depend on the orchestrator's own ass
 - **Risk 1:** the per-role decision-class enumeration is incomplete (lower bound). Per-role decisions about *how to structure the sub-task* are not enumerated (assumed embedded in tool / skill invocation contracts); if the orchestrator session for any role makes ~5 additional per-cycle structural decisions, aggregate grows by ~20.
 - **Risk 2 (CLOSED at specification level cycle 106):** coordination overhead estimate (~9-23 per cycle) assumes typed-channel-map reducer-rules are stable; if reducer-rules are revised mid-cycle (Axis 8 mechanical-enforcement evolves over time), coordination overhead grows substantially. **Cycle 106 closes Risk 2 at the specification level** — see the [Coordination overhead decomposition section](#coordination-overhead-decomposition-cycle-106-specification-addressing-risk-2) above. The closure decomposes coordination overhead into 5 types under the cycle 103 rubric (Type A excluded as mechanical; Types B+C as structural-invariant floor ≤8/cycle; Types D+E as structural-character-dependent), specifies per-coordination-decision logging at Phase 3 with type/role-of-origin/cause schema, specifies pre-agreed coordination-ratio direction-check thresholds (≤30% direction-validated / 30-50% direction-supported / >50% direction-refuted) independent of the cycle 103 aggregate threshold, and quantifies reducer-rule stability via a ≤1/cycle revision-rate bound in steady state past cycle 5 of Phase 3 measurement. Risk 2 remains *open at the operational level* until Phase 3 prototype measurement observes the rates; the specification-level closure is the cycle 106 deliverable.
 - **Risk 3:** goal-coherence enforcement requires planner to evaluate executor / curator / reconciler outputs; this is itself a substantive decision-class that may exceed the ~3 per cycle estimate when goals are ambiguous or sub-tasks diverge.
-- **Risk 4:** the per-role decision count assumes each role's session is single-pass (one invocation per super-step). If sub-tasks require iteration within a role's super-step (e.g., executor needs to revisit a structural decision after curator review), per-role decision count multiplies.
+- **Risk 4 (CLOSED at specification level cycle 108):** the per-role decision count assumes each role's session is single-pass (one invocation per super-step). If sub-tasks require iteration within a role's super-step (e.g., executor needs to revisit a structural decision after curator review), per-role decision count multiplies. **Cycle 108 closes Risk 4 at the specification level** — see the [Per-role iteration decomposition section](#per-role-iteration-decomposition-cycle-108-specification-addressing-risk-4) above. The closure decomposes within-super-step iteration into 5 trigger types under B's architectural elements (α curator-review-driven / β goal-coherence-redirect / γ reconciler-triggered / δ plan-lifecycle / ε branch-spawn), specifies pre-agreed iteration-event count thresholds (≤3/cycle direction-validated / (3, 6] at-risk / >6 refuted in steady state past cycle 5 of Phase 3 measurement) as primary falsifiable bound with iteration multiplier (M ≤1.3 / 1.3-1.8 / >1.8) as secondary derived metric, specifies per-iteration-event logging at Phase 3 with three-layer verification (orchestrator self-logging + external-observer reproducibility ≥80% + CI sweep), specifies iteration-event-classification rubric stability with warm-up window discipline (cycles 1-5 + post-warm-up bounds; shape #24 HARDENED@3 transfer), and specifies a combined-readings diagnostic (per-role decision count × iteration events) preserving the Risk-1-vs-Risk-4 distinction at Phase 3 measurement. Risk 4 remains *open at the operational level* until Phase 3 prototype measurement observes the iteration-event rates and rubric inter-rater disagreement; the specification-level closure is the cycle 108 deliverable.
 - **Risk 5:** the aggregate-comparable-to-v1 claim depends on per-role agents NOT also doing v1's coordination work (substantive-focal selection, sibling-pattern recognition, honest reflection). If those decision-classes leak across role boundaries (e.g., curator does its own honest reflection in addition to planner's coordination), aggregate inflates.
 - **Risk 6 (added cycle 96 per PR #2878 absorption — multi-session wall-clock cost):** B requires 4 sequential AI sessions per cycle (planner → executor → curator → reconciler). Each session has cold-start cost: context loading, workspace state synchronization, tool initialization. This overhead is NOT part of the decision-count metric (it's wall-clock, not cognitive). If each cold-start costs ~5-10 minutes and there are 4 sessions in a 75-minute window, **20-40% of cycle budget is consumed before any substantive work begins**. Validation against v1's wall-clock baseline (single session, single cold-start) is required separately from decision-count validation. This is a P3-adjacent structural risk that the cycle 92 sharpening did not name.
 - **Risk 7 (added cycle 96 per PR #2878 absorption — circular baseline):** the v1 ~40-decision baseline used in this section was self-measured by the orchestrator that benefits from the comparison. The author is the same orchestrator that designed B and proposed B's per-role decision counts. The 12 "per-axis position commitments for C" element of the baseline counts template applications as 12 independent decisions; if those count as 1 structural decision each, the v1 baseline approximately halves and B's "comparable" claim breaks. The baseline therefore admits a 2× uncertainty band on the v1 side.
