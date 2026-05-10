@@ -384,8 +384,155 @@ The estimates above are derived from cycle observation (cycles 75-91 cold-reader
 7. **Stale-active-plan promotion lag tracking (added cycle 107 per Choice 3):** measure cycles between detected staleness (active plan not updated in ≥5 cycles) and orchestrator decision (promote-to-completed | promote-to-technical-debt | mark-active-with-justification). Verify against ≤3 cycle bound; this is the cycle 92 "~3-4 cycle reduction" claim's direct measurement.
 8. **External-observer reproducibility check (added cycle 107 per Choice 4):** at Phase 3 measurement, an external classifier (Eva, audit-orchestrator, or independent Copilot dispatch) re-classifies a sample (≥20% of prototype cycles) without seeing orchestrator self-classification. Inter-rater disagreement >10% steady-state indicates classification-rubric-stability concern.
 9. **Cycle-type taxonomy stability check (added cycle 107 per Choice 5 — warm-up window pattern):** track "other"-rate (cycles falling outside the 5-type taxonomy). Past cycle 5 of measurement, verify ≤10% other-rate steady-state. Higher rates trigger taxonomy revision before reading compliance rates per Choice 6 diagnostic.
+10. **Plan-lifecycle change event logging (added cycle 110 per Risk 5 closure Choice 4):** classify each plan-lifecycle change event during Phase 3 prototype evolution into one of 5 types (Type 1 bounded-mechanical / Type 2 state-addition / Type 3 informational-field / Type 4 transition-rule-evolution / Type 5 emergency-hot-fix); log per the JSONC schema in Risk 5 closure Choice 4 with paired-CI-rule status and drift-window timing.
+11. **CI-uncovered ratio U measurement (added cycle 110 per Risk 5 closure Choice 2):** at each commit affecting plan-lifecycle, compute U = uncovered/total invariants in spec; verify U ≤ 0.05 steady-state. CI sweep `plan-lifecycle-invariant-coverage-check` emits U per commit.
+12. **Drift-window D measurement (added cycle 110 per Risk 5 closure Choice 3):** for Type 2/4/5 plan-lifecycle events, measure cycles between change event and paired-CI-update OR reclassification; verify D ≤ 3 (Type 2) / ≤ 5 (Type 4) / Type 5 reclassified-or-paired within ≤5 cycles.
+13. **Plan-lifecycle-event classification stability check (added cycle 110 per Risk 5 closure Choice 5 — warm-up window pattern):** track other-rate (events falling outside the 5-type taxonomy). Past cycle 5 of measurement, verify ≤10% other-rate steady-state. Higher rates trigger plan-lifecycle change taxonomy revision before reading U per Choice 6 diagnostic.
 
 If validation reveals all three improvements are real, C's PASS-WITH-NOTE on P3 holds. If F2 improvement is null (~0pp reliability difference) but F4 + F11 hold, C's distinctness from A still holds via plans-as-artifacts (Axis 5) but reconcile-mode (Axis 7 + Axis 12) is weakened — the candidate may consolidate to "A + plans-as-artifacts" rather than full middle-path.
+
+### Plan-lifecycle CI-invariant coverage discipline (cycle 110 specification, addressing Risk 5)
+
+Per cycle 105/106/107/108/109 closure pattern (substrate-decomposition + falsifiable bound + verification + status), Risk 5 is closed at the specification level. Cycle 92 framing identified the conditional ("if plan-lifecycle CI invariants drift, F4 detection legibility degrades to A's implicit baseline") but did not specify (a) what counts as a plan-lifecycle change that requires paired CI update vs purely informational addition, (b) what coverage rate counts as "CI-invariant discipline holds" per change type, (c) how coverage is measured non-circularly given the orchestrator both authors plan-lifecycle changes and self-reports CI-update status.
+
+C Risk 5 is the **third discipline-conditional risk closure** after C Risk 2 (cycle 107) and A Risk 4 (cycle 109). The three share structure: a discipline (plan authoring / tool extraction / CI-invariant pairing) that applies to a subset of events with rubric-asymmetric ambiguity (rubric tightening affects WHICH events count as expected-to-comply, but each event's compliance is separately observable). Closure follows cycle 109's structure with substrate-content adapted to CI-invariant pairing. **C Risk 5 is also the first closure applying the discipline-conditional shape to a CODE-INVARIANT-COORDINATION substrate** (prior discipline-conditional closures addressed orchestrator-behavior substrates: cycle authoring discipline / prompt extraction discipline). Whether substrate-novelty introduces shape-distinguishing differences is itself a closure-level observation.
+
+**Deferral arc:** 18 cycles (cycle 92 framing → cycle 110 closure). Compares to cycle 105's 8-cycle arc, cycle 106's 14-cycle arc, cycle 107's 15-cycle arc, cycle 108's 16-cycle arc, and cycle 109's 18-cycle arc (also 18 cycles, but from cycle 91; cycle 110 from cycle 92 makes the same calendar arc). Cycle 110's closure depends on cycle 103 three-layer verification + cycle 107 discipline-conditional substrate (warm-up window + rubric-fragility diagnostic) + cycle 108 two-tier metric discipline (drift-window as secondary derived) + cycle 109 5-type extension taxonomy template + cycle 109 candidate-pattern `exclude-by-type`. Cycle 110 absorbs **5 prior closures' substrate** — one more than cycle 109 (which absorbed 4), reflecting cycle 109's pattern-extraction also being available substrate.
+
+#### Choice 1: 5-type plan-lifecycle change taxonomy as substrate-decomposition
+
+Plan-lifecycle changes vary in what CI-update discipline applies. Designed 5-type taxonomy (sibling of cycle 109's extension taxonomy with substrate-content adapted to plan-lifecycle):
+
+| Type | Description | Trigger | Discipline | Compliance bar |
+|---|---|---|---|---|
+| 1 bounded-mechanical | Trivial state-name rename / field-name rename / transition-rule already codified | Refactor-only commits | Paired CI update MUST exist in same commit | 100% (any unpaired Type 1 is contract violation) |
+| 2 state-addition (novel-deterministic) | New plan-lifecycle state added (e.g., `deferred` alongside `active`/`completed`/`technical-debt`) | Phase 3+ state-machine evolution | Paired CI invariant added at commit OR within drift-window ≤3 cycles | ≥95% steady-state |
+| 3 informational-field (judgment-surface analog) | Purely informational field added (description, justification, free-text notes — no invariant to check) | Plan annotation enrichment | NO paired CI update required (informational fields have no invariants) | ≤10% later-reclassification to Type 2 |
+| 4 transition-rule-evolution (tool-deprecation analog) | Transition graph evolves (e.g., `completed` becomes non-terminal via `completed → re-opened`; or stale-detection threshold changed) | Plan-lifecycle semantics revision | CI transition-validation update documented at change AND re-validated against full transition graph within ≤5 cycles | ≥90% documented; ≥80% re-validated within window |
+| 5 emergency / hot-fix | Ad-hoc invariant change under time pressure (e.g., temporary suspension of stale-detection during incident) | Incident response | Paired CI follow-up REQUIRED within ≤5 cycles, OR Type 5 reclassified to Type 1/2/3/4 | ≥80% reclassified-or-paired within ≤5 cycles |
+
+**Alternatives rejected:**
+- Binary CI-coverage discipline (every plan-lifecycle change pairs with CI or doesn't) — conflates Type 1 (mechanical refactor) with Type 3 (informational, no invariant to check); loses the discipline-applicability distinction that makes the diagnostic interpretable.
+- 3-type simpler taxonomy (deterministic / informational / emergency) — collapses Type 1+2 (both deterministic-but-different time discipline) and Type 4+5 (both reactive but different cause).
+- Retrospective-only classification — not falsifiable; classifying after seeing CI drift is circular per cycle 96 self-report-circularity concern.
+
+**Substrate partition:** discipline-applicable Types 1 + 2 + 4 + 5 (paired-CI requirement applies; ~85% of expected change volume) + discipline-non-applicable Type 3 (informational; pairing would itself violate CI-as-rule-checker principle since informational fields have nothing to check; ~15% of expected volume). Type 3 is the discipline-conditional analog to cycle 107 Type 5 (NO-PLAN annotation IS the discipline) and cycle 109 Type 3 (judgment-surface NOT-extracted IS the discipline). **Candidate-pattern `exclude-by-type`** (cycle 109 NOVEL @ TESTED@3) promotes to **HARDENED@4** spanning cycle 106 Type A mechanical-excluded / cycle 107 Type 5 NO-PLAN-as-discipline / cycle 109 Type 3 judgment-surface-not-extracted / cycle 110 Type 3 informational-field-no-CI-invariant.
+
+#### Choice 2: CI-uncovered ratio U as primary falsifiable bound (rubric-symmetric)
+
+Per cycle 103/106/108/109 ratio-based threshold pattern:
+
+U = (CI-uncovered plan-lifecycle invariants) / (total plan-lifecycle invariants in spec)
+
+Pre-agreed thresholds:
+- U ≤ 0.05 (≥95% covered): direction-validated; CI-coverage discipline holds; F4 detection legibility preserved
+- U ∈ (0.05, 0.20]: at-risk; CI-invariant drift in progress; investigate per Choice 6
+- U > 0.20: refuted; CI-coverage discipline failed; F4 detection legibility degrades to A's implicit baseline; C's plan-lifecycle improvement is undermined
+
+U is rubric-symmetric in the cycle 108/109 sense: rubric tightening affects both numerator (uncovered invariants) and denominator (total invariants) equally. If "invariant" is redefined upward (only state-machine-validating invariants count, excluding stylistic checks), uncovered count drops AND total count drops; ratio is rubric-robust within the chosen unit.
+
+**Alternatives rejected:**
+- Absolute uncovered count as primary — depends on plan-lifecycle complexity; a richer plan-lifecycle can have more uncovered invariants without violating coverage discipline. Ratio is more interpretable.
+- Type-1-specific compliance rate as primary — captures one type's discipline only; misses Type 2/4/5 drift modes; consistent with cycle 109 reasoning.
+- Aggregate `plan-lifecycle-check` LOC count — rubric-asymmetric (refactoring CI rules affects LOC without changing coverage).
+- Coverage ratio C = covered/total instead of U = uncovered/total — directionality flip from cycle 109 P (lower-is-better); chose U to maintain directional consistency across closures (lower-is-better for both P and U; cleaner cross-closure interpretation).
+
+#### Choice 3: Drift-window D as secondary derived metric (cycle 108 two-tier discipline transfer)
+
+For Type 2/4/5 plan-lifecycle changes, drift-window D = (cycles between change event and paired-CI-update OR reclassification). Per cycle 108 Choice 3 / cycle 109 Choice 3 two-tier primary-vs-secondary-derived metric discipline:
+
+- D ≤ 3 cycles for Type 2: aggregate drift bounded; consistent with Type 2 ≥95% compliance
+- D ∈ (3, 5] for Type 4: bounded under window
+- D > 5 for Type 4/5: change has aged into permanent CI-coverage gap; reclassify or accept U regression
+
+D is **secondary derived (informational)**, NOT primary falsificational, because:
+- D depends on auxiliary measurements (change-event timing + paired-CI-update timing — both separately measured).
+- CI-uncovered ratio U (Choice 2) already captures aggregate coverage discipline regardless of per-change drift.
+
+Cycle 108 / cycle 109 two-tier metric discipline promotes from **TESTED@2 → HARDENED@3** at cycle 110. The methodological pattern (when a metric depends on auxiliary measurements, demote to secondary derived to avoid refutation conflation) holds at THIRD instance with substrate-content adapted from iteration-multiplier (cycle 108) → drift-window for prompt-extension (cycle 109) → drift-window for plan-lifecycle CI (cycle 110). **The pattern is now substrate-domain-general**: holds across iteration-events, prompt-extensions, AND CI-invariant pairings.
+
+**Alternatives rejected:**
+- Make drift-window primary falsifiable — conflates change-event count with paired-CI-update timing; refutation on D alone would not distinguish "many changes, fast follow-up" from "few changes, slow follow-up" (diagnostically equivalent under D, structurally distinct under per-type compliance).
+- Omit drift-window entirely — loses diagnostic resolution for Type 4/5 reactive changes; binary "paired or not" misses the time-pressure interaction.
+
+#### Choice 4: Three-layer verification (cycle 103/107/108/109 transfer)
+
+Per-plan-lifecycle-event log schema:
+```jsonc
+{
+  "event-type": 1 | 2 | 3 | 4 | 5,
+  "plan-lifecycle-element": "state" | "field" | "transition-rule" | "stale-detection-rule",
+  "element-name": "<element identifier>",
+  "trigger-cause": "<cycle-event description>",
+  "cycle": <cycle-id>,
+  "paired-ci-rule": "<ci-rule-name>" | null,
+  "paired-ci-status": "exists" | "follow-up-required-by-cycle-N" | "not-required",
+  "drift-window-start-cycle": <cycle-id> | null,
+  "drift-window-end-cycle": <cycle-id> | null,
+  "decision-rationale": "<why this event type vs another>"
+}
+```
+
+Three-layer verification (inheriting cycle 103/107/108/109 pattern intact):
+1. Per-plan-lifecycle-event logging by orchestrator at change time (primary).
+2. External-observer reproducibility check at Phase 3 measurement (≥20% sample re-classified by Eva, audit-orchestrator, or independent Copilot dispatch; inter-rater disagreement ≤10% steady-state past cycle 5 of measurement).
+3. CI sweep (`plan-lifecycle-invariant-coverage-check` — verifies each declared plan-lifecycle invariant in the spec has a corresponding CI rule, tracks drift-windows for Type 2/4/5, and emits the U metric per commit).
+
+**Three-layer verification at HARDENED-at-5 across 5 closure types** (cycle 103 counting protocol, cycle 107 plan-authoring discipline, cycle 108 iteration events, cycle 109 extension events, cycle 110 plan-lifecycle CI events). Cycle 109 named candidate functional-class shape #25 (`three-layer-closure-verification`) at NOVEL@1; cycle 110 promotes shape #25 from NOVEL@1 → **TESTED@2** with substrate-content adapted from prompt-extension events (cycle 109) to plan-lifecycle CI events (cycle 110). At TESTED@2 with high cross-substrate generality, shape #25 strengthens its case for promotion from "shape #21 sub-element" to its own functional-class shape; cycle 111+ may HARDEN.
+
+**Alternatives rejected:**
+- Self-classification alone — exact cycle 96 self-report-circularity concern; orchestrator self-grading on whether its own plan-lifecycle change was Type 1 vs Type 2 is the same shape as B's self-counting concern.
+- Manual tracking via journal entries — unstructured, not CI-checkable, classification quality varies cycle-to-cycle.
+- Instrument every commit affecting plan-lifecycle (full diff classification) rather than change-specific events — introduces classification overhead on non-structural commits (typo fixes, formatting); per cycle 106 mechanical-vs-structural reasoning, mechanical edits are excluded from the structural unit.
+
+#### Choice 5: CI-invariant rubric stability as warm-up window discipline (cycle 107/108/109 shape #24 transfer)
+
+Direct application of cycle 107/108/109 shape #24:
+- Warm-up window: cycles 1-5 of Phase 3 measurement. Plan-lifecycle change classification rubric is being tightened (what counts as Type 1 mechanical-rename vs Type 2 state-addition; whether stale-detection threshold change is Type 4 transition-evolution or Type 1 mechanical; whether emergency hot-fix that gets reclassified as informational is Type 5 success or Type 3 misclassification).
+- Steady-state: past cycle 5 of measurement. Per-type compliance rates apply. Inter-rater disagreement on event type ≤10% expected.
+- Combined-readings against rubric stability: see Choice 6.
+
+**Shape #24 promotes HARDENED@4 (cycle 109 extension-classification stability) → HARDENED@5 (cycle 110 plan-lifecycle-event-classification stability)** spanning 5 protocol-stability types: measurement-bound stability (cycle 106) + rubric stability (cycle 107) + classification stability (cycle 108) + extension-rubric stability (cycle 109) + plan-lifecycle-event-rubric stability (cycle 110).
+
+Critical methodological observation: cycle 110 is **rubric-asymmetric** like cycle 107 and cycle 109 (discipline-conditional rubric-fragility) — rubric tightening affects WHICH events count as expected-to-comply (Type 1 vs Type 3 boundary; or Type 2 vs Type 4 distinction) but each event's pairing/non-pairing is separately observable. The discipline-conditional risk-shape type now has 3 instances all showing rubric-asymmetric character at the warm-up boundary; cycle 109 _notes observation 7 (discipline-conditional commonalities at 2 instances) extends to **3 instances confirming the rubric-asymmetric character is structural, not coincidental**.
+
+**Alternatives rejected:**
+- Measure plan-lifecycle changes from cycle 1 with no warm-up — conflates rubric-evolution with CI-coverage-instability per cycle 106/107/108/109 reasoning.
+- Treat plan-lifecycle change classification rubric as fixed (no stability check) — without stability check, Type-distribution and per-type compliance rates are uninterpretable when classification disagreement is high.
+
+#### Choice 6: Combined-readings diagnostic preserving discipline-conditional rubric-fragility distinction (third instance)
+
+Per cycle 107 Choice 6 / cycle 109 Choice 6 discipline-conditional rubric-fragility diagnostic, this is the **third instance** of the discipline-conditional rubric-fragility pattern. C Risk 5 has the same one-sided rubric ambiguity as C Risk 2 and A Risk 4: rubric tightening affects WHICH events count as expected-to-comply (Type 1/2/4/5 vs Type 3 boundary; or Type 2 vs Type 4 distinction) but each event's compliance is separately observable.
+
+A 4-quadrant matrix:
+
+| CI-uncovered ratio U | Plan-lifecycle-event rubric stability (other-rate past cycle 5) | Diagnostic |
+|---|---|---|
+| U ≤ 0.05 | ≤ 10% other-rate | C Risk 5 direction validated; CI-coverage discipline holds; F4 detection legibility preserved |
+| U ≤ 0.05 | > 10% other-rate | Coverage is cherry-picked over a rubric-unstable subset; revise plan-lifecycle change taxonomy before reading U-value (possibly Type 3 misclassification masking Type 2 drift) |
+| U > 0.20 | ≤ 10% other-rate | Risk 5 fires; CI-coverage discipline failed; magnitude refuted (rubric is sound) |
+| U > 0.20 | > 10% other-rate | Both rubric and discipline fail; revise plan-lifecycle change taxonomy first; if revised rubric still produces U > 0.20, accept that C's F4 improvement degrades to A's baseline |
+
+Discipline-conditional rubric-fragility diagnostic promotes from **TESTED@2 (cycle 109) → HARDENED@3 (cycle 110)**. The diagnostic structure (combined-readings table preserving discipline-vs-rubric-stability distinction) holds across three different discipline-conditional risk substrates — plan-authoring (cycle 107), prompt-extension (cycle 109), CI-invariant-coverage (cycle 110). Methodological observation: the two-axis combined-readings table is the **structural diagnostic shape** for discipline-conditional rubric-fragility — one axis is the primary falsifiable bound (compliance rate / P / U), the other is rubric-stability (other-rate / inter-rater disagreement). At HARDENED@3 across 3 substrate domains, the diagnostic generalizes.
+
+**Alternatives rejected:**
+- CI-uncovered ratio U alone — high "other" rate masks discipline failure (cherry-picked coverage over a rubric-unstable subset).
+- Combine taxonomy stability into U (count "other" as Type-2 non-compliant) — conflates two failure modes; loses diagnostic resolution for revising the candidate post-Phase-3.
+- Use cycle 108's combined-readings (per-role decision count × iteration events) — orthogonal metrics; doesn't apply to CI-invariant-coverage substrate where the relevant axes are U and rubric-stability.
+
+### Risk 5 status post-cycle-110
+
+- **Direction continues to hold** by construction: F4 improvement is conditional on plan-lifecycle CI invariants tracking the spec. The mechanism Risk 5 named is real.
+- **Magnitude refined** from "if plan-lifecycle CI invariants drift, F4 detection legibility degrades to A's implicit baseline" to: 5-type plan-lifecycle change taxonomy / per-type compliance rates / CI-uncovered ratio U bounded ≤0.05 / drift-window D as secondary derived metric / three-layer verification / warm-up-window plan-lifecycle-event classification stability / combined-readings diagnostic preserving discipline-conditional rubric-fragility distinction.
+- **Mitigation specification is now concrete enough for Phase 3 prototype validation** (plan-lifecycle change events logged from cycle 1 of Phase 3; per-type compliance rates measurable by cycle 5+ steady state; U measurable per-commit).
+- **Operational closure deferred** to Phase 3 prototype when plan-lifecycle change-event logging meets actual `plan-lifecycle` crate evolution events AND inter-rater disagreement on event type ≤10% steady-state AND per-type compliance rates measured across ≥10 measurement cycles AND drift-window D measured for Type 2/4/5 changes.
+- **Shape #21 transfer verdict:** structural form transfers (substrate-decomposition + falsifiable bound + verification + status); cycle 110 instance is the **third discipline-conditional application** of shape #21 (after cycle 107 plan-authoring discipline and cycle 109 extension-discipline). **Shape #21 promotes HARDENED-at-6 → HARDENED-at-7** spanning 7 risk-domain types (meta-counting-protocol / tool-registry-growth / coordination-stability / plan-authoring-discipline / per-role-iteration / extension-discipline / plan-lifecycle-CI-coverage) AND 2 risk-shape types (4 quantity-bounded + 3 discipline-conditional). The discipline-conditional risk-shape type promotes from TESTED@2 (cycle 109) → **HARDENED@3 (cycle 110)** at the risk-shape-type level — three substrate-distinct discipline-conditional applications confirm the shape's risk-shape-type generality.
+- **Shape #24 transfer verdict:** cycle 110 plan-lifecycle-event-classification stability is the **fifth stability type** after measurement-bound (cycle 106) + rubric (cycle 107) + classification (cycle 108) + extension-rubric (cycle 109). **Shape #24 promotes HARDENED@4 → HARDENED@5** spanning 5 protocol-stability types.
+- **Shape #25 candidate (`three-layer-closure-verification`) transfer verdict:** cycle 109 named at NOVEL@1; cycle 110 transfers intact. **Shape #25 promotes NOVEL@1 → TESTED@2** with substrate-content adapted from prompt-extension events to plan-lifecycle CI events. At TESTED@2 with high cross-substrate generality, shape #25's case for HARDENING strengthens; cycle 111+ may promote to HARDENED@3.
+- **Discipline-conditional rubric-fragility diagnostic** (cycle 107 NOVEL@1 → cycle 109 TESTED@2) promotes **TESTED@2 → HARDENED@3** at third instance with substrate-content adapted from plan-authoring (cycle 107) to extension-discipline (cycle 109) to CI-invariant-coverage (cycle 110). At HARDENED@3 across 3 substrate domains, the diagnostic structure is **the** discipline-conditional rubric-fragility diagnostic shape.
+- **Two-tier primary-vs-secondary-derived metric discipline** (cycle 108 NOVEL@1 → cycle 109 TESTED@2) promotes **TESTED@2 → HARDENED@3** at third instance with substrate-content adapted from iteration-multiplier (cycle 108) to drift-window for prompt-extension (cycle 109) to drift-window for plan-lifecycle CI (cycle 110). The pattern is now substrate-domain-general.
+- **Candidate-rotation-balance-discipline** (cycle 107 NOVEL@1 → cycle 109 TESTED@2) promotes **TESTED@2 → HARDENED@3** by cycle 110 honoring the cycle 109 _notes-named rotation commitment (C Risk 5 chosen over higher-priority B-side targets to balance closure distribution toward A:2 / B:3 / C:2).
+- **Candidate-pattern `exclude-by-type`** (cycle 109 TESTED@3) promotes **TESTED@3 → HARDENED@4** spanning cycle 106 Type A mechanical-excluded / cycle 107 Type 5 NO-PLAN-as-discipline / cycle 109 Type 3 judgment-surface-not-extracted / cycle 110 Type 3 informational-field-no-CI-invariant.
 
 ### Risks named at the structural level
 
@@ -393,7 +540,7 @@ If validation reveals all three improvements are real, C's PASS-WITH-NOTE on P3 
 - **Risk 2 (CLOSED at specification level cycle 107):** plan-lifecycle requires plan-authoring discipline — if cycles don't author plans (e.g., absorption cycles, dispatch-poll cycles), the lifecycle is empty and F4 improvement is 0pp. The candidate's F4 improvement is conditional on cycles producing structured plans; cycles that don't (steady-state cycles) inherit A's F4 behavior. **Cycle 107 closes Risk 2 at the specification level** — see the [Plan-authoring discipline taxonomy section](#plan-authoring-discipline-taxonomy-cycle-107-specification-addressing-risk-2) above. The closure decomposes cycles into a 5-type taxonomy with per-type plan-discipline expectations (Type 1 substantive-novel REQUIRED / Type 2 substantive-iteration REQUIRED / Type 3 bounded-mechanical OPTIONAL / Type 4 reactive-only REQUIRED-or-promotion / Type 5 no-substantive NO-PLAN-annotation REQUIRED), specifies pre-agreed compliance-rate thresholds as ratio-based (Type 1+2 ≥90% direction-validated / 70-90% at-risk / <70% refuted; Type 4 ≥80%; Type 5 ≥95% annotation), specifies stale-active-plan promotion lag ≤3 cycles steady-state directly grounding the cycle 92 "~3-4 cycle reduction" claim, specifies per-cycle classification annotation with structured JSON schema + external-observer reproducibility check at Phase 3 + CI sweep as the three-layer verification procedure (addressing self-classification circularity per cycle 96 lesson), specifies cycle-type taxonomy stability ≤10% other-rate steady-state past cycle 5 of measurement (warm-up window per cycle 106 shape #24 — promotes shape #24 NOVEL@1 → TESTED@2), and provides a combined-readings diagnostic distinguishing discipline-failure from taxonomy-wrongness (the discipline-conditional rubric-fragility distinction that quantity-bounded closures don't carry). Risk 2 remains *open at the operational level* until Phase 3 prototype measurement observes the rates across ≥10 prototype cycles; the specification-level closure is the cycle 107 deliverable.
 - **Risk 3:** reconcile-mode adds ~10min budget to cycle window (per Axis 9 per-mode runtime budget). If reconcile-mode handlers process inbound events efficiently, the budget is mostly idle (overhead without proportional benefit). If inbound events are heavy (audit critique landing + Eva-response + dispatch-PR-merge in same cycle), reconcile-mode may exceed budget and slip detection to next cycle anyway — degrading the F11 improvement.
 - **Risk 4:** the F11 detection-rate-improvement estimate (~5-13pp) is from cycle 75-83 cold-reader observation, which itself was an iteration on A-style behavior. Phase 3 prototype paired-cycle measurement may reveal the cold-reader cycle was already capturing most missed mutations, and reconcile-mode's marginal improvement is smaller than estimated.
-- **Risk 5:** plan-lifecycle CI (`plan-lifecycle-check`) adds CI surface that needs ongoing attention (similar to A's prompt-contract-check risk, but at a different layer). If plan-lifecycle CI invariants drift (e.g., new plan-lifecycle state added without paired CI update), F4 detection legibility degrades to A's implicit baseline.
+- **Risk 5 (CLOSED at specification level cycle 110):** plan-lifecycle CI (`plan-lifecycle-check`) adds CI surface that needs ongoing attention (similar to A's prompt-contract-check risk, but at a different layer). If plan-lifecycle CI invariants drift (e.g., new plan-lifecycle state added without paired CI update), F4 detection legibility degrades to A's implicit baseline. **Cycle 110 closes Risk 5 at the specification level** — see the [Plan-lifecycle CI-invariant coverage discipline section](#plan-lifecycle-ci-invariant-coverage-discipline-cycle-110-specification-addressing-risk-5) above. The closure decomposes plan-lifecycle changes into a 5-type taxonomy (Type 1 bounded-mechanical / Type 2 state-addition / Type 3 informational-field / Type 4 transition-rule-evolution / Type 5 emergency-hot-fix), specifies CI-uncovered ratio U as primary falsifiable bound (U ≤ 0.05 direction-validated / (0.05, 0.20] at-risk / >0.20 refuted), drift-window D as secondary derived metric per cycle 108/109 two-tier discipline (D ≤ 3 Type 2 / ≤ 5 Type 4 / >5 reclassify-or-accept), three-layer verification (per-plan-lifecycle-event log + external-observer reproducibility ≥80% with ≤10% disagreement + CI sweep `plan-lifecycle-invariant-coverage-check`), warm-up-window plan-lifecycle-event classification stability (≤10% other-rate steady-state past cycle 5), and a combined-readings diagnostic preserving discipline-conditional rubric-fragility distinction (third instance after cycles 107/109). Risk 5 remains *open at the operational level* until Phase 3 prototype measurement observes the rates across ≥10 prototype cycles; the specification-level closure is the cycle 110 deliverable.
 - **Risk 6:** reconcile-mode and work-mode share the same context-window (Axis 1 single-threaded). If reconcile-mode's deltas are non-trivial, work-mode inherits a contaminated context. C's distinctness from A's boot-phase pull is structural (named harness phase) but not context-isolated; the context-isolation property B claims (per-agent context-window) is NOT inherited by C.
 - **Risk 7 (added cycle 96 per PR #2878 absorption — workload-confounding in paired-cycle measurement):** C's validation plan requires paired cycles on the same workload, but real cycles have variable inbound events. If A-prototype and C-prototype cycles happen to have different inbound volumes (Eva-responses, audit critiques, dispatch returns), the F11 and F2 measurements are confounded — the C-prototype could appear better simply because its cycle had more inbound events to detect. The validation methodology must address this either via synthetic replay or paired-on-consecutive-cron sequencing. This is a **structural flaw in the validation methodology**, not just a magnitude risk.
 - **Risk 8 (added cycle 96 per PR #2878 absorption — F4 categorical-fact vs operational-consequence conflation):** the F4 "categorical improvement" claim conflates two distinct claims. Fact: A has 0 named plan-states, C has 3 named states (verifiable). Operational consequence: A has "~3-5 cycle slip in practice" based on cycle 87's _notes-aging observation extrapolated to a per-cycle behavioral claim. The categorical fact is real; the operational-consequence extrapolation rests on one cycle's observation. The F4 claim should distinguish these: the named-state structural improvement is categorical; the stale-detection-lag improvement is conditional on the extrapolation holding across cycles, which is itself a measurement question.
