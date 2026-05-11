@@ -894,6 +894,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "v2-phase-transition-check"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "v2-tool-registry"
 version = "0.1.0"
 dependencies = [

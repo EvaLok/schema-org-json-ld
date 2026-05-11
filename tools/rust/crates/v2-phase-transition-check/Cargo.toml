@@ -1,0 +1,13 @@
+[package]
+name = "v2-phase-transition-check"
+version = "0.1.0"
+edition = "2021"
+description = "Validate phase-boundary invariants on v2 cycle-history substrate (v2 redesign prototype)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
