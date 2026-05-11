@@ -81,6 +81,8 @@ jobs:
                   "Bash(cat *)",
                   "Bash(head *)",
                   "Bash(tail *)",
+                  "Bash(tools/dispatch-task *)",
+                  "Bash(tools/dispatch-review *)",
                   "WebFetch(domain:schema.org)",
                   "WebFetch(domain:developers.google.com)",
                   "WebFetch(domain:search.google.com)"
