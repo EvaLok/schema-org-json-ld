@@ -1,0 +1,13 @@
+[package]
+name = "v2-boot-phase"
+version = "0.1.0"
+edition = "2021"
+description = "Orchestration-hub for v2 boot-phase: load cycle-history, compute cursor, emit cycle-context (v2 redesign prototype scaffold; standing-directive-check + gardening-sweep deferred)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
