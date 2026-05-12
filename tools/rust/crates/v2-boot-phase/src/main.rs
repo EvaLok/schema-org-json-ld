@@ -1,15 +1,22 @@
 use clap::Parser;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
+
+const EVA_LOGIN: &str = "EvaLok";
+const PRIVILEGED_LABELS: &[&str] = &[
+    "input-from-eva",
+    "question-for-eva",
+    "orchestrator-run",
+];
 
 #[derive(Parser, Debug)]
 #[command(
     name = "v2-boot-phase",
-    about = "Orchestration-hub for v2 boot-phase: load cycle-history, compute cursor, emit cycle-context (scaffold; standing-directive-check + gardening-sweep deferred to cycle 124+)"
+    about = "Orchestration-hub for v2 boot-phase: load cycle-history, compute cursor, check standing directives, identify gardening candidates, emit cycle-context"
 )]
 struct Args {
     /// Repository root (path containing the state directory)
@@ -31,6 +38,19 @@ struct Args {
     /// Strict mode — promote warnings (gaps, deferred stages) to non-zero exit
     #[arg(long)]
     strict: bool,
+
+    /// Read GitHub fixtures from this directory instead of shelling out to `gh`.
+    /// Expected files (any missing file is treated as an empty array):
+    ///   - input-from-eva.json (output of `gh issue list --label input-from-eva ...`)
+    ///   - open-issues.json    (output of `gh issue list --state open ...`)
+    ///   - open-prs.json       (output of `gh pr list --state open ...`)
+    #[arg(long)]
+    fixture_dir: Option<PathBuf>,
+
+    /// Repository slug in `owner/name` form for `gh` shell-outs. When unset, `gh`
+    /// uses the current directory's git remote.
+    #[arg(long)]
+    repo_slug: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, clap::ValueEnum)]
@@ -44,6 +64,9 @@ enum OutputFormat {
 enum StageStatus {
     Done,
     Warn,
+    // Preserved as scaffold-honesty primitive (cycle 123 NOVEL@1) for future
+    // multi-cycle features that ship in stages; strict mode still rejects it.
+    #[allow(dead_code)]
     Deferred,
     Failed,
     Skipped,
@@ -93,14 +116,70 @@ struct PreviousCycleSummary {
 struct StandingDirectives {
     implemented: bool,
     note: String,
-    items: Vec<Value>,
+    items: Vec<StandingDirectiveItem>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct StandingDirectiveItem {
+    number: u64,
+    title: String,
+    author_login: String,
+    created_at: String,
+    labels: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
 struct GardeningCandidates {
     implemented: bool,
     note: String,
-    items: Vec<Value>,
+    items: Vec<GardeningCandidateItem>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct GardeningCandidateItem {
+    category: String, // "stale-issue" | "open-draft-pr"
+    number: u64,
+    title: String,
+    labels: Vec<String>,
+    created_at: String,
+    updated_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhIssue {
+    number: u64,
+    title: String,
+    author: Option<GhActor>,
+    #[serde(rename = "createdAt", default)]
+    created_at: Option<String>,
+    #[serde(rename = "updatedAt", default)]
+    updated_at: Option<String>,
+    #[serde(default)]
+    labels: Vec<GhLabel>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhActor {
+    login: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhLabel {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GhPr {
+    number: u64,
+    title: String,
+    #[serde(rename = "isDraft", default)]
+    is_draft: bool,
+    #[serde(rename = "createdAt", default)]
+    created_at: Option<String>,
+    #[serde(rename = "updatedAt", default)]
+    updated_at: Option<String>,
+    #[serde(default)]
+    labels: Vec<GhLabel>,
 }
 
 #[derive(Debug, Serialize)]
@@ -173,10 +252,10 @@ fn run(args: &Args) -> Result<u8, BootError> {
     let (gap_stage, gaps) = detect_gaps(&entries);
     stages.push(gap_stage);
 
-    let (directives_stage, standing_directives) = check_standing_directives();
+    let (directives_stage, standing_directives) = check_standing_directives(args);
     stages.push(directives_stage);
 
-    let (gardening_stage, gardening_candidates) = identify_gardening_candidates();
+    let (gardening_stage, gardening_candidates) = identify_gardening_candidates(args);
     stages.push(gardening_stage);
 
     let cycle_context = CycleContext {
@@ -423,36 +502,235 @@ fn detect_gaps(entries: &[CycleEntry]) -> (StageResult, Vec<Gap>) {
     }
 }
 
-fn check_standing_directives() -> (StageResult, StandingDirectives) {
-    let note = "DEFERRED: standing-directive-check requires GitHub API integration (gh CLI shell-out or octocrab); scaffold returns empty items list. See cycle 122 _notes for 2-cycle split rationale; full implementation planned cycle 124+.".to_string();
+fn check_standing_directives(args: &Args) -> (StageResult, StandingDirectives) {
+    let raw = match fetch_issues(args, "input-from-eva.json", &["--label", "input-from-eva"]) {
+        Ok(v) => v,
+        Err(msg) => {
+            let note = format!("standing-directive-check failed: {msg}");
+            return (
+                StageResult {
+                    name: "check-standing-directives".into(),
+                    status: StageStatus::Warn,
+                    details: note.clone(),
+                },
+                StandingDirectives {
+                    implemented: true,
+                    note,
+                    items: Vec::new(),
+                },
+            );
+        }
+    };
+
+    let mut items: Vec<StandingDirectiveItem> = Vec::new();
+    let mut spoof_count = 0u64;
+    for issue in raw {
+        let author_login = match issue.author.as_ref().map(|a| a.login.as_str()) {
+            Some(login) => login.to_string(),
+            None => {
+                spoof_count += 1;
+                continue;
+            }
+        };
+        if author_login != EVA_LOGIN {
+            spoof_count += 1;
+            continue;
+        }
+        let labels: Vec<String> = issue.labels.iter().map(|l| l.name.clone()).collect();
+        items.push(StandingDirectiveItem {
+            number: issue.number,
+            title: issue.title,
+            author_login,
+            created_at: issue.created_at.unwrap_or_default(),
+            labels,
+        });
+    }
+
+    let mut note = format!(
+        "{} authentic directive(s) from {EVA_LOGIN}; {} label-only entry/entries rejected (auth gate per primitive `input-from-eva`)",
+        items.len(),
+        spoof_count
+    );
+    if items.is_empty() && spoof_count == 0 {
+        note = format!("no open input-from-eva issues found (authored by {EVA_LOGIN})");
+    }
+    let status = if spoof_count > 0 {
+        StageStatus::Warn
+    } else {
+        StageStatus::Done
+    };
     (
         StageResult {
             name: "check-standing-directives".into(),
-            status: StageStatus::Deferred,
+            status,
             details: note.clone(),
         },
         StandingDirectives {
-            implemented: false,
+            implemented: true,
             note,
-            items: Vec::new(),
+            items,
         },
     )
 }
 
-fn identify_gardening_candidates() -> (StageResult, GardeningCandidates) {
-    let note = "DEFERRED: gardening-sweep-pre-cycle requires GitHub API integration (gh CLI shell-out) + HOUSEKEEPING-discipline heuristics; scaffold returns empty items list. See cycle 122 _notes for 2-cycle split rationale; full implementation planned cycle 124+.".to_string();
+fn identify_gardening_candidates(args: &Args) -> (StageResult, GardeningCandidates) {
+    let mut items: Vec<GardeningCandidateItem> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+
+    match fetch_issues(args, "open-issues.json", &["--state", "open"]) {
+        Ok(raw) => {
+            for issue in raw {
+                let labels: Vec<String> = issue.labels.iter().map(|l| l.name.clone()).collect();
+                if labels
+                    .iter()
+                    .any(|l| PRIVILEGED_LABELS.contains(&l.as_str()))
+                {
+                    continue;
+                }
+                items.push(GardeningCandidateItem {
+                    category: "stale-issue".into(),
+                    number: issue.number,
+                    title: issue.title,
+                    labels,
+                    created_at: issue.created_at.unwrap_or_default(),
+                    updated_at: issue.updated_at,
+                });
+            }
+        }
+        Err(msg) => errors.push(format!("issues: {msg}")),
+    }
+
+    match fetch_prs(args) {
+        Ok(raw) => {
+            for pr in raw {
+                if !pr.is_draft {
+                    continue;
+                }
+                let labels: Vec<String> = pr.labels.iter().map(|l| l.name.clone()).collect();
+                items.push(GardeningCandidateItem {
+                    category: "open-draft-pr".into(),
+                    number: pr.number,
+                    title: pr.title,
+                    labels,
+                    created_at: pr.created_at.unwrap_or_default(),
+                    updated_at: pr.updated_at,
+                });
+            }
+        }
+        Err(msg) => errors.push(format!("prs: {msg}")),
+    }
+
+    let issue_count = items.iter().filter(|i| i.category == "stale-issue").count();
+    let pr_count = items
+        .iter()
+        .filter(|i| i.category == "open-draft-pr")
+        .count();
+    let note = if errors.is_empty() {
+        format!(
+            "{issue_count} open issue(s) + {pr_count} draft PR(s) surfaced for HOUSEKEEPING review (privileged labels excluded: {})",
+            PRIVILEGED_LABELS.join(", ")
+        )
+    } else {
+        format!(
+            "{} fetch error(s): {}; {} item(s) surfaced from partial results",
+            errors.len(),
+            errors.join("; "),
+            items.len()
+        )
+    };
+    let status = if !errors.is_empty() {
+        StageStatus::Warn
+    } else {
+        StageStatus::Done
+    };
     (
         StageResult {
             name: "identify-gardening-candidates".into(),
-            status: StageStatus::Deferred,
+            status,
             details: note.clone(),
         },
         GardeningCandidates {
-            implemented: false,
+            implemented: true,
             note,
-            items: Vec::new(),
+            items,
         },
     )
+}
+
+fn fetch_issues(
+    args: &Args,
+    fixture_filename: &str,
+    extra_gh_args: &[&str],
+) -> Result<Vec<GhIssue>, String> {
+    let raw = fetch_gh_json(args, fixture_filename, "issue", extra_gh_args)?;
+    serde_json::from_value::<Vec<GhIssue>>(raw).map_err(|e| format!("parse issues: {e}"))
+}
+
+fn fetch_prs(args: &Args) -> Result<Vec<GhPr>, String> {
+    let raw = fetch_gh_json(args, "open-prs.json", "pr", &["--state", "open"])?;
+    serde_json::from_value::<Vec<GhPr>>(raw).map_err(|e| format!("parse prs: {e}"))
+}
+
+fn fetch_gh_json(
+    args: &Args,
+    fixture_filename: &str,
+    gh_subcommand: &str, // "issue" or "pr"
+    extra_gh_args: &[&str],
+) -> Result<Value, String> {
+    if let Some(dir) = &args.fixture_dir {
+        let path = dir.join(fixture_filename);
+        if !path.exists() {
+            return Ok(Value::Array(Vec::new()));
+        }
+        let content =
+            fs::read_to_string(&path).map_err(|e| format!("read fixture {}: {e}", path.display()))?;
+        let value: Value =
+            serde_json::from_str(&content).map_err(|e| format!("parse fixture {}: {e}", path.display()))?;
+        return Ok(value);
+    }
+
+    let json_fields = match gh_subcommand {
+        "issue" => "number,title,author,createdAt,updatedAt,labels",
+        "pr" => "number,title,isDraft,createdAt,updatedAt,labels",
+        _ => return Err(format!("unknown gh subcommand: {gh_subcommand}")),
+    };
+
+    let mut cmd = Command::new("gh");
+    cmd.arg(gh_subcommand);
+    cmd.arg("list");
+    if let Some(slug) = &args.repo_slug {
+        cmd.arg("--repo").arg(slug);
+    }
+    for a in extra_gh_args {
+        cmd.arg(a);
+    }
+    cmd.arg("--json").arg(json_fields);
+    cmd.arg("--limit").arg("100");
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("spawn gh: {e} (is the gh CLI installed?)"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "gh exited {} ({}): {}",
+            output.status.code().unwrap_or(-1),
+            cmd_string(&cmd),
+            stderr.trim()
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str::<Value>(&stdout)
+        .map_err(|e| format!("parse gh stdout as json: {e}"))
+}
+
+fn cmd_string(cmd: &Command) -> String {
+    let mut s = cmd.get_program().to_string_lossy().to_string();
+    for arg in cmd.get_args() {
+        s.push(' ');
+        s.push_str(&arg.to_string_lossy());
+    }
+    s
 }
 
 fn summarize(stages: &[StageResult], strict: bool) -> ReportSummary {
@@ -566,12 +844,14 @@ fn render_text(report: &BootPhaseReport) -> String {
         }
     }
     s.push_str(&format!(
-        "  standing_directives: deferred={} (cycle 124+)\n",
-        !report.cycle_context.standing_directives.implemented
+        "  standing_directives: {} item(s) (implemented={})\n",
+        report.cycle_context.standing_directives.items.len(),
+        report.cycle_context.standing_directives.implemented
     ));
     s.push_str(&format!(
-        "  gardening_candidates: deferred={} (cycle 124+)\n",
-        !report.cycle_context.gardening_candidates.implemented
+        "  gardening_candidates: {} item(s) (implemented={})\n",
+        report.cycle_context.gardening_candidates.items.len(),
+        report.cycle_context.gardening_candidates.implemented
     ));
     s.push('\n');
     s.push_str("Summary:\n");
@@ -676,20 +956,237 @@ mod tests {
         assert_eq!(gaps[1].missing_count, 3);
     }
 
+    fn args_with_fixtures(dir: PathBuf) -> Args {
+        Args {
+            repo_root: PathBuf::from("."),
+            state_dir: PathBuf::from("state/cycle-history"),
+            format: OutputFormat::Json,
+            output: "-".into(),
+            strict: false,
+            fixture_dir: Some(dir),
+            repo_slug: None,
+        }
+    }
+
+    fn write_fixture(dir: &Path, name: &str, content: &str) {
+        fs::create_dir_all(dir).unwrap();
+        fs::write(dir.join(name), content).unwrap();
+    }
+
     #[test]
-    fn check_standing_directives_returns_deferred() {
-        let (stage, dirs) = check_standing_directives();
-        assert_eq!(stage.status, StageStatus::Deferred);
-        assert!(!dirs.implemented);
+    fn standing_directives_empty_fixture_is_done_with_no_items() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(tmp.path(), "input-from-eva.json", "[]");
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert!(dirs.implemented);
         assert!(dirs.items.is_empty());
     }
 
     #[test]
-    fn identify_gardening_candidates_returns_deferred() {
-        let (stage, cands) = identify_gardening_candidates();
-        assert_eq!(stage.status, StageStatus::Deferred);
-        assert!(!cands.implemented);
+    fn standing_directives_missing_fixture_treated_as_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert!(dirs.implemented);
+        assert!(dirs.items.is_empty());
+    }
+
+    #[test]
+    fn standing_directives_eva_authored_kept() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "input-from-eva.json",
+            r#"[
+                {"number": 100, "title": "Phase 1 authorized",
+                 "author": {"login": "EvaLok"},
+                 "createdAt": "2026-03-15T00:00:00Z",
+                 "updatedAt": "2026-03-15T00:00:00Z",
+                 "labels": [{"name": "input-from-eva"}]}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert_eq!(dirs.items.len(), 1);
+        assert_eq!(dirs.items[0].number, 100);
+        assert_eq!(dirs.items[0].author_login, "EvaLok");
+        assert_eq!(dirs.items[0].title, "Phase 1 authorized");
+        assert_eq!(dirs.items[0].labels, vec!["input-from-eva".to_string()]);
+    }
+
+    #[test]
+    fn standing_directives_non_eva_rejected_with_warn() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "input-from-eva.json",
+            r#"[
+                {"number": 200, "title": "Spoof attempt",
+                 "author": {"login": "attacker"},
+                 "createdAt": "2026-05-01T00:00:00Z",
+                 "labels": [{"name": "input-from-eva"}]}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Warn);
+        assert!(dirs.implemented);
+        assert!(dirs.items.is_empty());
+        assert!(dirs.note.contains("label-only"));
+    }
+
+    #[test]
+    fn standing_directives_mixed_keeps_eva_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "input-from-eva.json",
+            r#"[
+                {"number": 10, "title": "real",
+                 "author": {"login": "EvaLok"},
+                 "createdAt": "2026-01-01T00:00:00Z",
+                 "labels": [{"name": "input-from-eva"}]},
+                {"number": 11, "title": "spoof",
+                 "author": {"login": "evil"},
+                 "createdAt": "2026-01-01T00:00:00Z",
+                 "labels": [{"name": "input-from-eva"}]}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Warn);
+        assert_eq!(dirs.items.len(), 1);
+        assert_eq!(dirs.items[0].number, 10);
+    }
+
+    #[test]
+    fn standing_directives_missing_author_rejected() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "input-from-eva.json",
+            r#"[
+                {"number": 99, "title": "no-author",
+                 "author": null,
+                 "createdAt": "2026-01-01T00:00:00Z",
+                 "labels": [{"name": "input-from-eva"}]}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, dirs) = check_standing_directives(&args);
+        assert_eq!(stage.status, StageStatus::Warn);
+        assert!(dirs.items.is_empty());
+    }
+
+    #[test]
+    fn gardening_candidates_empty_fixtures_is_done_no_items() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(tmp.path(), "open-issues.json", "[]");
+        write_fixture(tmp.path(), "open-prs.json", "[]");
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, cands) = identify_gardening_candidates(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert!(cands.implemented);
         assert!(cands.items.is_empty());
+    }
+
+    #[test]
+    fn gardening_candidates_privileged_labels_excluded() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "open-issues.json",
+            r#"[
+                {"number": 1, "title": "orchestrator cycle",
+                 "labels": [{"name": "orchestrator-run"}],
+                 "createdAt": "2026-05-12T00:21:24Z"},
+                {"number": 2, "title": "directive from Eva",
+                 "labels": [{"name": "input-from-eva"}],
+                 "createdAt": "2026-04-01T00:00:00Z"},
+                {"number": 3, "title": "blocker question",
+                 "labels": [{"name": "question-for-eva"}],
+                 "createdAt": "2026-04-15T00:00:00Z"},
+                {"number": 4, "title": "regular issue",
+                 "labels": [{"name": "agent-task"}],
+                 "createdAt": "2026-03-01T00:00:00Z",
+                 "updatedAt": "2026-03-15T00:00:00Z"}
+            ]"#,
+        );
+        write_fixture(tmp.path(), "open-prs.json", "[]");
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, cands) = identify_gardening_candidates(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert_eq!(cands.items.len(), 1);
+        assert_eq!(cands.items[0].number, 4);
+        assert_eq!(cands.items[0].category, "stale-issue");
+        assert_eq!(cands.items[0].labels, vec!["agent-task".to_string()]);
+        assert_eq!(cands.items[0].updated_at.as_deref(), Some("2026-03-15T00:00:00Z"));
+    }
+
+    #[test]
+    fn gardening_candidates_only_draft_prs_surfaced() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(tmp.path(), "open-issues.json", "[]");
+        write_fixture(
+            tmp.path(),
+            "open-prs.json",
+            r#"[
+                {"number": 50, "title": "ready PR", "isDraft": false,
+                 "createdAt": "2026-05-01T00:00:00Z", "labels": []},
+                {"number": 51, "title": "still draft", "isDraft": true,
+                 "createdAt": "2026-04-01T00:00:00Z", "labels": [{"name": "research-only"}]}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, cands) = identify_gardening_candidates(&args);
+        assert_eq!(stage.status, StageStatus::Done);
+        assert_eq!(cands.items.len(), 1);
+        assert_eq!(cands.items[0].number, 51);
+        assert_eq!(cands.items[0].category, "open-draft-pr");
+    }
+
+    #[test]
+    fn gardening_candidates_mixed_issue_and_pr_categories() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(
+            tmp.path(),
+            "open-issues.json",
+            r#"[
+                {"number": 10, "title": "stale",
+                 "labels": [],
+                 "createdAt": "2026-01-01T00:00:00Z"}
+            ]"#,
+        );
+        write_fixture(
+            tmp.path(),
+            "open-prs.json",
+            r#"[
+                {"number": 90, "title": "draft", "isDraft": true,
+                 "createdAt": "2026-01-01T00:00:00Z", "labels": []}
+            ]"#,
+        );
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (_stage, cands) = identify_gardening_candidates(&args);
+        assert_eq!(cands.items.len(), 2);
+        let categories: Vec<&str> = cands.items.iter().map(|i| i.category.as_str()).collect();
+        assert!(categories.contains(&"stale-issue"));
+        assert!(categories.contains(&"open-draft-pr"));
+    }
+
+    #[test]
+    fn gardening_candidates_malformed_fixture_warns() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_fixture(tmp.path(), "open-issues.json", "{not json");
+        write_fixture(tmp.path(), "open-prs.json", "[]");
+        let args = args_with_fixtures(tmp.path().to_path_buf());
+        let (stage, cands) = identify_gardening_candidates(&args);
+        assert_eq!(stage.status, StageStatus::Warn);
+        assert!(cands.implemented);
+        assert!(cands.note.contains("error"));
     }
 
     #[test]
