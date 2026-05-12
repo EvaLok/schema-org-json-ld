@@ -1005,6 +1005,30 @@ role-asymmetry via cluster G pattern alone (any role-asymmetric
 mechanism) without preserving v1's specific audit-as-peer
 relationship; the two are distinct evaluation axes.
 
+**V2-empirical calibration lens** (cycle 128 [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462)
+D2 absorption): the 5-criterion structural compliance score is
+necessary but not sufficient evidence of audit-as-peer fit. A
+candidate scoring 5/5 PASS based on structural reasoning alone
+about an unoperated substrate is weaker evidence than a candidate
+scoring 5/5 PASS-WITH-WORK on a substrate that is empirically
+demonstrated to operate the audit-as-peer pattern. V2-era
+operational substrate by cycle 128 has run ~146 concurrent cycles
+(main 1-128 + ~18 Opus 4.7 audit cycles) under single-orchestrator
+substrate (A-shaped or C-shaped, never B-shaped), with three
+substantive cross-repo audit-engagements ([audit#442](https://github.com/EvaLok/schema-org-json-ld-audit/issues/442)
+cycle 202, [audit#454](https://github.com/EvaLok/schema-org-json-ld-audit/issues/454)
+cycle 212 absorbed at 100% verdict-level by main cycle 85, [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462)
+cycle 217 first via implicit-ask channel) and ≥4 commitment-thread
+discipline instances. **When the 5-criterion structural score is
+read together with the empirical-vs-theoretical distinction, the
+appropriate ordering of A/B/C on Criterion 6 is C ≈ A > B, not
+B narrowly-wins** — A and C's PASS scores are evidence of
+empirically-demonstrated fit on an operated substrate, while B's
+PASS is evidence of structural-fit reasoning on an unoperated
+substrate. Future candidates may be evaluated against this
+calibration lens at the same time as the structural-compliance
+score.
+
 **Cross-cluster anchoring**: P1 + P4 cross-reference cluster A↔B and
 cluster A↔C / B↔C intersections; P2 cross-references cluster I
 substrate-correlation; P3 cross-references the M2 self-management

@@ -44,7 +44,7 @@ This directory contains the per-candidate artifacts for Phase 2 candidate-select
 | **P3 (self-management-reduction)** | PASS | PARTIAL-FLAG | PASS-WITH-NOTE |
 | **P4 (lifecycle-vocabulary completeness)** | PARTIAL (bypass clause) | PASS (cluster C sub-shapes 1-5) | PASS-WITH-WORK (cluster C sub-shapes 4+5 only) |
 | **P5 (polarity-pivot exit)** | PASS at authoring | PASS at authoring | PASS at authoring |
-| **P6 (audit-as-peer preservation)** | 5/5 PASS-WITH-WORK on Criterion 4 | 5/5 PASS (structural fit) | 5/5 PASS (dedicated reconcile-mode) |
+| **P6 (audit-as-peer preservation)** | 5/5 PASS-WITH-WORK on Criterion 4 (empirically demonstrated under V2) † | 5/5 PASS (structural fit only — theoretical) † | 5/5 PASS (dedicated reconcile-mode; empirically demonstrated under V2) † |
 | **M3 strengths** | 5/5 PRESERVED | 5/5 PRESERVED-or-EXTENDED | 5/5 PRESERVED, 2 EXTENDED (S2, S3) |
 | **M2 cost (LOW + MOD + HIGH)** | 12 + 8 + 1 (~21 sub-shapes) | 16 + 22 + 5 (~43 sub-shapes) | 13 + 10 + 1 (~24 sub-shapes) |
 | **Migration: new Rust crates** | ~9 | ~12+ Rust + 20-40 skill | ~11 |
@@ -52,6 +52,8 @@ This directory contains the per-candidate artifacts for Phase 2 candidate-select
 | **Migration: net-add LOC** (PR #2877 lens-4 revised) | ~3600-6200 | ~14000-28000 | ~5200-8200 |
 | **Migration: cutover scope** | bounded single-cycle per crate (trivial); 1-2 cycles per orchestration-hub crate | multi-cycle build-out (PR #2877: 16-30 cycles for non-negotiable quality) | bounded single-cycle per A-shared crate; reconcile-mode + plan-lifecycle pair likely 2-3 cycles each |
 | **Cutover predictability** | medium-high (docs say "high"; PR #2877 lens-5 revises to medium-with-trivial-crate-bias since 2-3 crates likely under-estimated) | low | medium (docs say "medium-high"; PR #2877 net-assessment names C as most under-justified estimate posture, revises toward medium) |
+
+**† P6 V2-empirical calibration** (cycle 128 [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462) D2 absorption): the P6 row scores reflect each candidate's structural compliance with the 5 preservation criteria (clusters.md M5/P6 subsection). A and C operate on substrate that is empirically demonstrated under V2 — single-orchestrator-with-cross-repo-audit, running across ~146 V2-era concurrent cycles (main 1-128 + ~18 Opus 4.7 audit cycles) with 3 substantive cross-repo audit-engagements ([audit#442](https://github.com/EvaLok/schema-org-json-ld-audit/issues/442) / [audit#454](https://github.com/EvaLok/schema-org-json-ld-audit/issues/454) / [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462)), the implicit-ask channel verified (#462), audit-side commitment-thread discipline observed ≥4 V2-era instances. B's "5/5 PASS (structural fit only — theoretical)" cell reflects that B's substrate (4-agent decomposition) has not been operated at all — the 5/5 score is from structural reasoning that B's reconciler agent IS the cluster G clean-context-reviewer pattern at session level. Structural compliance scores remain unchanged; the empirical-vs-theoretical distinction is added as a calibration lens. **Operational reading**: A's PASS-WITH-WORK status (Criterion 4 discovery-primitive gap) is stronger evidence-of-fit than B's PASS at-structural-fit-only because A has demonstrated audit-as-peer fit under V2 substrate while the gap is being closed; B's 5/5 PASS is unconditional structurally but unconditional structurally on an unoperated substrate. Criterion 6 ranking among the three is therefore not B > A or B > C — it is approximately C ≈ A > B with the A-vs-C dimension being whether C's dedicated reconcile-mode adds operational fit beyond A's PASS-WITH-WORK shape.
 
 **Most-discriminating criteria across the 3 candidates:**
 
@@ -124,7 +126,7 @@ The **most-discriminating axes** between A and B for cycle 90's first iteration:
 - **P3 (self-management-reduction):** A passes decisively (~20 sub-shapes adopted, low aggregate cost); B is PARTIAL-FLAG (~43 sub-shapes adopted, role-specialization mitigates per-role cost but aggregate is high).
 - **Migration cost:** A is bounded (~9 new Rust crates); B is multi-cycle (~12+ crates + ~20-40 skill crates).
 - **F-pattern structural depth:** A relies on Axis 13 medium-harness extraction; B relies on Axis 1 role-specialization. Different mechanisms; both structural.
-- **Audit-as-peer P6 preservation:** A is 5/5 PASS with one PASS-WITH-WORK; B is 5/5 PASS with structural fit (reconciler agent IS the cluster G clean-context-reviewer pattern at session level).
+- **Audit-as-peer P6 preservation:** A is 5/5 PASS with one PASS-WITH-WORK (empirically demonstrated under V2 substrate); B is 5/5 PASS with structural fit only — theoretical (B's substrate has not been operated at all); cycle 128 [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462) D2 absorption qualifies the prior "B is structurally-fit" framing — see † P6 V2-empirical calibration note above the "Most-discriminating criteria" section.
 
 ## Iteration discipline
 
