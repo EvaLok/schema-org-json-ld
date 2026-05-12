@@ -42,12 +42,29 @@ Cycles 111-119 iterated extensively on the cross-candidate comparison. The orche
 
 The orchestrator's tentative recommendation therefore shifts cycle 120 to **Q7-dependent** rather than C-unilaterally. This is more honest than the cycle 114-119 framing.
 
+**Cycle 126 [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462) refinement** (audit cycle 217 substantive critique; third V2 audit-engagement, first via implicit-ask channel): two additions to Q7's resolution surface.
+
+- **D1 — cycles 122-125 A-shared scaffolding is A∪C-scoped architecture evidence**, not domain-agnostic evidence. The cumulative LOC trajectory (~4440 prod / 9-crate aggregate; ~10212 with tests) estimates LOC for *orchestrator-invoking-primitives at single-orchestrator substrate*. 4 of 5 measured crates (`v2-tool-registry`, `v2-cycle-history-append`, `v2-phase-transition-check`, `v2-wiki-search`) are **no-regret primitives** whose implementations would carry residual value in B with different usage patterns; only `v2-boot-phase` (cycles 123-124) is A∪C-specific in its 5-sub-responsibility bundling that B would split across planner/executor/reconciler agents. The cumulative architecture extrapolation does NOT generalize to B's multi-agent topology.
+- **D5 — cost-of-being-wrong asymmetry across Q7 options should be explicit**, not only implicit in Criterion 3. The asymmetry is dominantly between A/C (bounded weeks) and B (months by 2.7×-4.5×). See the table in "What this means for Phase 3" below.
+
+Other audit#462 findings (D2 D3 D4 + missing patterns M1-M5 + Phase 3 implications P3-1 through P3-8) are absorbed in [`_notes/cycle-126-audit-217-absorption-D1-D5.md`](./_notes/cycle-126-audit-217-absorption-D1-D5.md) for cycle 127+ work and Phase 3 design requirements.
+
 ## What this means for Phase 3
 
 - **If Eva approves Q7 option (a) — select C:** Phase 3 begins with C's `reconcile-mode` + plan-lifecycle as the prototype targets; the orchestrator's tentative C recommendation is confirmed.
 - **If Eva approves Q7 option (b) — select A:** Phase 3 begins with A's `boot-phase` + `wiki-search` + medium-harness extraction as prototype targets; the cycle 114 flip is reversed honestly per Q7's resolution.
 - **If Eva approves Q7 option (c) — different weighting rule:** the orchestrator implements the rule and proceeds accordingly.
 - **If Eva extends the iteration window (Q5):** the orchestrator continues per `ITERATION-UNTIL-APPROVAL`, with priority on legibility-restoration over more recursive annotation (the [#2911](https://github.com/EvaLok/schema-org-json-ld/pull/2911) L2 critique stands as a constraint on further iteration).
+
+**Cost-of-being-wrong asymmetry across Q7 options** (cycle 126 D5 absorption per [audit#462](https://github.com/EvaLok/schema-org-json-ld-audit/issues/462)):
+
+| Q7 option | Selection | Rollback LOC if Phase 3 refutes the central bet | Recovery time-frame |
+|---|---|---|---|
+| (a) | C | ~5200-8200 | bounded weeks |
+| (b) | A | ~3600-6200 | bounded weeks (lowest) |
+| (c) selecting B | B | ~14000-28000 | months (2.7×-4.5× higher) |
+
+The asymmetry is dominantly between A/C (bounded weeks, recoverable within Phase 3's normal iteration window) and B (months). Within A/C, the difference is bounded. Selecting B materially raises the recovery cost should Phase 3 measurement refute B's central bet on cluster G role-asymmetric context. The dimension is implicit in Criterion 3 (cost-of-being-wrong) but is structurally pivotal between A/C and B — material to Q7 option (c).
 
 ## Other Eva-resolves items (lower priority than Q7)
 
