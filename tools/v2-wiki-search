@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BINARY="$SCRIPT_DIR/rust/target/release/v2-wiki-search"
+
+if [ ! -x "$BINARY" ]; then
+    echo "Pre-built binary not found, building..." >&2
+    cargo build --release --manifest-path "$SCRIPT_DIR/rust/Cargo.toml" --bin v2-wiki-search >&2
+fi
+
+exec "$BINARY" "$@"

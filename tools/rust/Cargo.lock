@@ -924,6 +924,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "v2-wiki-search"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "validate-docs"
 version = "0.1.0"
 dependencies = [
