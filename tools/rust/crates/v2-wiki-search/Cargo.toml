@@ -2,7 +2,7 @@
 name = "v2-wiki-search"
 version = "0.1.0"
 edition = "2021"
-description = "Top-k retrieval over _notes/*.md corpus (v2 redesign prototype scaffold; cluster B sub-shape 6 PARTIAL — wiki + search memory substrate). Scaffold-partial: simple-substring ranking with H1+body description-surrogate; TF-IDF ranking, index caching, and frontmatter parsing deferred."
+description = "Top-k retrieval over _notes/*.md corpus (v2 redesign prototype; cluster B sub-shape 6). COMPLETE: TF-IDF ranking with sublinear TF and smoothed IDF; opt-in index caching with mtime+size invalidation; YAML-lite frontmatter parsing (title/description/tags); typed WarnKind classification for corruption-handling."
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

@@ -74,7 +74,7 @@ fn json_format_finds_scaffold_results_and_ranks_title_match_first() {
 }
 
 #[test]
-fn json_format_includes_deferred_stages_array() {
+fn json_format_emits_empty_deferred_stages_after_complete() {
     let corpus = setup_corpus();
     let (code, stdout, _) = run_bin(&[
         "--corpus",
@@ -85,15 +85,13 @@ fn json_format_includes_deferred_stages_array() {
     assert_eq!(code, 0);
     let v: Value = serde_json::from_str(&stdout).unwrap();
     let deferred = v["deferred_stages"].as_array().unwrap();
-    assert_eq!(deferred.len(), 4);
-    let names: Vec<&str> = deferred.iter().filter_map(|d| d.as_str()).collect();
-    assert!(names.iter().any(|n| n.contains("tf-idf-ranking")));
-    assert!(names.iter().any(|n| n.contains("index-caching")));
-    assert!(names.iter().any(|n| n.contains("frontmatter-parsing")));
+    assert!(deferred.is_empty());
+    assert_eq!(v["index_status"], "no-cache");
+    assert!(v["warnings_by_kind"].is_object());
 }
 
 #[test]
-fn text_format_renders_results_and_deferred() {
+fn text_format_renders_results_and_index_status() {
     let corpus = setup_corpus();
     let (code, stdout, _) = run_bin(&[
         "--corpus",
@@ -106,8 +104,9 @@ fn text_format_renders_results_and_deferred() {
     assert_eq!(code, 0);
     assert!(stdout.contains("# wiki-search: orchestration"));
     assert!(stdout.contains("## Results"));
-    assert!(stdout.contains("## Deferred (scaffold-partial)"));
+    assert!(stdout.contains("index-status: no-cache"));
     assert!(stdout.contains("orchestration-hub measurement"));
+    assert!(!stdout.contains("## Deferred"));
 }
 
 #[test]
@@ -134,7 +133,11 @@ fn nonexistent_corpus_emits_warn_but_succeeds() {
     assert_eq!(code, 0);
     let v: Value = serde_json::from_str(&stdout).unwrap();
     let notes = v["notes"].as_array().unwrap();
-    assert!(notes.iter().any(|n| n.as_str().unwrap().contains("warn:")));
+    assert!(notes.iter().any(|n| n.as_str().unwrap().starts_with("warn[")));
+    assert!(v["warnings_by_kind"]
+        .as_object()
+        .unwrap()
+        .contains_key("corpus-missing"));
     assert_eq!(v["documents_indexed"], 0);
     assert!(v["results"].as_array().unwrap().is_empty());
 }
@@ -369,4 +372,164 @@ fn punctuation_in_query_is_tokenized_clean() {
     let v: Value = serde_json::from_str(&stdout).unwrap();
     let terms = v["query_terms"].as_array().unwrap();
     assert!(terms.iter().any(|t| t.as_str().unwrap() == "orchestration-hub"));
+}
+
+#[test]
+fn frontmatter_title_and_tags_are_honored() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "---\ntitle: A Special Title\ntags: scaffold, orchestration\n---\n\n# Body Heading\n\nProse here.\n",
+    )
+    .unwrap();
+    let (code, stdout, _) = run_bin(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--query",
+        "scaffold",
+    ]);
+    assert_eq!(code, 0);
+    let v: Value = serde_json::from_str(&stdout).unwrap();
+    let results = v["results"].as_array().unwrap();
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0]["title"], "A Special Title");
+    let tags: Vec<&str> = results[0]["tags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|t| t.as_str())
+        .collect();
+    assert!(tags.contains(&"scaffold"));
+    assert!(tags.contains(&"orchestration"));
+}
+
+#[test]
+fn malformed_frontmatter_is_classified_as_warn() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "---\ntitle: never-closes\nstill-not-closed\n",
+    )
+    .unwrap();
+    let (code, stdout, _) = run_bin(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--query",
+        "anything",
+    ]);
+    assert_eq!(code, 0);
+    let v: Value = serde_json::from_str(&stdout).unwrap();
+    let kinds = v["warnings_by_kind"].as_object().unwrap();
+    assert!(kinds.contains_key("frontmatter-malformed"));
+}
+
+#[test]
+fn index_cache_round_trip_reuses_index() {
+    let corpus_dir = tempfile::tempdir().unwrap();
+    fs::write(
+        corpus_dir.path().join("a.md"),
+        "# foo\n\nfoo body content\n",
+    )
+    .unwrap();
+    let cache_dir = tempfile::tempdir().unwrap();
+    let cache_path = cache_dir.path().join("idx.json");
+    let cache_str = cache_path.to_str().unwrap();
+    let corpus_str = corpus_dir.path().to_str().unwrap();
+
+    let (code1, stdout1, _) = run_bin(&[
+        "--corpus",
+        corpus_str,
+        "--query",
+        "foo",
+        "--index-cache",
+        cache_str,
+    ]);
+    assert_eq!(code1, 0);
+    let v1: Value = serde_json::from_str(&stdout1).unwrap();
+    assert_eq!(v1["index_status"], "rebuilt-fresh");
+
+    let (code2, stdout2, _) = run_bin(&[
+        "--corpus",
+        corpus_str,
+        "--query",
+        "foo",
+        "--index-cache",
+        cache_str,
+    ]);
+    assert_eq!(code2, 0);
+    let v2: Value = serde_json::from_str(&stdout2).unwrap();
+    assert_eq!(v2["index_status"], "cached");
+    assert_eq!(v2["documents_indexed"], 1);
+}
+
+#[test]
+fn rebuild_index_flag_forces_fresh_build() {
+    let corpus_dir = tempfile::tempdir().unwrap();
+    fs::write(corpus_dir.path().join("a.md"), "# foo\n\nfoo body\n").unwrap();
+    let cache_dir = tempfile::tempdir().unwrap();
+    let cache_path = cache_dir.path().join("idx.json");
+    let cache_str = cache_path.to_str().unwrap();
+    let corpus_str = corpus_dir.path().to_str().unwrap();
+
+    run_bin(&[
+        "--corpus",
+        corpus_str,
+        "--query",
+        "foo",
+        "--index-cache",
+        cache_str,
+    ]);
+
+    let (code, stdout, _) = run_bin(&[
+        "--corpus",
+        corpus_str,
+        "--query",
+        "foo",
+        "--index-cache",
+        cache_str,
+        "--rebuild-index",
+    ]);
+    assert_eq!(code, 0);
+    let v: Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(v["index_status"], "rebuilt-forced");
+}
+
+#[test]
+fn rare_term_outranks_common_term_in_real_corpus() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    fs::write(
+        root.join("a.md"),
+        "# the rare\n\nthe rare body content\n",
+    )
+    .unwrap();
+    for i in 0..10 {
+        fs::write(
+            root.join(format!("common-{i}.md")),
+            format!("# common doc {i}\n\nthe filler text the the\n"),
+        )
+        .unwrap();
+    }
+    let (_, stdout_rare, _) = run_bin(&[
+        "--corpus",
+        root.to_str().unwrap(),
+        "--query",
+        "rare",
+    ]);
+    let (_, stdout_common, _) = run_bin(&[
+        "--corpus",
+        root.to_str().unwrap(),
+        "--query",
+        "the",
+    ]);
+    let v_rare: Value = serde_json::from_str(&stdout_rare).unwrap();
+    let v_common: Value = serde_json::from_str(&stdout_common).unwrap();
+    let rare_top_score = v_rare["results"][0]["score"].as_f64().unwrap();
+    let common_top_score = v_common["results"][0]["score"].as_f64().unwrap();
+    assert!(
+        rare_top_score > common_top_score,
+        "rare term ({}) should outscore common term ({})",
+        rare_top_score,
+        common_top_score
+    );
 }
