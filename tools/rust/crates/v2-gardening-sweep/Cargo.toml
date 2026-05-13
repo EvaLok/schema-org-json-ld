@@ -2,7 +2,7 @@
 name = "v2-gardening-sweep"
 version = "0.1.0"
 edition = "2021"
-description = "Axis 10 deslop pass for v2 redesign: stale-detection (file mtime older than threshold) + dead-link-detection (broken markdown [text](path) and wiki [[name]] references). SCAFFOLD: golden-path implementations of both detectors with JSON+text output; cycle 131 first-shape measurement crate for entropy-mitigation."
+description = "Axis 10 deslop pass for v2 redesign: stale-detection (file mtime older than threshold) + dead-link-detection (broken markdown [text](path) and wiki [[name]] references). COMPLETE: scaffold (cycle 131) + 10 sub-responsibilities (cycle 132) — frontmatter/HTML-comment/indented-code skipping, multi-line + reference-style links, exclude patterns, auto-fix suggestions via edit-distance, content-hash state file, JSON config, detector composition."
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

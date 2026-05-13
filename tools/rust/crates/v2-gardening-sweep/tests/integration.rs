@@ -445,3 +445,365 @@ fn output_file_writes_json_to_disk() {
     let v: Value = serde_json::from_str(&content).unwrap();
     assert_eq!(v["schema"], "v2-gardening-sweep/v1");
 }
+
+#[test]
+fn skips_frontmatter_links() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "---\ntitle: foo\nrelated: [bad](missing-in-frontmatter.md)\n---\n# Body\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    assert_eq!(
+        v["dead_links"].as_array().unwrap().len(),
+        0,
+        "links inside frontmatter should be skipped"
+    );
+}
+
+#[test]
+fn skips_multiline_html_comments() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "before\n<!--\n[bad](missing-html.md)\n-->\nafter [real](missing-after.md)\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    assert_eq!(dead[0]["target_as_written"], "missing-after.md");
+}
+
+#[test]
+fn skips_indented_code_blocks() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "para\n    [fake](missing-indent.md)\nback [real](missing-back.md)\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    assert_eq!(dead[0]["target_as_written"], "missing-back.md");
+}
+
+#[test]
+fn resolves_reference_style_link() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "see [docs][ref1] for details\n\n[ref1]: target.md\n",
+    )
+    .unwrap();
+    fs::write(dir.path().join("target.md"), "# target\n").unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    assert_eq!(
+        v["dead_links"].as_array().unwrap().len(),
+        0,
+        "reference-style link should resolve to existing target"
+    );
+}
+
+#[test]
+fn dead_reference_style_link_when_undefined() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "see [docs][nope] for details\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    assert_eq!(dead[0]["kind"], "markdown_ref");
+    assert!(dead[0]["target_as_written"]
+        .as_str()
+        .unwrap()
+        .contains("undefined-ref"));
+}
+
+#[test]
+fn exclude_pattern_filters_files() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("archive")).unwrap();
+    fs::write(
+        dir.path().join("archive/old.md"),
+        "[bad](missing-archive.md)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("current.md"),
+        "[bad](missing-current.md)\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--exclude",
+        "archive/*.md",
+    ]);
+    let v = parse_json(&stdout);
+    assert_eq!(v["files_scanned"], 1);
+    assert_eq!(v["files_excluded"], 1);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    assert_eq!(dead[0]["target_as_written"], "missing-current.md");
+}
+
+#[test]
+fn exclude_pattern_with_double_star() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("deep/sub/archive")).unwrap();
+    fs::write(
+        dir.path().join("deep/sub/archive/old.md"),
+        "[bad](missing.md)\n",
+    )
+    .unwrap();
+    fs::write(dir.path().join("current.md"), "# clean\n").unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--exclude",
+        "**/archive/*.md",
+    ]);
+    let v = parse_json(&stdout);
+    assert_eq!(v["files_scanned"], 1);
+    assert_eq!(v["files_excluded"], 1);
+}
+
+#[test]
+fn auto_fix_suggestion_for_near_match() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "[link](sibling-typo.md)\n",
+    )
+    .unwrap();
+    fs::write(dir.path().join("sibling-type.md"), "# target\n").unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    let suggested = dead[0]["suggested_target"].as_str();
+    assert!(suggested.is_some(), "expected a suggestion for near-match");
+    assert!(suggested.unwrap().contains("sibling-type"));
+}
+
+#[test]
+fn no_suggest_fixes_disables_suggestions() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "[link](sibling-typo.md)\n",
+    )
+    .unwrap();
+    fs::write(dir.path().join("sibling-type.md"), "# target\n").unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--no-suggest-fixes",
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(dead.len(), 1);
+    assert!(
+        dead[0]["suggested_target"].is_null(),
+        "suggested_target should be omitted when --no-suggest-fixes given"
+    );
+}
+
+#[test]
+fn state_file_first_run_no_hash_unchanged_annotation() {
+    let dir = tempfile::tempdir().unwrap();
+    let old = dir.path().join("old.md");
+    fs::write(&old, "# old\n").unwrap();
+    touch_old(&old, 60);
+    let state = dir.path().join("state.json");
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--state-file",
+        state.to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let stale = v["stale"].as_array().unwrap();
+    assert_eq!(stale.len(), 1);
+    // First run: no prior hash, so hash_unchanged should be null/absent
+    assert!(stale[0].get("hash_unchanged").is_none() || stale[0]["hash_unchanged"].is_null());
+    // State file written
+    assert!(state.exists());
+}
+
+#[test]
+fn state_file_second_run_marks_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let old = dir.path().join("old.md");
+    fs::write(&old, "# old\n").unwrap();
+    touch_old(&old, 60);
+    let state = dir.path().join("state.json");
+
+    // First run: writes state.
+    let (_, _, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--state-file",
+        state.to_str().unwrap(),
+    ]);
+
+    // Re-touch as old (same content) so it's still stale.
+    touch_old(&old, 60);
+
+    // Second run: content unchanged from state.
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--state-file",
+        state.to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let stale = v["stale"].as_array().unwrap();
+    assert_eq!(stale.len(), 1);
+    assert_eq!(stale[0]["hash_unchanged"], true);
+}
+
+#[test]
+fn state_file_marks_changed_when_content_differs() {
+    let dir = tempfile::tempdir().unwrap();
+    let old = dir.path().join("old.md");
+    fs::write(&old, "# original\n").unwrap();
+    touch_old(&old, 60);
+    let state = dir.path().join("state.json");
+
+    let (_, _, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--state-file",
+        state.to_str().unwrap(),
+    ]);
+
+    // Rewrite with different content, keep old mtime.
+    fs::write(&old, "# changed\n").unwrap();
+    touch_old(&old, 60);
+
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--state-file",
+        state.to_str().unwrap(),
+    ]);
+    let v = parse_json(&stdout);
+    let stale = v["stale"].as_array().unwrap();
+    assert_eq!(stale.len(), 1);
+    assert_eq!(stale[0]["hash_unchanged"], false);
+}
+
+#[test]
+fn detector_composition_dead_links_only_on_stale() {
+    let dir = tempfile::tempdir().unwrap();
+    let stale = dir.path().join("stale.md");
+    let fresh = dir.path().join("fresh.md");
+    fs::write(&stale, "[bad](missing-stale.md)\n").unwrap();
+    fs::write(&fresh, "[bad](missing-fresh.md)\n").unwrap();
+    touch_old(&stale, 60);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--stale-days",
+        "30",
+        "--dead-links-only-on-stale-files",
+    ]);
+    let v = parse_json(&stdout);
+    let dead = v["dead_links"].as_array().unwrap();
+    assert_eq!(
+        dead.len(),
+        1,
+        "only the stale file's dead link should be reported"
+    );
+    assert_eq!(dead[0]["target_as_written"], "missing-stale.md");
+    assert_eq!(v["composition"], "dead-links-only-on-stale-files");
+}
+
+#[test]
+fn config_file_provides_defaults() {
+    let dir = tempfile::tempdir().unwrap();
+    let corpus_dir = dir.path().join("docs");
+    fs::create_dir_all(&corpus_dir).unwrap();
+    let old = corpus_dir.join("old.md");
+    fs::write(&old, "# old\n").unwrap();
+    touch_old(&old, 60);
+
+    let config_path = dir.path().join("config.json");
+    let config_body = format!(
+        r#"{{"corpus": ["{}"], "stale_days": 10}}"#,
+        corpus_dir.display()
+    );
+    fs::write(&config_path, config_body).unwrap();
+
+    let (code, stdout, _) = run_with(&[
+        "--config",
+        config_path.to_str().unwrap(),
+    ]);
+    assert_eq!(code, 0);
+    let v = parse_json(&stdout);
+    assert_eq!(v["stale_threshold_days"], 10);
+    assert_eq!(v["stale"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn config_excludes_union_with_cli() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("archive")).unwrap();
+    fs::create_dir_all(dir.path().join("draft")).unwrap();
+    fs::write(dir.path().join("archive/old.md"), "# old\n").unwrap();
+    fs::write(dir.path().join("draft/wip.md"), "# wip\n").unwrap();
+    fs::write(dir.path().join("current.md"), "# current\n").unwrap();
+
+    let config_path = dir.path().join("config.json");
+    let config_body = r#"{"exclude": ["archive/*.md"]}"#;
+    fs::write(&config_path, config_body).unwrap();
+
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--config",
+        config_path.to_str().unwrap(),
+        "--exclude",
+        "draft/*.md",
+    ]);
+    let v = parse_json(&stdout);
+    assert_eq!(v["files_scanned"], 1, "only current.md should remain");
+    assert_eq!(v["files_excluded"], 2);
+}
+
+#[test]
+fn no_corpus_specified_errors() {
+    let (code, _, stderr) = run_with(&["--stale-days", "30"]);
+    assert_ne!(code, 0);
+    assert!(stderr.contains("no corpus specified"));
+}
