@@ -2,6 +2,8 @@
 
 ## Status
 
+**Cycle 138 update (2026-05-13): Phase 2 checkpoint RESOLVED.** Per Eva's directive [#2930](https://github.com/EvaLok/schema-org-json-ld/issues/2930), Candidate B is selected; Phase 3 prototype work is pre-approved. **Framework rename**: the cross-candidate Criterion 1 label "schema-work-enabling" is renamed to **"system bandwidth preservation"** (or "experiment runway"). The schema-org-json-ld library is test material with relatively little intrinsic value; the system itself is the deliverable. Migration cost is one-time investment IN the deliverable, not subtraction FROM it. The P3 prose in this file (lines 898-923) uses "schema work" as the original V1-derived shorthand for what is now read as "system bandwidth": the load-bearing question P3 asks ("does the candidate's per-cycle decision surface preserve system bandwidth, or does it add more self-management?") is unchanged in substance; the label rename clarifies that the system's improvement trajectory — not the schema library's per-cycle throughput — is the deliverable. Eva-facing summary: [`2-selection-summary.md`](./2-selection-summary.md) (Status header updated cycle 138); [`2-candidates/README.md`](./2-candidates/README.md) (rename note added). Historical iteration paragraphs below this Status block preserve the original wording as frozen record per the journal-immutability discipline.
+
 **v1.22 (cycle 61, 2026-05-04).** Phase-2-input artifact-in-progress. Subject to
 iteration before any Phase 2 candidate generation begins (which itself
 requires post-retrospective checkpoint approval).
