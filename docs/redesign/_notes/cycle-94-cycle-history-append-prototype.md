@@ -2,7 +2,7 @@
 
 **Cycle issue:** [#2871](https://github.com/EvaLok/schema-org-json-ld/issues/2871)
 **Date:** 2026-05-08
-**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../.github/workflows/orchestrator-redesign-prompt.xml), **fifth cycle of Phase 2 candidate-set work**)
+**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../../.github/workflows/orchestrator-redesign-prompt.xml), **fifth cycle of Phase 2 candidate-set work**)
 **Cycle composition shape:** **Phase 3 prototype-scaffold-only** (functional-class shape: Phase 3 prototype scaffold without paired dispatch — distinct from cycle 93's paired-execution shape #14). 14 functional-class shapes total demonstrated through cycle 94 at 34 instances (cycle 93's shape #14 advances from NOVEL at 1 instance to TESTED at 1 instance + 1 close-relative; or remains NOVEL with cycle 94 introducing shape #15 prototype-only — see *Sibling pattern tracking*).
 
 ## What I did

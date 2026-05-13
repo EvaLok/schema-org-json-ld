@@ -69,13 +69,13 @@ This shape parallels:
   - The Q7-dependent shift cycle 120 already partially superseded the convergence framing
   - The L2 constraint forbids further recursive annotation
   - The cycle 117 framing is preserved in the iteration record but is not the load-bearing current claim
-- **Edited [`2-selection-summary.md`](../redesign/2-selection-summary.md)** — added a cycle 129 audit#462 D3 absorption paragraph after the cycle 128 D2 absorption paragraph. The paragraph:
+- **Edited [`2-selection-summary.md`](../2-selection-summary.md)** — added a cycle 129 audit#462 D3 absorption paragraph after the cycle 128 D2 absorption paragraph. The paragraph:
   - States the framing qualification ("converging at non-refutation-of-C")
   - Names that cycles 116-117 substrate was A-side + flip-rationale, not C itself
   - Acknowledges cycle 120's Q7-dependent shift already partially superseded
   - Names cycle 120's L2 constraint + cycle 117's `productive-content-decreases` pattern preclude executing Option 1
   - Combined cycle 120 + cycle 129 framing made explicit
-- **Added cycle 129 row** to [`2-selection.md`](../redesign/2-selection.md) iteration log following cycles 126 + 128 pattern (bounded annotation, preserving cycle 120 L2 constraint; no recursive expansion of cycle 117/120 sections).
+- **Added cycle 129 row** to [`2-selection.md`](../2-selection.md) iteration log following cycles 126 + 128 pattern (bounded annotation, preserving cycle 120 L2 constraint; no recursive expansion of cycle 117/120 sections).
 
 ## Verification (compressed)
 

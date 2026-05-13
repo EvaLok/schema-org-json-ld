@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-09
 **Cycle issue:** [#2893](https://github.com/EvaLok/schema-org-json-ld/issues/2893)
-**Phase:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../.github/workflows/orchestrator-redesign-prompt.xml))
+**Phase:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../../.github/workflows/orchestrator-redesign-prompt.xml))
 **Cycle composition shape:** **cross-cluster intersection extension via sub-shape absorption** — NOVEL functional-class shape #22 at 1 instance. Extending established cross-cluster intersection sub-pattern enumerations to integrate newly-absorbed within-cluster sub-shapes from a multi-cycle absorption arc. Distinct from `catalogue-rebuild-with-multi-cycle-absorption` (cycle 102, NOVEL shape #20 at 1 instance) — that shape rebuilds within-cluster catalogues; this shape extends cross-cluster intersection sub-pattern catalogues. Distinct from `risk-closure-at-specification-level` (cycle 103, NOVEL shape #21 at 1 instance) — that shape closes a candidate-specific risk; this shape extends a cross-system synthesis layer. **23 functional-class shapes total demonstrated cycles 62-104 at 44 instances.**
 
 ## Setup

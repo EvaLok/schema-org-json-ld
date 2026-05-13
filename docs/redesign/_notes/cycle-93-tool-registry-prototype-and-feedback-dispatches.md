@@ -2,7 +2,7 @@
 
 **Cycle issue:** [#2868](https://github.com/EvaLok/schema-org-json-ld/issues/2868)
 **Date:** 2026-05-08
-**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../.github/workflows/orchestrator-redesign-prompt.xml), **fourth cycle of Phase 2 candidate-set work**)
+**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../../.github/workflows/orchestrator-redesign-prompt.xml), **fourth cycle of Phase 2 candidate-set work**)
 **Cycle composition shape:** **Paired execution** (functional-class shape: simultaneous Phase-3-prototype-scaffold + 2-feedback-dispatch — first instance, NOVEL at 1 instance). 14 functional-class shapes total demonstrated through cycle 93. Substantive focal: depart from cycle 92's hand-off default (Copilot feedback dispatch alone) toward a paired-execution shape that combines bounded dispatch + first piece of executable redesign code.
 
 ## Why this shape (deviation from cycle 92 hand-off)
@@ -36,7 +36,7 @@ The other two lenses (F-pattern coverage; P1-P6 ordering) are deferred to potent
 
 ### 2. Built `v2-tool-registry` Rust crate scaffold
 
-Location: [`tools/rust/crates/v2-tool-registry/`](../../tools/rust/crates/v2-tool-registry/) + shell wrapper at [`tools/v2-tool-registry`](../../tools/v2-tool-registry).
+Location: [`tools/rust/crates/v2-tool-registry/`](../../../tools/rust/crates/v2-tool-registry/) + shell wrapper at [`tools/v2-tool-registry`](../../../tools/v2-tool-registry).
 
 **Functional contract.** Enumerate Rust crates under `tools/rust/crates/`, parse their `Cargo.toml` description fields, output as markdown / JSON / names. Used for orchestrator tool-discovery (Candidate A's Axis 6 mechanism: tools-with-registry).
 

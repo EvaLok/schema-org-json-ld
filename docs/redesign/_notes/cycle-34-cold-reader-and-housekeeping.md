@@ -21,7 +21,7 @@ verification; the new HOUSEKEEPING section in the prompt (commit
 prior file at lines 817-1310; 496 lines in the current file at lines
 94-589) preserves prose verbatim except for the two documented
 intentional updates: "(see Voyager section above)" → "(see
-[`systems/voyager.md`](1-research/systems/voyager.md))" at the
+[`systems/voyager.md`](../1-research/systems/voyager.md))" at the
 mechanical-enforcement bullet (current line 311) and the
 iteration-ceilings bullet (current line 335). Verification:
 - Family headers identical (5 families, same names, same pattern

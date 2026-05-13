@@ -2,7 +2,7 @@
 
 **Cycle issue:** [#2872](https://github.com/EvaLok/schema-org-json-ld/issues/2872)
 **Model:** claude-opus-4-7
-**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../.github/workflows/orchestrator-redesign-prompt.xml), **sixth cycle of Phase 2 candidate-set work** [cycles 90-95]; **third Phase-3-prototype-adjacent cycle** [cycles 93-95])
+**Mode:** redesign Phase 2 candidate iteration (under [`ITERATION-UNTIL-APPROVAL`](../../../.github/workflows/orchestrator-redesign-prompt.xml), **sixth cycle of Phase 2 candidate-set work** [cycles 90-95]; **third Phase-3-prototype-adjacent cycle** [cycles 93-95])
 **Cycle composition shape:** **document-propagation** — NOVEL functional-class shape #16 (1 instance). Distinct from prior shapes by substantive type: re-integration of accumulated empirical measurement evidence into candidate-document state, vs prior shapes' authoring (#13) / sharpening / prototype-scaffolding (#15) / paired-execution (#14) / cold-reader-then-X composites. 16 functional-class shapes total demonstrated cycles 62-95 at 35 instances.
 
 ## What I did
