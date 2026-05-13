@@ -68,6 +68,53 @@ This directory contains the per-candidate artifacts for Phase 2 candidate-select
 - **F4 (frozen-artifact lifecycle):** A has no plan-lifecycle (implicit); C has plan-lifecycle states (active/completed/technical-debt); B has plan-lifecycle plus branching-checkpoints. **C bridges A and B on F4 structural addressing.**
 - **F2 (Eva-response detection):** A polls in boot-phase (interleaved); C runs first-class reconcile-mode; B has dedicated reconciler agent. **C bridges A and B on F2 structural addressing without paying full agent cost.**
 
+## Cycle 134 V2-era operational failure-mode evidence
+
+Cycle 134 [audit#465](https://github.com/EvaLok/schema-org-json-ld-audit/issues/465) M1 absorption reframes audit retrospective A1-A6 from Phase-3-deferred to Phase-2-evidence (see [`../2-selection-summary.md`](../2-selection-summary.md) cycle 134 paragraph). The F1-F12 failure-mode framework that grounds the P1-P6 evaluation criteria is V1-derived. V2-era operations across ~146 V2-era cycles (main 1-133 + ~19 Opus 4.7 audit cycles) have produced **two operational failure-mode families** that augment the F1-F12 taxonomy and that the candidate evaluation should consider explicitly. Neither flips the cross-candidate ordering; both add evidence to existing criteria.
+
+### Classifier-class failures (audit A4 family)
+
+**Pattern**: a workflow trigger fires, the orchestrator session starts, the session exits cleanly with zero tool calls — no opening comment, no commits, no journal, no detection signal. Workflow-layer success conflates with cycle-layer success. The most plausible root cause (per audit cycle 211/212 hypothesis-C) is model-side guardrail/classifier intersection with cycle context; deterministic ~27-31s step durations support a classifier rather than transient cluster failure.
+
+**Empirical rate**: 7 of 14 cycles ~50% sustained over audit cycles 203-216 (FFPPPFPPFFPFPF pattern; cycle 218 PASS does not falsify the cycle-203-to-216 empirical base — over-extrapolation from consecutive PASS was the cycle 215 hypothesis-update lesson). V1 baseline was ~1 in 30+ cycles; V2 baseline is materially higher. Cycle 217 PASS after cycle 216 FAIL falsified the cycle 215 "self-bounded" hypothesis; A4 is not self-bounded.
+
+**Commitment-thread cascade interaction**: when cycle N filed a commitment to be evaluated cycle N+1 and cycle N+1 silently fails, the commitment cascades to cycle N+2+M with no user-visible notification. Two cycle-bounded examples observed (audit cycle 207→211 [#448](https://github.com/EvaLok/schema-org-json-ld-audit/issues/448) escalation; cycle 212→214 [#455](https://github.com/EvaLok/schema-org-json-ld-audit/issues/455) Option A) — 1-4 cycle latency penalty per silent fail.
+
+**Per-candidate prediction (no empirical falsification possible without B operating)**:
+
+| Candidate | A4-class manifestation prediction | Rationale |
+|---|---|---|
+| **A** | ~50% rate; commitment-thread cascade cost 1-4 cycles per silent fail | Single-orchestrator substrate; one classifier-trigger kills the cycle |
+| **C** | similar to A; reconcile-mode adds a second classifier-surface but does not multiply the cycle-killing dimension | Single-orchestrator substrate; reconcile-mode-specific classifier interaction unmeasured |
+| **B** | **amplification or mitigation, both plausible** — amplified if per-agent classifier risk is independent (4 agents × per-agent rate); mitigated if one agent's silent fail does not kill the cycle (other agents continue) | Multi-agent fan-out; topology-dependent classifier-risk distribution unmeasured under V2 |
+
+**Phase 2 implication**: classifier-class failures belong in the Criterion 3 (cost-of-being-wrong) + Criterion 4 (failure-mode coverage) evaluation as a V2-era failure-mode family the v1 retrospective did not enumerate. The cost-of-being-wrong asymmetry between A/C and B remains unchanged at the dominant scale (bounded weeks vs months by 2.7×-4.5×) — A4-class failure under either topology costs cycle-latency-units, not project-cost-units. Selection ordering A > C >> B holds under cycle 134 classifier-class evidence; the dimension augments the failure-mode coverage taxonomy without flipping ordering.
+
+**Mechanism the selected candidate must specify** (Phase 3 carry per cycle 130 P3-1 + P3-2 framing): a liveness assertion at the workflow layer (post-condition check on trigger issue's comment count or emitted heartbeat) AND a commitment-thread observability mechanism that surfaces deferred commitments at cycle N+1 entry. Both are Phase 3 architecture-design carries independent of cycle 134's Phase 2 evidence absorption.
+
+### State-growth-axis failures (audit A5 family)
+
+**Pattern**: append-only registries in `state.json` (and analogous files) grow monotonically across cycles without decay or summarization. Eventually crosses tool readability thresholds (256KB Read-tool ceiling); compounds reconciliation cost when the registry becomes unreadable in a single context window. Audit's `state.json` reached 273674 bytes (267KB) cycle 214 — operational F5 instance. Cycle 215 added STARTUP_CHECKLIST Step 13.1 named thresholds (100KB advisory / 200KB mandatory / 250KB hard); cycle 217 implementation reduced 271KB → 264KB via `redesign_mode.cycle_N` narrative archival, but the dominant size driver (`recommendations.accepted` 190 entries / ~190KB / 73% of state.json) is pending Eva direction per [audit#463](https://github.com/EvaLok/schema-org-json-ld-audit/issues/463). At cycle 218: state.json 262KB ≥ 250KB hard limit.
+
+**Per-candidate prediction (asymmetric across topology)**:
+
+| Candidate | State-growth-axis manifestation prediction | Rationale |
+|---|---|---|
+| **A** | F5 well-documented in main's retrospective; single-orchestrator state surface; named-thresholds discipline applicable | Single state surface; growth-without-decay shape applies once per registry |
+| **C** | F5 similar to A; single-orchestrator state surface with shared cluster catalog | Same single-state-surface topology as A |
+| **B** | **F5 instance count likely multiplies** — per-agent state + coordinator state; named-thresholds discipline must apply per-surface; different mitigation shape required (state-shape-per-agent or shared-state-with-per-agent-views) | Multi-agent state surface; F5 axes proliferate with agent count |
+
+**Phase 2 implication**: state-growth-axis is a per-candidate distinguishing dimension that the F5 framing did not surface at the topology level. Under cycle 134 V2-era evidence, A's and C's single-state-surface topology is empirically demonstrated; B's multi-state-surface topology is structurally implied and empirically unmeasured. The cost-of-being-wrong asymmetry between A/C and B is **reinforced** by A5 evidence — B's state-growth mitigation must apply per-surface, which is a multi-cycle Phase 3 design effort that A and C do not require at the same depth.
+
+**Mechanism the selected candidate must specify** (Phase 3 carry per cycle 130 P3-4 framing): named-thresholds for any append-only registries with archival or summarization patterns at threshold-crossing. The cycle 215 audit-side pattern (advisory → mandatory → hard, against tool-ceiling) is a candidate template. Phase 3 architecture-design carry independent of cycle 134's Phase 2 evidence absorption.
+
+### What cycle 134 changes vs preserves
+
+- **Changes**: failure-mode coverage taxonomy gains two V2-era operational families (classifier-class + state-growth-axis); Criterion 4 evaluation has explicit per-candidate predictions for both; Criterion 3 cost-of-being-wrong reinforced by A5 multi-state-surface evidence against B.
+- **Preserves**: P1-P6 ordering (A:3 / B:3 / C:0 PARTIAL-FLAG distribution unchanged); migration LOC ranges (cycle 130 D4 calibration unchanged); Q7's three options (a/b/c) and Q7 as the load-bearing lever (per [`../2-selection-summary.md`](../2-selection-summary.md)); selection ordering A > C >> B at the bounded-vs-multi-month scale unchanged; F1-F12 framework grounding of P1-P6 unchanged (cycle 134 augments without replacing).
+
+The audit retrospective A1-A6 is now part of the Phase 2 evidence base on the same footing as main's F1-F12 + cycle 96 PR #2878 + cycle 117 convergence claims + PR #2877 lens-4 ranges. M1 (audit retrospective unconsulted) closes at cycle 134.
+
 ## Load-bearing claims sharpening tracker
 
 This subsection tracks which candidate-specific load-bearing claims have been sharpened from estimate-level to grounded-with-validation-plan. Each entry: claim, sharpening-cycle, validation status (estimate / structurally-validated / prototype-pending / prototype-validated). Per `ITERATION-UNTIL-APPROVAL`, sharpening is one of the named iteration activities.
