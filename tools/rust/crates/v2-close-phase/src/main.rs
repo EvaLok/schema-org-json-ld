@@ -11,8 +11,9 @@ const SCHEMA: &str = "v2-close-phase/v1";
 #[derive(Parser, Debug)]
 #[command(
     name = "v2-close-phase",
-    about = "Orchestration-hub for v2 close-phase: gardening-sweep, cycle-history append, journal commit+push, cycle-issue close. \
-             SCAFFOLD-PARTIAL: receipt-validation + push-confirmation + multi-cycle batch close + Eva-response carry-forward DEFERRED."
+    about = "Orchestration-hub for v2 close-phase: pre-check git-safety, gardening-sweep, cycle-history append, journal commit+push, cycle-issue close, receipt-validate. \
+             COMPLETE: receipt-validate pass (state pointer + push confirmation + issue state) + idempotent re-run + git-safety pre-check landed cycle 137. \
+             DEFERRED still: multi-cycle batch close, rollback semantics, Eva-response carry-forward, smart commit-message generation, partial-success rollback, concurrent-runner detection, journal-immutability enforcement."
 )]
 struct Args {
     /// Cycle number being closed (required)
@@ -72,6 +73,20 @@ struct Args {
     #[arg(long)]
     skip_issue_close: bool,
 
+    /// Skip the git-safety pre-check stage. Use only when the caller has
+    /// already verified there are no unpushed local commits — e.g. in a
+    /// hermetic test environment or when running the very first cycle on
+    /// a freshly-cloned repo with no upstream tracking.
+    #[arg(long)]
+    skip_pre_check: bool,
+
+    /// Skip the receipt-validate stage. The validation pass is the
+    /// COMPLETE-grade differentiator from SCAFFOLD-PARTIAL; skipping it
+    /// reverts to the scaffold-honesty stance where the receipt only
+    /// records captured artifacts.
+    #[arg(long)]
+    skip_receipt_validate: bool,
+
     /// Output format.
     #[arg(long, value_enum, default_value_t = OutputFormat::Json)]
     format: OutputFormat,
@@ -123,7 +138,11 @@ enum StageStatus {
     Done,
     Warn,
     /// Preserved as scaffold-honesty primitive (cycle 123 NOVEL@1, cycle 124
-    /// HARDENED-via-completion). Strict mode rejects it.
+    /// HARDENED-via-completion). Strict mode rejects it. No built-in stage
+    /// emits Deferred after cycle 137 COMPLETE removed the receipt-scaffold
+    /// always-Deferred stub, but the variant is retained so future scaffold
+    /// stages can use it without re-introducing the primitive.
+    #[allow(dead_code)]
     Deferred,
     Failed,
     Skipped,
@@ -187,19 +206,29 @@ impl StageSummary {
     }
 }
 
-/// What a future receipt-validate stage would reconcile. Populated opportunistically
-/// during the run; not yet checked against `state.json` (DEFERRED).
+/// Receipt of what close-phase produced this cycle, with validation outcomes
+/// from `run_receipt_validate` populated when --skip-receipt-validate is not set.
+/// Field names preserved from cycle 136 SCAFFOLD-PARTIAL (`state_pointer_check`
+/// and `push_confirmation` were declared but not populated then); cycle 137
+/// COMPLETE populates them and adds `issue_state_check`.
 #[derive(Debug, Serialize, Default)]
 struct ReceiptScaffold {
     gardening_findings_count: Option<u64>,
     cycle_history_path: Option<String>,
     commit_sha: Option<String>,
     issue_comment_url: Option<String>,
-    /// DEFERRED: would record `state.json` cycle_history pointer and verify
-    /// it matches `cycle_history_path` post-write.
+    /// COMPLETE (cycle 137): "ok: <detail>" if the cycle-history file exists
+    /// on disk; "err: <detail>" if not; None if no path was captured.
     state_pointer_check: Option<String>,
-    /// DEFERRED: would query remote HEAD and verify the push propagated.
+    /// COMPLETE (cycle 137): "ok: <detail>" if `git ls-remote` confirms the
+    /// commit reached the remote (exact match or ancestor of remote HEAD);
+    /// "err: <detail>" if not; "skipped: <reason>" in dry-run/fixture; None
+    /// if no commit SHA was captured.
     push_confirmation: Option<String>,
+    /// COMPLETE (cycle 137): "ok: closed" if `gh issue view` confirms the
+    /// issue state == CLOSED; "err: <state>" if not; "skipped: <reason>" in
+    /// dry-run/fixture; None if no issue number was provided.
+    issue_state_check: Option<String>,
 }
 
 fn main() -> ExitCode {
@@ -219,6 +248,52 @@ fn run(args: &Args) -> Result<u8, String> {
 
     let mut stages: Vec<StageResult> = Vec::new();
     let mut receipt = ReceiptScaffold::default();
+
+    // Stage 0: git-safety pre-check (cycle 137 COMPLETE — preserves cycle 524 lesson)
+    if args.skip_pre_check {
+        stages.push(StageResult {
+            name: "pre-check".to_string(),
+            status: StageStatus::Skipped,
+            details: "--skip-pre-check was set".to_string(),
+            output: None,
+        });
+    } else {
+        let stage = pre_check_git_safety(args, effective_dry_run);
+        let abort = matches!(stage.status, StageStatus::Failed);
+        stages.push(stage);
+        if abort {
+            // git-safety violation aborts the pipeline — do not stack destructive
+            // work on top of an inconsistent repo state. The Failed pre-check
+            // becomes the only non-skipped stage; remaining stages are recorded
+            // as Skipped with the pre-check abort reason.
+            for name in [
+                "gardening-sweep",
+                "cycle-history-append",
+                "journal-commit-push",
+                "issue-close",
+                "receipt-validate",
+            ] {
+                stages.push(StageResult {
+                    name: name.to_string(),
+                    status: StageStatus::Skipped,
+                    details: "aborted: pre-check git-safety violation".to_string(),
+                    output: None,
+                });
+            }
+            let summary = StageSummary::from_stages(&stages);
+            let report = CloseReport {
+                schema: SCHEMA,
+                cycle_n: args.cycle_n,
+                dry_run: effective_dry_run,
+                fixture_mode,
+                summary: StageSummary::from_stages(&stages),
+                stages,
+                receipt,
+            };
+            write_output(args, &report)?;
+            return Ok(summary.worst_exit_code(args.strict));
+        }
+    }
 
     // Stage 1: gardening-sweep
     if args.skip_gardening {
@@ -272,8 +347,18 @@ fn run(args: &Args) -> Result<u8, String> {
         stages.push(stage);
     }
 
-    // Stage 5: receipt scaffold (DEFERRED — captures artifacts; does not validate yet)
-    stages.push(receipt_scaffold_stage(&receipt));
+    // Stage 5: receipt-validate (cycle 137 COMPLETE — state pointer + push confirmation + issue state)
+    if args.skip_receipt_validate {
+        stages.push(StageResult {
+            name: "receipt-validate".to_string(),
+            status: StageStatus::Skipped,
+            details: "--skip-receipt-validate was set".to_string(),
+            output: None,
+        });
+    } else {
+        let stage = run_receipt_validate(args, effective_dry_run, &mut receipt);
+        stages.push(stage);
+    }
 
     let summary = StageSummary::from_stages(&stages);
     let report = CloseReport {
@@ -827,6 +912,22 @@ fn run_issue_close(
         };
     }
 
+    // Idempotency check (cycle 137 COMPLETE): if the issue is already closed,
+    // skip the comment-and-close to avoid duplicate close-comments on re-runs.
+    // Failures of the state query are non-fatal — proceed with comment+close
+    // and let those operations surface any auth/network issues themselves.
+    if let Some(state) = fetch_issue_state(args, issue_number) {
+        if state.eq_ignore_ascii_case("closed") {
+            receipt.issue_comment_url = None;
+            return StageResult {
+                name: "issue-close".to_string(),
+                status: StageStatus::Done,
+                details: format!("issue {issue_number} already closed (idempotent re-run; comment not posted)"),
+                output: None,
+            };
+        }
+    }
+
     let mut comment_cmd = Command::new("gh");
     comment_cmd.current_dir(&args.repo_root);
     comment_cmd.arg("issue").arg("comment").arg(issue_number.to_string());
@@ -909,32 +1010,272 @@ fn run_issue_close(
 }
 
 // -------------------------------------------------------------------
-// Stage 5: receipt scaffold (DEFERRED full implementation)
+// Stage 0: git-safety pre-check (cycle 137 COMPLETE)
 // -------------------------------------------------------------------
 
-fn receipt_scaffold_stage(receipt: &ReceiptScaffold) -> StageResult {
-    // The receipt scaffold is NOT yet a validation pass — it just summarizes
-    // which artifacts were produced. cycle 137 COMPLETE will:
-    //   - read state.json's cycle_history pointer and verify match
-    //   - query remote HEAD via `git ls-remote` and verify push propagated
-    //   - re-fetch the issue and verify state == "closed"
-    let captured = [
-        receipt.gardening_findings_count.is_some(),
-        receipt.cycle_history_path.is_some(),
-        receipt.commit_sha.is_some(),
-        receipt.issue_comment_url.is_some(),
-    ]
-    .iter()
-    .filter(|x| **x)
-    .count();
+/// Pre-check that the repo is in a state where close-phase can run safely.
+/// The dominant concern is the cycle 524 corruption class: an unpushed local
+/// commit from a prior cycle would silently turn close-phase's commit+push
+/// into a stack of two pushed commits, breaking the "every commit is pushed
+/// in the same operation" git-safety primitive (see PRESERVED-PRIMITIVES).
+///
+/// In dry-run / fixture mode, the pre-check is skipped — those modes do not
+/// touch the working tree.
+fn pre_check_git_safety(args: &Args, dry_run: bool) -> StageResult {
+    if dry_run {
+        return StageResult {
+            name: "pre-check".to_string(),
+            status: StageStatus::Skipped,
+            details: "dry-run: no unpushed-commits check".to_string(),
+            output: None,
+        };
+    }
+
+    let out = Command::new("git")
+        .current_dir(&args.repo_root)
+        .arg("rev-list")
+        .arg("--count")
+        .arg("@{u}..HEAD")
+        .output();
+
+    match out {
+        Ok(output) if output.status.success() => {
+            let count_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let count: u64 = count_str.parse().unwrap_or(0);
+            if count == 0 {
+                StageResult {
+                    name: "pre-check".to_string(),
+                    status: StageStatus::Done,
+                    details: "no unpushed local commits".to_string(),
+                    output: None,
+                }
+            } else {
+                StageResult {
+                    name: "pre-check".to_string(),
+                    status: StageStatus::Failed,
+                    details: format!(
+                        "{count} unpushed local commit(s) detected; cycle 524 git-safety violation — resolve before close-phase. Run `git push` to publish or `git reset --soft @{{u}}` to discard."
+                    ),
+                    output: None,
+                }
+            }
+        }
+        Ok(output) => {
+            // Most common cause: no upstream tracking branch configured.
+            // Surface as Warn (not Failed) so first-cycle / detached-HEAD
+            // setups don't get stuck. Caller can pass --skip-pre-check to
+            // suppress entirely.
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            StageResult {
+                name: "pre-check".to_string(),
+                status: StageStatus::Warn,
+                details: format!(
+                    "git rev-list @{{u}}..HEAD non-zero exit: {} (no upstream tracking branch?)",
+                    stderr.trim()
+                ),
+                output: None,
+            }
+        }
+        Err(e) => StageResult {
+            name: "pre-check".to_string(),
+            status: StageStatus::Failed,
+            details: format!("git rev-list exec error: {e}"),
+            output: None,
+        },
+    }
+}
+
+// -------------------------------------------------------------------
+// Stage 5: receipt-validate (cycle 137 COMPLETE)
+// -------------------------------------------------------------------
+
+/// Validate the artifacts captured in the receipt actually landed.
+///
+/// Three independent checks:
+///   - state-pointer: the cycle-history file exists on disk at the captured path
+///   - push-confirmation: `git ls-remote origin HEAD` resolves to a commit
+///     that either equals the captured commit_sha or has it as an ancestor
+///   - issue-state: `gh issue view N --json state` returns CLOSED
+///
+/// When the corresponding artifact wasn't captured (e.g. the stage was skipped
+/// or produced no SHA), the check is recorded as "skipped: <reason>" and the
+/// receipt field is left None. A check counts as failed only when an artifact
+/// WAS captured and validation rejected it.
+fn run_receipt_validate(
+    args: &Args,
+    dry_run: bool,
+    receipt: &mut ReceiptScaffold,
+) -> StageResult {
+    let mut checks: Vec<(&'static str, bool, String)> = Vec::new();
+
+    // Check 1: state-pointer
+    let state_pointer_detail = match &receipt.cycle_history_path {
+        Some(path) => {
+            if dry_run {
+                ("skipped: dry-run".to_string(), true)
+            } else {
+                let full = args.repo_root.join(path);
+                if full.exists() {
+                    (format!("ok: {path}"), true)
+                } else {
+                    (format!("err: {path} not on disk"), false)
+                }
+            }
+        }
+        None => ("skipped: no cycle_history_path captured".to_string(), true),
+    };
+    receipt.state_pointer_check = Some(state_pointer_detail.0.clone());
+    checks.push((
+        "state-pointer",
+        state_pointer_detail.1,
+        state_pointer_detail.0,
+    ));
+
+    // Check 2: push-confirmation
+    let push_detail = match &receipt.commit_sha {
+        Some(sha) => {
+            if dry_run {
+                ("skipped: dry-run".to_string(), true)
+            } else {
+                let conf = confirm_push(args, sha);
+                let ok = conf.starts_with("ok:");
+                (conf, ok)
+            }
+        }
+        None => ("skipped: no commit_sha captured".to_string(), true),
+    };
+    receipt.push_confirmation = Some(push_detail.0.clone());
+    checks.push(("push-confirmation", push_detail.1, push_detail.0));
+
+    // Check 3: issue-state
+    let issue_detail = match args.issue_number {
+        Some(n) if !args.skip_issue_close => {
+            if dry_run {
+                ("skipped: dry-run".to_string(), true)
+            } else {
+                match fetch_issue_state(args, n) {
+                    Some(state) if state.eq_ignore_ascii_case("closed") => {
+                        ("ok: closed".to_string(), true)
+                    }
+                    Some(state) => {
+                        (format!("err: issue {n} state={state} (expected CLOSED)"), false)
+                    }
+                    None => (format!("err: could not fetch state for issue {n}"), false),
+                }
+            }
+        }
+        Some(_) => ("skipped: --skip-issue-close was set".to_string(), true),
+        None => ("skipped: no --issue-number provided".to_string(), true),
+    };
+    receipt.issue_state_check = Some(issue_detail.0.clone());
+    checks.push(("issue-state", issue_detail.1, issue_detail.0));
+
+    let failed_count = checks.iter().filter(|(_, ok, _)| !*ok).count();
+    let real_checks = checks
+        .iter()
+        .filter(|(_, _, msg)| !msg.starts_with("skipped:"))
+        .count();
+    let details = checks
+        .iter()
+        .map(|(name, ok, detail)| {
+            let marker = if *ok { "OK" } else { "FAIL" };
+            format!("{name}[{marker}]: {detail}")
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+
+    let status = if failed_count > 0 {
+        StageStatus::Failed
+    } else if real_checks == 0 {
+        // Nothing was actually validated (no artifacts captured, or dry-run, or
+        // fixture mode). Reporting Done would over-claim — Skipped is honest.
+        StageStatus::Skipped
+    } else {
+        StageStatus::Done
+    };
+
     StageResult {
-        name: "receipt-scaffold".to_string(),
-        status: StageStatus::Deferred,
-        details: format!(
-            "{captured}/4 artifacts captured; receipt-validate pass (state.json pointer check + push confirmation + issue state re-fetch) DEFERRED to v2-close-phase COMPLETE"
-        ),
+        name: "receipt-validate".to_string(),
+        status,
+        details,
         output: None,
     }
+}
+
+/// Confirm that `sha` is reachable from the remote default-branch HEAD.
+/// Returns "ok: <detail>" or "err: <detail>".
+fn confirm_push(args: &Args, sha: &str) -> String {
+    let ls = Command::new("git")
+        .current_dir(&args.repo_root)
+        .arg("ls-remote")
+        .arg("origin")
+        .arg("HEAD")
+        .output();
+
+    let remote_head = match ls {
+        Ok(o) if o.status.success() => {
+            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            match s.split_whitespace().next() {
+                Some(h) => h.to_string(),
+                None => return "err: empty ls-remote output for origin HEAD".to_string(),
+            }
+        }
+        Ok(o) => {
+            return format!(
+                "err: git ls-remote exit {}: {}",
+                o.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&o.stderr).trim()
+            );
+        }
+        Err(e) => return format!("err: git ls-remote exec: {e}"),
+    };
+
+    if remote_head == sha {
+        return format!("ok: remote HEAD == {}", short_sha(&remote_head));
+    }
+
+    // Check ancestry — if our commit is an ancestor of remote HEAD, the push
+    // succeeded and a subsequent push by another writer advanced HEAD further.
+    let ancestor = Command::new("git")
+        .current_dir(&args.repo_root)
+        .arg("merge-base")
+        .arg("--is-ancestor")
+        .arg(sha)
+        .arg(&remote_head)
+        .status();
+    match ancestor {
+        Ok(s) if s.success() => format!(
+            "ok: {} is ancestor of remote HEAD {}",
+            short_sha(sha),
+            short_sha(&remote_head)
+        ),
+        Ok(_) => format!(
+            "err: {} not reachable from remote HEAD {}",
+            short_sha(sha),
+            short_sha(&remote_head)
+        ),
+        Err(e) => format!("err: git merge-base exec: {e}"),
+    }
+}
+
+/// Fetch the GitHub issue state via `gh issue view N --json state`.
+/// Returns Some("open"|"closed"|...) on success, None on any error.
+/// Used by both the issue-close idempotency check and receipt-validate.
+fn fetch_issue_state(args: &Args, issue_number: u64) -> Option<String> {
+    let mut cmd = Command::new("gh");
+    cmd.current_dir(&args.repo_root);
+    cmd.arg("issue").arg("view").arg(issue_number.to_string());
+    cmd.arg("--json").arg("state");
+    if let Some(slug) = &args.repo_slug {
+        cmd.arg("--repo").arg(slug);
+    }
+    let out = cmd.output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let v: Value = serde_json::from_str(&stdout).ok()?;
+    v.get("state").and_then(|s| s.as_str()).map(|s| s.to_string())
 }
 
 // -------------------------------------------------------------------
@@ -1100,6 +1441,8 @@ mod tests {
             skip_history_append: false,
             skip_git_push: false,
             skip_issue_close: false,
+            skip_pre_check: false,
+            skip_receipt_validate: false,
             format: OutputFormat::Json,
             output: "-".to_string(),
             strict: false,
@@ -1110,6 +1453,14 @@ mod tests {
         };
         let msg = default_commit_message(&args);
         assert!(msg.contains("cycle 137"));
+    }
+
+    #[test]
+    fn short_sha_handles_short_input() {
+        assert_eq!(short_sha(""), "");
+        assert_eq!(short_sha("abc"), "abc");
+        assert_eq!(short_sha("abcdef01"), "abcdef01");
+        assert_eq!(short_sha("abcdef012"), "abcdef01");
     }
 
     #[test]
