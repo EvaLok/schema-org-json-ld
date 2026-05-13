@@ -1,0 +1,13 @@
+[package]
+name = "v2-close-phase"
+version = "0.1.0"
+edition = "2021"
+description = "Orchestration-hub for v2 close-phase: run gardening-sweep, append cycle-history entry, commit+push journal, comment+close cycle-issue (v2 redesign prototype scaffold; receipt-validation + push-confirmation + multi-cycle batch close deferred)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
