@@ -184,6 +184,12 @@ fn main() -> ExitCode {
 }
 
 fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
+    // Cycle-1 note for checks 3/4:
+    // The current prompts/v2 input sections are not declared with parseable
+    // `<source channel="..."> ... <required-key .../>` structures. They use
+    // prose `<source>...</source>` with `<required-keys><key .../></required-keys>`.
+    // This tool therefore enforces checks 3/4 only when parseable declarations
+    // exist and reports those checks as deferred otherwise.
     let prompts_dir = resolve_prompts_dir(&args.prompts_dir)?;
     let schemas = read_router_schema(&args.channel_router_bin)?;
     let by_writer = map_channel_by_writer(&schemas);
@@ -272,6 +278,9 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
         let mut effective_prompt_output_keys = prompt_output_keys.clone();
         let mut output_delta = compare_keys(&router_output_keys, &effective_prompt_output_keys);
         if !output_delta.extra_in_prompt.is_empty() || !output_delta.missing_in_prompt.is_empty() {
+            // Curator currently emits a multi-surface session output wrapper.
+            // If output-contract top-level keys mismatch, try channel-specific
+            // required payload keys from <output-surfaces><surface name="...">.
             if let Some(surface_keys) = parse_surface_required_keys_for_channel(&xml, &schema.channel)? {
                 let surface_delta = compare_keys(&router_output_keys, &surface_keys);
                 if surface_delta.extra_in_prompt.is_empty() && surface_delta.missing_in_prompt.is_empty() {
@@ -294,12 +303,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
             continue;
         }
 
-        // Critique-style note:
-        // Check 3 and Check 4 in the cycle-146 design expect parseable declarations shaped like:
-        //   <inputs><source channel="..."> ... <required-key name="..."/> ... </source></inputs>
-        // The current v2 prompts do not use this structure; they use <source>text...</source> plus
-        // <required-keys><key name="...">...</key></required-keys>. For cycle-1 minimal scope we
-        // only enforce parseable <source channel="..."> declarations. When absent, we skip checks 3/4.
+        // Attempt checks 3/4 for parseable source-channel declarations (see cycle-1 note above).
         let input_contracts = parse_input_source_contracts(&xml)?;
         if !input_contracts.is_empty() {
             parseable_input_declarations_found = true;
@@ -523,7 +527,7 @@ fn read_router_schema(channel_router_bin: &Path) -> Result<Vec<ChannelSchema>, C
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(CheckError::Invocation(format!(
-            "failed to execute `{}`: {stderr}",
+            "`{} schema --format json` exited with error: {stderr}",
             channel_router_bin.display()
         )));
     }
@@ -559,7 +563,7 @@ fn mismatch_kind_from_delta(delta: &KeyDelta) -> MismatchKind {
         (false, true) => MismatchKind::ExtraInPrompt,
         (true, false) => MismatchKind::MissingInPrompt,
         (false, false) => MismatchKind::KeysMismatch,
-        (true, true) => MismatchKind::KeysMismatch,
+        (true, true) => unreachable!("mismatch kind requested for empty delta"),
     }
 }
 

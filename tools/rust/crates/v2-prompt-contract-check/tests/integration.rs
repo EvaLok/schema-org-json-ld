@@ -1,6 +1,13 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+const EXPECTED_PROMPTS: &[&str] = &[
+    "planner-prompt.xml",
+    "reconciler-prompt.xml",
+    "executor-prompt.xml",
+    "curator-prompt.xml",
+];
+
 fn repo_root() -> PathBuf {
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     p.pop(); // v2-prompt-contract-check -> crates
@@ -71,7 +78,10 @@ fn strict_check_passes_against_live_prompts() {
         stderr
     );
     assert!(
-        stdout.contains("v2-prompt-contract-check: 4/4 prompts contract-aligned with v2-channel-router"),
+        stdout.contains(&format!(
+            "v2-prompt-contract-check: {0}/{0} prompts contract-aligned with v2-channel-router",
+            EXPECTED_PROMPTS.len()
+        )),
         "unexpected stdout:\n{}",
         stdout
     );
