@@ -10181,6 +10181,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[redesign-phase-3] prompts/v2/reconciler-prompt.xml — cycle 144 minimal end-to-end role prompt"
+    },
+    {
+      "dispatched_at": "2026-05-14T09:05:05Z",
+      "issue": 2940,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[redesign-phase-3] prompts/v2/executor-prompt.xml — cycle 144 minimal end-to-end role prompt"
     }
   ],
   "audit_dropped": [
@@ -11487,7 +11494,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2939 [redesign-phase-3] prompts/v2/reconciler-prompt.xml — cycle 144 minimal end-to-end role prompt (cycle 545)",
+  "dispatch_log_latest": "#2940 [redesign-phase-3] prompts/v2/executor-prompt.xml — cycle 144 minimal end-to-end role prompt (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11758,13 +11765,13 @@
       }
     }
   },
-  "in_flight_sessions": 5,
+  "in_flight_sessions": 6,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
     "number": 545,
-    "summary": "4 dispatches, 2 merges (PR #2732, PR #2734)",
-    "timestamp": "2026-05-14T09:04:58Z"
+    "summary": "5 dispatches, 2 merges (PR #2732, PR #2734)",
+    "timestamp": "2026-05-14T09:05:05Z"
   },
   "last_eva_comment_check": "2026-04-26T21:55:46Z",
   "last_tool_audit_cycle": 403,
