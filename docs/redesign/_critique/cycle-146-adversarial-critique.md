@@ -2,7 +2,7 @@
 
 ## Convergent findings (top of file — what all 3 lenses agree on)
 
-- **The prompt set overstates enforcement and understates runtime freedom.** The prompts repeatedly present required-key/type/shape guarantees as if they are hard-enforced, but `v2-channel-router` only checks that payload is an object and that required top-level keys exist (`tools/rust/crates/v2-channel-router/src/main.rs:359-379`). It does **not** enforce types or nested sub-keys. This gap appears in all four prompts and creates a structural “declared contract vs actual runtime behavior” fault line.
+- **The prompt set overstates enforcement and understates runtime freedom.** The prompts repeatedly present required-key/type/shape guarantees as if they are hard-enforced, but `v2-channel-router` only checks that payload is an object (`tools/rust/crates/v2-channel-router/src/main.rs:362-364`) and that required top-level keys exist (`tools/rust/crates/v2-channel-router/src/main.rs:370-372`). It does **not** enforce types or nested sub-keys. This gap appears in all four prompts and creates a structural “declared contract vs actual runtime behavior” fault line.
 - **Template-mirror parity is now causing semantic drift that threatens operator reliability.** Executor retains planner-shaped section names that no longer describe executor semantics (`prompts/v2/executor-prompt.xml:196`, `260`), while curator was expanded into a much larger and denser control surface (`prompts/v2/curator-prompt.xml:42-53`, `144-223`, `641-673`). The mirror strategy is optimizing visible symmetry over role-legibility.
 - **Cycle-1 minimal scope is not being held as a hard boundary; it is being punctured by multi-cycle side effects.** Planner optional `forward-notes` explicitly writes N+1 guidance (`prompts/v2/planner-prompt.xml:166-170`), executor embeds dispatch-firing as a first-class execution shape (`prompts/v2/executor-prompt.xml:280-285`), and curator creates multiple non-channel outputs plus session telemetry-like output keys (`prompts/v2/curator-prompt.xml:241-258`). The architecture claims minimality but behaviorally schedules asynchronous, multi-cycle work.
 
@@ -44,7 +44,7 @@ Now combine with cursor language (`249-252`): cursor advancement happens in proc
 
 Planner calls per-role tasks “your contract with the other roles” (`prompts/v2/planner-prompt.xml:305`) and defines required role sub-objects/action fields (`312-327`). But who enforces that this object actually coordinates the cycle?
 
-Not `v2-channel-router`: it only checks top-level keys (`tools/rust/crates/v2-channel-router/src/main.rs:117-123`, `370-378`).
+Not `v2-channel-router`: `required_payload_keys()` defines the key list (`tools/rust/crates/v2-channel-router/src/main.rs:117-123`), and runtime validation only checks key presence (`tools/rust/crates/v2-channel-router/src/main.rs:370-378`).
 
 Not role-driver structurally either: it validates required keys exist (`tools/rust/crates/v2-role-driver/src/main.rs:512-527`), not that per-role task semantics are complete/coherent.
 
@@ -142,7 +142,7 @@ Without this, mirror will continue producing superficially aligned but semantica
 
 Router enforcement is minimal:
 - checks payload is object,
-- checks required keys exist (`tools/rust/crates/v2-channel-router/src/main.rs:359-379`).
+- checks required keys exist (`tools/rust/crates/v2-channel-router/src/main.rs:370-378`).
 
 Role-driver duplicates this minimal validation (`tools/rust/crates/v2-role-driver/src/main.rs:512-527`).
 
@@ -216,7 +216,7 @@ This is another behavior-vs-contract gap: minimal schema success can hide collec
 
 ## What would change your critique (counterfactual)
 
-My top findings would weaken materially if the boundary tools enforced what the prompts currently claim. Specifically, if `v2-channel-router` (or role-driver before router write) validated required key **types** and required nested shapes (e.g., planner per-role executor/curator/reconciler sub-keys), then several “contract overstatement” findings collapse from load-bearing to documentation polish. Likewise, if curator cross-channel exceptions were removed (no “unless harness provides,” no “should be avoided”) and executor dispatch-firing were either isolated to a distinct role or explicitly modeled as a sanctioned side-channel in architecture docs, the role-boundary critique would be less severe.
+My top findings would weaken materially if the boundary tools enforced what the prompts currently claim. If `v2-channel-router` (or role-driver before router write) validated required key **types** and required nested shapes (e.g., planner per-role executor/curator/reconciler sub-keys), several “contract overstatement” findings would collapse from load-bearing to documentation polish. Likewise, if curator cross-channel exceptions were removed (no “unless harness provides,” no “should be avoided”), and executor dispatch-firing were either isolated to a distinct role or explicitly modeled as a sanctioned side-channel in architecture docs, the role-boundary critique would be less severe.
 
 I would also revise Lens 2 conclusions if runtime evidence from cycle 148+ showed that the semantic label mismatches in executor have no measurable effect on role behavior quality (e.g., no increased deviation, no instruction confusion, stable output quality over repeated cycles). In that case, mirror-template costs might be mostly aesthetic. But absent that evidence, the current prompt set reads like a structure-first artifact with enforcement and semantics lagging behind it.
 
