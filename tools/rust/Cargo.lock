@@ -894,6 +894,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "v2-channel-router"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "v2-close-phase"
 version = "0.1.0"
 dependencies = [

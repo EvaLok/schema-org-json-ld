@@ -1,0 +1,13 @@
+[package]
+name = "v2-channel-router"
+version = "0.1.0"
+edition = "2021"
+description = "Typed-channel reducer-rule application and per-channel file persistence for the v2 multi-agent orchestrator (Eva-named load-bearing primitive cycle 138)"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
