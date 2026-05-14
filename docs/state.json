@@ -10209,6 +10209,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146 re-dispatch from cycle 147)"
+    },
+    {
+      "dispatched_at": "2026-05-14T22:34:06Z",
+      "issue": 2952,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[redesign-impl] v2-prompt-contract-check crate (cycle 147)"
     }
   ],
   "audit_dropped": [
@@ -11515,7 +11522,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2950 [redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146 re-dispatch from cycle 147) (cycle 545)",
+  "dispatch_log_latest": "#2952 [redesign-impl] v2-prompt-contract-check crate (cycle 147) (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11786,13 +11793,13 @@
       }
     }
   },
-  "in_flight_sessions": 9,
+  "in_flight_sessions": 10,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
     "number": 545,
-    "summary": "8 dispatches, 2 merges (PR #2732, PR #2734)",
-    "timestamp": "2026-05-14T22:30:48Z"
+    "summary": "9 dispatches, 2 merges (PR #2732, PR #2734)",
+    "timestamp": "2026-05-14T22:34:06Z"
   },
   "last_eva_comment_check": "2026-04-26T21:55:46Z",
   "last_tool_audit_cycle": 403,
