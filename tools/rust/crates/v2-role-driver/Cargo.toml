@@ -1,0 +1,13 @@
+[package]
+name = "v2-role-driver"
+version = "0.1.0"
+edition = "2021"
+description = "Per-role session orchestration for the v2 multi-agent orchestrator (Eva-named load-bearing primitive cycle 138). Loads role context (prompt + input-channel states), invokes the role's session, validates the session output, writes to the role's output channel, and records a per-role run history. Consumes v2-channel-router channel-state files (direct file read at SCAFFOLD scope) and v2-super-step-boundary super-step state (direct file read at SCAFFOLD scope)."
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
