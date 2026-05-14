@@ -10195,6 +10195,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[redesign-phase-3] prompts/v2/curator-prompt.xml — cycle 144 minimal end-to-end role prompt"
+    },
+    {
+      "dispatched_at": "2026-05-14T20:35:59Z",
+      "issue": 2947,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146)"
     }
   ],
   "audit_dropped": [
@@ -11501,7 +11508,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2942 [redesign-phase-3] prompts/v2/curator-prompt.xml — cycle 144 minimal end-to-end role prompt (cycle 545)",
+  "dispatch_log_latest": "#2947 [redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146) (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11772,13 +11779,13 @@
       }
     }
   },
-  "in_flight_sessions": 7,
+  "in_flight_sessions": 8,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
     "number": 545,
-    "summary": "6 dispatches, 2 merges (PR #2732, PR #2734)",
-    "timestamp": "2026-05-14T09:05:11Z"
+    "summary": "7 dispatches, 2 merges (PR #2732, PR #2734)",
+    "timestamp": "2026-05-14T20:35:59Z"
   },
   "last_eva_comment_check": "2026-04-26T21:55:46Z",
   "last_tool_audit_cycle": 403,
