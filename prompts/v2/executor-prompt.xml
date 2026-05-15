@@ -415,9 +415,12 @@
   </constraint>
 
   <constraint name="payload-validation">
-    artifacts-written is required and must be an array (may be empty only
-    for true non-artifact actions). Invalid payload causes write reject
-    and cycle error.
+    artifacts-written is required (v2-channel-router enforces the key's
+    presence). Executor-internal discipline: it must be an array, may
+    be empty only for true non-artifact actions, and otherwise should
+    list each written artifact. These value-shape constraints are NOT
+    router-enforced in the current minimal scope; the executor must
+    self-enforce them.
   </constraint>
 
   <constraint name="commit-must-be-pushed">

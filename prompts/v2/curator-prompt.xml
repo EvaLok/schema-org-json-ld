@@ -133,8 +133,10 @@
     - Do NOT read memory-channel at runtime for prior-cycle replay.
       Prior memory is implicit context from earlier curator output; cycle
       1 minimal does not require runtime re-read.
-    - Do NOT read inbound-channel or channel history files unless the
-      harness explicitly provides them as part of cycle-close context.
+    - Do NOT read inbound-channel or channel history files at runtime.
+      The harness may bundle specific entries into cycle-close context;
+      treat those as already-vetted inputs, not as a license for ad-hoc
+      cross-channel reads.
   </forbidden-inputs>
 </inputs>
 
@@ -534,8 +536,8 @@
 
   <constraint name="no-cross-channel-reads-runtime">
     Runtime reads are limited to work-channel + plan-channel for cycle-N
-    close-out. Prior memory-channel re-read is not required in cycle 1
-    minimal and should be avoided.
+    close-out. Do NOT re-read prior memory-channel in cycle 1 minimal;
+    prior cycle outputs are implicit context, not runtime inputs.
   </constraint>
 
   <constraint name="no-skill-execution">

@@ -207,10 +207,13 @@
   </quiet-cycle-example>
 
   <validation>
-    v2-channel-router enforces inbound-channel required keys exactly:
-    eva-responses, audit-posts, dispatch-returns. Missing keys or non-
-    array values cause write rejection. Empty arrays are valid and are
-    expected in many cycles.
+    v2-channel-router enforces, at write time, that the inbound-channel
+    payload is a JSON object containing all three required keys:
+    eva-responses, audit-posts, dispatch-returns. Value types are NOT
+    router-enforced in the current minimal scope (router's TODO arc
+    covers type checks). Reconciler must therefore self-enforce that
+    each of these three values is an array (empty arrays are valid and
+    expected in many cycles).
   </validation>
 </output-contract>
 

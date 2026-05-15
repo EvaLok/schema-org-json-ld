@@ -355,9 +355,10 @@
     If a role has no work this cycle (e.g., reconciler has nothing
     forward-routing-worthy), the task object should still exist with
     action="no work this cycle," inputs-needed=[], success-criterion=
-    "no work required." Do NOT omit the role from per-role-tasks —
-    v2-channel-router's reducer rule requires the per-role-tasks object
-    to be present and structurally complete.
+    "no work required." Do NOT omit the role from per-role-tasks. The
+    v2-channel-router only enforces the presence of the per-role-tasks
+    key; per-role sub-structure is planner-internal discipline that
+    must be self-enforced.
   </missing-role-fallback>
 </per-role-tasks-decomposition>
 
