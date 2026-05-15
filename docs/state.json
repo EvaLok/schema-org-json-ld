@@ -10132,7 +10132,7 @@
       "dispatched_at": "2026-04-26T17:22:24Z",
       "issue": 2729,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Replace raw gh api dispatch template with dispatch-task in orchestrator-prompt.xml (closes #2696)"
     },
     {
@@ -10158,63 +10158,65 @@
       "dispatched_at": "2026-04-26T21:52:00Z",
       "issue": 2736,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "Add --auto-blockers flag to write-entry journal (cycle 544 F2 structural fix)"
     },
     {
       "dispatched_at": "2026-04-26T22:08:59Z",
       "issue": 2738,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[Cycle Review] Cycle 545 end-of-cycle review"
     },
     {
       "dispatched_at": "2026-05-11T07:11:23Z",
       "issue": 2910,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-feedback] Adversarial critique on Phase 2 selection draft (post-cycle-118 / 8-cycle iteration)"
     },
     {
       "dispatched_at": "2026-05-14T09:04:58Z",
       "issue": 2939,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-phase-3] prompts/v2/reconciler-prompt.xml — cycle 144 minimal end-to-end role prompt"
     },
     {
       "dispatched_at": "2026-05-14T09:05:05Z",
       "issue": 2940,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-phase-3] prompts/v2/executor-prompt.xml — cycle 144 minimal end-to-end role prompt"
     },
     {
       "dispatched_at": "2026-05-14T09:05:11Z",
       "issue": 2942,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-phase-3] prompts/v2/curator-prompt.xml — cycle 144 minimal end-to-end role prompt"
     },
     {
       "dispatched_at": "2026-05-14T20:35:59Z",
       "issue": 2947,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146)"
     },
     {
       "dispatched_at": "2026-05-14T22:30:48Z",
       "issue": 2950,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-feedback] Adversarial critique on the 4-prompt role set (cycle 146 re-dispatch from cycle 147)"
     },
     {
       "dispatched_at": "2026-05-14T22:34:06Z",
       "issue": 2952,
+      "merged_at": "2026-05-15T03:14:13Z",
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "pr": 2953,
+      "status": "merged",
       "title": "[redesign-impl] v2-prompt-contract-check crate (cycle 147)"
     },
     {
@@ -11800,7 +11802,7 @@
       }
     }
   },
-  "in_flight_sessions": 11,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
