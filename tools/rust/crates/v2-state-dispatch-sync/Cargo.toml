@@ -1,0 +1,13 @@
+[package]
+name = "v2-state-dispatch-sync"
+version = "0.1.0"
+edition = "2021"
+description = "Reconcile docs/state.json agent_sessions in_flight entries against actual GitHub state (v2 redesign prototype). Extracts the cycle 153 Track 2 manual housekeeping pattern into a reusable tool per CORE-DESIGN-PRINCIPLE."
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3"
