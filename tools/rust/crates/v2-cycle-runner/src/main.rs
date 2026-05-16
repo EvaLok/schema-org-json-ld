@@ -547,6 +547,12 @@ struct StepTrace {
     primitive: &'static str,
     args: Vec<String>,
     bin_path: PathBuf,
+    /// `true` if the primitive was actually invoked (live mode, regardless
+    /// of pass/fail outcome). `false` for dry-run-only traces. Per-step
+    /// disambiguation so trace consumers do not have to climb to
+    /// `CycleReport.dry_run` or `CycleReport.status == "dry-run-traced"` —
+    /// defense-in-depth per cycle 152 v2-cycle-runner critique C5 (L1.5).
+    executed: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -624,6 +630,12 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
             primitive: primitive_name,
             args: step_args.clone(),
             bin_path: bin_path.clone(),
+            // `executed` reflects the run mode this trace is being recorded
+            // under. By the time `trace` is pushed (in any path), this value
+            // is semantically correct: false for dry-run (we just describe
+            // the step), true for live (the invoke_with_retry_once below
+            // ran the primitive, whether it succeeded or failed).
+            executed: !run_args.dry_run,
         };
 
         if run_args.dry_run {
@@ -1389,6 +1401,89 @@ mod tests {
         let r = run_cycle(&args, &ra, &mut out, &mock);
         assert!(matches!(r, Err(RunnerError::MissingSessionOutput { role: Role::Executor })));
         assert_eq!(mock.invoke_count(), 0, "must not invoke primitives if validation fails");
+    }
+
+    #[test]
+    fn dry_run_traces_have_executed_false() {
+        // C5 (L1.5) per-step disambiguation: each trace's `executed` must
+        // reflect whether the primitive actually ran. In dry-run, every
+        // trace describes a step that was skipped — `executed=false`.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let mut ra = run_args_with_outputs(tmp.path(), 10);
+        ra.dry_run = true;
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        // Dry-run path also writes "step N name: ..." lines to stdout, so
+        // strip everything before the first `{` to isolate the JSON report.
+        let s = String::from_utf8_lossy(&out).into_owned();
+        let json_start = s.find('{').expect("expected JSON report in stdout");
+        let report: serde_json::Value = serde_json::from_str(&s[json_start..]).unwrap();
+        let traces = report["traces"].as_array().unwrap();
+        assert_eq!(traces.len(), 10);
+        for (i, t) in traces.iter().enumerate() {
+            assert_eq!(
+                t["executed"].as_bool(),
+                Some(false),
+                "dry-run trace {i} expected executed=false, got {t:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn live_success_traces_have_executed_true() {
+        // Each trace in a live successful run must carry executed=true.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 11);
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
+        let traces = report["traces"].as_array().unwrap();
+        assert_eq!(traces.len(), 10);
+        for (i, t) in traces.iter().enumerate() {
+            assert_eq!(
+                t["executed"].as_bool(),
+                Some(true),
+                "live-success trace {i} expected executed=true, got {t:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn live_halt_pushed_trace_has_executed_true() {
+        // When a primitive invocation fails (live mode, non-transient), the
+        // trace for THAT step is still pushed before halt_cycle is called.
+        // It must carry executed=true because the primitive DID run — the
+        // failure is part of the observable outcome.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 12);
+        let mock = MockInvoker::new();
+        // Step 1 ok, step 2 ok, step 3 (reconciler-session) fails with
+        // role-session-empty.
+        mock.queue(ok_output());
+        mock.queue(ok_output());
+        mock.queue(fail_output(1, "role session returned empty output"));
+        let mut out = Vec::new();
+        let r = run_cycle(&args, &ra, &mut out, &mock);
+        assert!(matches!(r, Err(RunnerError::CycleHalted { .. })));
+        // halt_cycle re-serializes a synthetic report with the partial traces.
+        // Recover from the JSON written to out — emit_report path in halt.
+        let s = String::from_utf8_lossy(&out).into_owned();
+        let parsed: serde_json::Value = serde_json::from_str(&s).unwrap();
+        let traces = parsed["traces"].as_array().unwrap();
+        assert_eq!(traces.len(), 3, "expected 3 traces (2 ok + 1 fail), got {}", traces.len());
+        for (i, t) in traces.iter().enumerate() {
+            assert_eq!(
+                t["executed"].as_bool(),
+                Some(true),
+                "live-halt trace {i} expected executed=true, got {t:?}"
+            );
+        }
     }
 
     #[test]
