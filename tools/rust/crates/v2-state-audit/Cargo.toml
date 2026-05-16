@@ -1,0 +1,10 @@
+[package]
+name = "v2-state-audit"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-axis state-surface auditor per cycle 158 v2-state-retention-policy. Walks state/ + docs/state.json, classifies per-axis size/count against advisory/mandatory/hard thresholds, emits per-axis breakdown + recommended action. CORE-DESIGN-PRINCIPLE-aligned tool extraction of policy §5 enforcement surface."
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
