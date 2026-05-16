@@ -1,3 +1,34 @@
+// v2-cycle-runner
+//
+// Conductor for the v2 multi-agent orchestrator: composes the 4 role-prompt sessions
+// and the 4 v2-* primitives (channel-router, super-step-boundary, role-driver,
+// reconciler-event-processor) into a single per-cycle execution.
+//
+// ## Scope explicitly OUT (cycle 161 X5 carveout)
+//
+// **Commit-shape / commit-governance discipline is OUT OF SCOPE for this crate.**
+//
+// PR #2961 cycle 152 critique X5 raised that the runner does not verify
+// single-direct-push or push-cleanliness assumptions named in redesign notes.
+// Cycle 155 absorption verdict was AGREE-WITH-CARVEOUT: the issue is real, but
+// the resolution is "commit governance lives outside v2-cycle-runner." Adding
+// commit-cleanliness checks here would make the runner a polymath, violating
+// the CORE-DESIGN-PRINCIPLE separation between (a) the runner's per-cycle
+// step-execution responsibility and (b) sibling-tool responsibilities like
+// state-surface auditing (v2-state-audit), dispatch-state reconciliation
+// (v2-state-dispatch-sync), and channel-write validation (v2-channel-router).
+//
+// If commit-shape verification is wanted, a separate sibling tool
+// (e.g., `v2-commit-discipline-check`) should own it. This crate's `RunReport`
+// and `StepTrace` record cycle/issue context for downstream consumers; they
+// do not assert anything about commit cleanliness, push topology, or
+// branch-state hygiene.
+//
+// Forward-pointer: see `docs/redesign/_notes/cycle-149-v2-cycle-runner-design-scope.md`
+// for the runner's named scope; see `docs/redesign/_critique/cycle-152-v2-cycle-runner-adversarial-critique.md`
+// X5 (line 146) for the original finding; see `docs/redesign/_notes/cycle-155-cycle-152-critique-absorption.md`
+// X5 entry for the AGREE-WITH-CARVEOUT verdict and the cycle 161 closure here.
+
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 use std::fs;
