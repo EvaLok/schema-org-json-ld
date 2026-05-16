@@ -486,7 +486,12 @@ fn super_step_sequence() -> [Step; 10] {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FailureClass {
-    /// Recoverable: retry once with brief backoff.
+    /// Recoverable: retry once immediately. No backoff or jitter — cycle 155
+    /// absorbed cycle 152 critique C8 (L2.3) acknowledged the docstring
+    /// previously claimed "brief backoff" but the implementation had none;
+    /// the immediate-retry behavior is intentional (lower cycle latency)
+    /// and the docstring is now honest about that. See
+    /// `docs/redesign/_notes/cycle-155-cycle-152-critique-absorption.md`.
     Transient,
     /// Role session returned empty output (A4-silent-fail family). Halt cleanly.
     RoleSessionEmpty,
