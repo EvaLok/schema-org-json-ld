@@ -1,0 +1,27 @@
+redesign(phase-3): cycle 158 Track 2 — v2-critique-task-class-taxonomy design scope (cycle 157 forward priority #2)
+
+Closes cycle 157 forward priority #2 produced by audit cycle 221 R5.b absorption
+(Copilot-as-adversarial-critique-parallel-pattern + audit's four distinctive
+properties enumeration). 199-line design scope document under docs/redesign/_notes/.
+
+Formalizes audit-class vs Copilot-class vs hybrid-class taxonomy using audit's
+four structural-capability gaps (cross-repo perspective + retrospective-corpus
+access + async-of-main-cycle cadence + cross-iteration memory) as classification
+basis. Decision procedure (5 steps) for dispatch decisions including
+classification recording. Worked examples mapped to past dispatches: cycle 152
+#2960 (Copilot-class, correct); cycle 130 #2951 (Copilot-class with hybrid
+shading); cycle 134 [audit#465] M1 (audit-class, correct); cycle 85 [audit#454]
+(audit-class, correct); cycle 158 v2-state-retention-policy critique (hypothetical
+hybrid-class).
+
+Promotes critique-task-class-taxonomy-from-audit-cycle-221-R5b-formalized from
+NOVEL@1 (cycle 157) via this document's formalization. Pairs structurally with
+cycle 148 L2.4 dispatch-brief discipline addendum (cycle 157 forward priority #7)
+for classification recording in dispatch briefs.
+
+Empirical testing under Phase 3 substrate deferred — audit's four distinctive
+properties are testable when first cron-driven multi-agent cycles execute.
+Tool extraction explicitly NOT recommended (CORE-DESIGN-PRINCIPLE: classification
+judgment is the orchestrator's, not the tool's).
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

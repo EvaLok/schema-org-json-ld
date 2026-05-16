@@ -1,0 +1,24 @@
+redesign(phase-3): cycle 158 Track 1 — v2-state-retention-policy design scope (cycle 157 forward priority #1)
+
+Closes cycle 157 forward priority #1 produced by audit cycle 221 R2 absorption
+(A1 axis-coverage instance against Step 13.1 defense itself —
+defense-accretion-on-one-axis-while-others-unbounded pattern). 230-line design
+scope document under docs/redesign/_notes/.
+
+Articulates holistic state-size discipline for v2 across 6 append-only axes:
+state/channels/history/, state/super-step-history.json, state/roles/<role>-history.json
+(×4), state/reconciler/poll-history.json, state/v2-cycle-runner/cycle-history.json,
+docs/state.json dispatches array. Three-threshold model (advisory / mandatory / hard)
+per-axis with initial calibration values, owner assignment to writing primitive,
+and cross-axis ceilings.
+
+Enforcement surface named but NOT YET BUILT — v2-state-audit tool deferred to
+cycle 159+. Per-axis archival mechanisms deferred to per-primitive design when
+first axis approaches mandatory threshold. Initial threshold values are
+best-guess; calibration against first cron-driven multi-agent cycles is forward.
+
+Mirrors audit's Step 13.1 archival model generalized cross-axis. Honors
+CORE-DESIGN-PRINCIPLE (single-writer-per-state-file discipline preserves per-axis
+ownership; cross-axis enforcer is a new tool, not embedded in v2-cycle-runner).
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
