@@ -73,6 +73,16 @@ struct Args {
     #[arg(long, default_value_os_t = default_primitive_bin("v2-reconciler-event-processor"), global = true)]
     reconciler_event_processor_bin: PathBuf,
 
+    /// Path to v2-state-audit binary. Invoked as a pre-flight check at
+    /// session-start before the 10-step super-step sequence (cycle 162
+    /// wiring; CORE-DESIGN-PRINCIPLE enforcer layer per
+    /// docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md §2.3).
+    /// When the audit returns exit code 3 (Hard severity), the runner
+    /// halts the cycle with halt_reason=state-bound-exceeded BEFORE any
+    /// super-step state mutation occurs.
+    #[arg(long, default_value_os_t = default_primitive_bin("v2-state-audit"), global = true)]
+    state_audit_bin: PathBuf,
+
     #[command(subcommand)]
     command: Subcmd,
 }
@@ -566,6 +576,13 @@ pub enum FailureClass {
     ChannelWriteRejected,
     /// Super-step-boundary refused a transition. Hard error; abort cycle.
     SuperStepOutOfOrder,
+    /// Session-start `v2-state-audit` reported `hard` severity (exit 3).
+    /// 5th halt class per cycle 149 §3 enumeration extension; named
+    /// `state-bound-as-halt-reason` in v2-state-retention-policy.md §7
+    /// and wired here cycle 162 (cycle 161 forward priority #1 closure).
+    /// Halts BEFORE the super-step sequence begins — no super-step state
+    /// mutation occurs.
+    StateBoundExceeded,
 }
 
 impl FailureClass {
@@ -575,6 +592,7 @@ impl FailureClass {
             FailureClass::RoleSessionEmpty => "role-session-empty",
             FailureClass::ChannelWriteRejected => "channel-write-rejected",
             FailureClass::SuperStepOutOfOrder => "super-step-out-of-order",
+            FailureClass::StateBoundExceeded => "state-bound-exceeded",
         }
     }
 }
@@ -594,6 +612,113 @@ fn classify_failure(_exit_code: i32, stderr: &str) -> FailureClass {
     } else {
         FailureClass::Transient
     }
+}
+
+// =====================================================================
+// State-audit pre-flight (cycle 162 wiring)
+// =====================================================================
+
+/// Mirror of `v2-state-audit`'s exit-code → Kind mapping. See
+/// `tools/rust/crates/v2-state-audit/src/main.rs::exit_code_for`.
+/// `SerializationFailure` corresponds to audit's exit 4 (JSON-serialize
+/// error inside the audit tool itself). `Unknown` covers any other
+/// non-zero exit (e.g. process killed, panics, future audit codes).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum StateAuditSeverity {
+    Ok,
+    Advisory,
+    Mandatory,
+    Hard,
+    SerializationFailure,
+    Unknown,
+}
+
+impl StateAuditSeverity {
+    fn from_exit_code(code: i32) -> Self {
+        match code {
+            0 => Self::Ok,
+            1 => Self::Advisory,
+            2 => Self::Mandatory,
+            3 => Self::Hard,
+            4 => Self::SerializationFailure,
+            _ => Self::Unknown,
+        }
+    }
+
+    fn as_kebab(self) -> &'static str {
+        match self {
+            Self::Ok => "ok",
+            Self::Advisory => "advisory",
+            Self::Mandatory => "mandatory",
+            Self::Hard => "hard",
+            Self::SerializationFailure => "serialization-failure",
+            Self::Unknown => "unknown",
+        }
+    }
+
+    /// True iff the audit result mandates halting the cycle before the
+    /// super-step sequence begins. Only `Hard` halts (cycle 158 policy §7
+    /// `state-bound-as-halt-reason` is hard-threshold-specific).
+    /// `SerializationFailure` and `Unknown` are reported but do not halt —
+    /// failing-open on tool-internal anomalies preserves the cycle's
+    /// ability to make progress and surfaces the issue in the cycle report
+    /// rather than silently halting.
+    fn requires_halt(self) -> bool {
+        matches!(self, Self::Hard)
+    }
+}
+
+/// Outcome of the pre-flight `v2-state-audit` invocation. `None` on the
+/// `CycleReport.state_audit` field means dry-run skipped the audit.
+#[derive(Debug, Clone, Serialize)]
+struct StateAuditOutcome {
+    bin_path: PathBuf,
+    args: Vec<String>,
+    exit_code: i32,
+    severity: StateAuditSeverity,
+    /// Audit tool's stdout — the JSON report when invoked with `--json`,
+    /// or the human summary otherwise. Captured verbatim for post-hoc
+    /// inspection.
+    stdout: String,
+    /// Audit tool's stderr — empty on success; populated on tool-internal
+    /// failures.
+    stderr: String,
+    /// True if the audit binary was actually invoked. False is reserved
+    /// for future opt-out paths; current `run_cycle` always invokes in
+    /// live mode and never records an `executed=false` outcome (dry-run
+    /// records `None` on the report instead).
+    executed: bool,
+}
+
+fn invoke_state_audit_on_start<I: PrimitiveInvoker>(
+    args: &Args,
+    invoker: &I,
+) -> Result<StateAuditOutcome, RunnerError> {
+    let bin = args.state_audit_bin.as_path();
+    if !bin.exists() {
+        return Err(RunnerError::PrimitiveMissing {
+            name: "v2-state-audit",
+            path: bin.to_path_buf(),
+        });
+    }
+    let invocation_args = vec![
+        "--repo-root".to_string(),
+        args.repo_root.to_string_lossy().into_owned(),
+        "--json".to_string(),
+    ];
+    let output = invoker.invoke(bin, &invocation_args)?;
+    let exit_code = output.status.code().unwrap_or(-1);
+    let severity = StateAuditSeverity::from_exit_code(exit_code);
+    Ok(StateAuditOutcome {
+        bin_path: bin.to_path_buf(),
+        args: invocation_args,
+        exit_code,
+        severity,
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        executed: true,
+    })
 }
 
 trait PrimitiveInvoker {
@@ -641,6 +766,10 @@ struct CycleReport {
     halted_after_role: Option<Role>,
     steps_attempted: usize,
     traces: Vec<StepTrace>,
+    /// Session-start `v2-state-audit` outcome. `None` in dry-run mode
+    /// (audit is skipped along with primitive invocations); `Some` in
+    /// live mode regardless of audit severity. Cycle 162 wiring.
+    state_audit: Option<StateAuditOutcome>,
 }
 
 fn iso8601_now() -> String {
@@ -690,6 +819,23 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
 
     let started_at = iso8601_now();
     let timestamp = started_at.clone();
+
+    // Pre-flight session-start state-audit (cycle 162). Skipped under
+    // dry-run, consistent with primitive invocations being skipped. In
+    // live mode: on `Hard` severity, halt BEFORE the super-step sequence
+    // begins — no super-step state mutation occurs. On any other
+    // severity, the outcome is recorded in the cycle report and the
+    // cycle proceeds.
+    let state_audit: Option<StateAuditOutcome> = if run_args.dry_run {
+        None
+    } else {
+        let outcome = invoke_state_audit_on_start(args, invoker)?;
+        if outcome.severity.requires_halt() {
+            return halt_cycle_at_state_audit(args, run_args, &started_at, outcome, out);
+        }
+        Some(outcome)
+    };
+
     let sequence = super_step_sequence();
     let mut traces: Vec<StepTrace> = Vec::with_capacity(10);
     let mut steps_attempted = 0usize;
@@ -732,7 +878,18 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
             let class = classify_failure(outcome.status.code().unwrap_or(-1), &stderr);
             traces.push(trace);
             steps_attempted += 1;
-            return halt_cycle(args, run_args, &started_at, step.name, class, stderr, &traces, steps_attempted, out);
+            return halt_cycle(
+                args,
+                run_args,
+                &started_at,
+                step.name,
+                class,
+                stderr,
+                &traces,
+                steps_attempted,
+                state_audit.clone(),
+                out,
+            );
         }
 
         traces.push(trace);
@@ -767,6 +924,7 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
         halted_after_role,
         steps_attempted,
         traces,
+        state_audit,
     };
 
     if !run_args.dry_run {
@@ -904,6 +1062,7 @@ fn halt_cycle<W: Write>(
     stderr: String,
     traces: &[StepTrace],
     steps_attempted: usize,
+    state_audit: Option<StateAuditOutcome>,
     out: &mut W,
 ) -> Result<(), RunnerError> {
     let ended_at = iso8601_now();
@@ -924,6 +1083,7 @@ fn halt_cycle<W: Write>(
         halted_after_role: None,
         steps_attempted,
         traces: traces.to_vec(),
+        state_audit,
     };
     write_runner_state(&args.repo_root, &report)?;
     emit_cycle_report(&report, args.format, out)?;
@@ -932,6 +1092,43 @@ fn halt_cycle<W: Write>(
     } else {
         Err(RunnerError::CycleHalted { step: step_name, class, stderr })
     }
+}
+
+/// Halt routine specific to the cycle 162 session-start state-audit
+/// pre-flight check. Routes through the standard `CycleHalted` error
+/// path with `step="state-audit-on-start"` and
+/// `class=FailureClass::StateBoundExceeded`. The synthetic stderr names
+/// the audit severity and exit code; the audit's full stdout (JSON
+/// report) is preserved on the cycle report's `state_audit` field for
+/// post-hoc inspection.
+fn halt_cycle_at_state_audit<W: Write>(
+    args: &Args,
+    run_args: &RunArgs,
+    started_at: &str,
+    outcome: StateAuditOutcome,
+    out: &mut W,
+) -> Result<(), RunnerError> {
+    let stderr = format!(
+        "v2-state-audit returned severity={} (exit_code={}); \
+         hard-threshold breach requires operator review before next cycle. \
+         Re-run `v2-state-audit --json` for per-axis breakdown; \
+         see docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md \
+         for the three-layer-ownership framing and archival options.",
+        outcome.severity.as_kebab(),
+        outcome.exit_code,
+    );
+    halt_cycle(
+        args,
+        run_args,
+        started_at,
+        "state-audit-on-start",
+        FailureClass::StateBoundExceeded,
+        stderr,
+        &[],
+        0,
+        Some(outcome),
+        out,
+    )
 }
 
 fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), RunnerError> {
@@ -986,6 +1183,14 @@ fn emit_cycle_report<W: Write>(report: &CycleReport, format: Format, out: &mut W
             writeln!(out, "  ended:          {}", report.ended_at)?;
             writeln!(out, "  dry_run:        {}", report.dry_run)?;
             writeln!(out, "  steps_attempted: {}", report.steps_attempted)?;
+            if let Some(state_audit) = &report.state_audit {
+                writeln!(
+                    out,
+                    "  state_audit:    severity={} (exit_code={})",
+                    state_audit.severity.as_kebab(),
+                    state_audit.exit_code,
+                )?;
+            }
             if let Some(step) = report.halt_step {
                 writeln!(out, "  halt_step:      {step}")?;
             }
@@ -1138,10 +1343,12 @@ mod tests {
         let ssb = bin_dir.join("v2-super-step-boundary");
         let rd = bin_dir.join("v2-role-driver");
         let rep = bin_dir.join("v2-reconciler-event-processor");
+        let sa = bin_dir.join("v2-state-audit");
         touch(&crb);
         touch(&ssb);
         touch(&rd);
         touch(&rep);
+        touch(&sa);
         Args {
             repo_root: tmp.to_path_buf(),
             format: Format::Json,
@@ -1149,6 +1356,7 @@ mod tests {
             super_step_boundary_bin: ssb,
             role_driver_bin: rd,
             reconciler_event_processor_bin: rep,
+            state_audit_bin: sa,
             command: Subcmd::Schema, // placeholder; tests dispatch run_cycle directly
         }
     }
@@ -1361,10 +1569,11 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 1);
         let mock = MockInvoker::new();
-        // All 10 invocations succeed by default (canned queue is empty → ok_output()).
+        // All invocations succeed by default (canned queue is empty → ok_output()).
+        // Invocations: 1 state-audit (cycle 162) + 10 super-step calls = 11.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
-        assert_eq!(mock.invoke_count(), 10);
+        assert_eq!(mock.invoke_count(), 11);
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
         let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "completed");
@@ -1385,8 +1594,9 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 2);
         let mock = MockInvoker::new();
-        // Step order: step 1 (boundary cycle-start) ok, step 2 (reconciler poll) ok,
-        // step 3 (role-driver invoke reconciler) FAIL with role-session-empty stderr.
+        // Invocation 0 = state-audit (ok); then step 1 ok, step 2 ok, step 3
+        // (role-driver invoke reconciler) FAIL with role-session-empty stderr.
+        mock.queue(ok_output()); // state-audit
         mock.queue(ok_output()); // step 1
         mock.queue(ok_output()); // step 2
         mock.queue(fail_output(1, "role session returned empty output")); // step 3 first
@@ -1414,7 +1624,9 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 5);
         let mock = MockInvoker::new();
-        // Step 1 fails with super-step-out-of-order
+        // Invocation 0 = state-audit (ok); then step 1 fails with
+        // super-step-out-of-order.
+        mock.queue(ok_output()); // state-audit
         mock.queue(fail_output(1, "super-step out of order: not at expected position"));
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
@@ -1436,14 +1648,15 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 6);
         let mock = MockInvoker::new();
-        // step 1: transient fail, then retry succeeds. step 2-10 succeed.
+        // Invocation 0 = state-audit (ok). Then step 1: transient fail, retry succeeds.
+        // Steps 2-10 succeed by default. Total invocations: 1 audit + 1 fail + 1 retry + 9 = 12.
+        mock.queue(ok_output()); // state-audit
         mock.queue(fail_output(1, "connection reset"));
         mock.queue(ok_output()); // retry
         // steps 2-10 default-ok.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
-        // 10 logical steps + 1 retry = 11 invocations.
-        assert_eq!(mock.invoke_count(), 11);
+        assert_eq!(mock.invoke_count(), 12);
     }
 
     #[test]
@@ -1455,8 +1668,9 @@ mod tests {
         let mock = MockInvoker::new();
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
-        // Steps 1..=5 (cycle-start, poll, reconciler-session, advance-1, planner-session) = 5.
-        assert_eq!(mock.invoke_count(), 5);
+        // 1 state-audit + 5 super-step calls (cycle-start, poll, reconciler-session,
+        // advance-1, planner-session) = 6.
+        assert_eq!(mock.invoke_count(), 6);
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
         let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "halted-after-role");
@@ -1537,8 +1751,9 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 12);
         let mock = MockInvoker::new();
-        // Step 1 ok, step 2 ok, step 3 (reconciler-session) fails with
-        // role-session-empty.
+        // Invocation 0 = state-audit (ok). Then step 1 ok, step 2 ok, step 3
+        // (reconciler-session) fails with role-session-empty.
+        mock.queue(ok_output()); // state-audit
         mock.queue(ok_output());
         mock.queue(ok_output());
         mock.queue(fail_output(1, "role session returned empty output"));
@@ -1707,14 +1922,223 @@ mod tests {
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         let calls = mock.calls();
-        // First call should be to super-step-boundary cycle-start.
-        assert!(calls[0].0.file_name().unwrap() == "v2-super-step-boundary");
-        assert!(calls[0].1.contains(&"cycle-start".to_string()));
-        // Second call: reconciler-event-processor poll.
-        assert!(calls[1].0.file_name().unwrap() == "v2-reconciler-event-processor");
-        assert!(calls[1].1.contains(&"poll".to_string()));
+        // Cycle 162: state-audit is the FIRST invocation (pre-flight), before
+        // the 10-step super-step sequence. Total: 11 calls.
+        assert_eq!(calls.len(), 11);
+        assert!(calls[0].0.file_name().unwrap() == "v2-state-audit");
+        assert!(calls[0].1.contains(&"--json".to_string()));
+        // Then the 10-step super-step sequence begins.
+        assert!(calls[1].0.file_name().unwrap() == "v2-super-step-boundary");
+        assert!(calls[1].1.contains(&"cycle-start".to_string()));
+        assert!(calls[2].0.file_name().unwrap() == "v2-reconciler-event-processor");
+        assert!(calls[2].1.contains(&"poll".to_string()));
         // Last call: super-step-boundary cycle-end.
-        assert!(calls[9].0.file_name().unwrap() == "v2-super-step-boundary");
-        assert!(calls[9].1.contains(&"cycle-end".to_string()));
+        assert!(calls[10].0.file_name().unwrap() == "v2-super-step-boundary");
+        assert!(calls[10].1.contains(&"cycle-end".to_string()));
+    }
+
+    // ---- cycle 162 state-audit-on-start wiring ----
+
+    #[test]
+    fn state_audit_severity_from_exit_code_covers_all_audit_codes() {
+        assert_eq!(StateAuditSeverity::from_exit_code(0), StateAuditSeverity::Ok);
+        assert_eq!(StateAuditSeverity::from_exit_code(1), StateAuditSeverity::Advisory);
+        assert_eq!(StateAuditSeverity::from_exit_code(2), StateAuditSeverity::Mandatory);
+        assert_eq!(StateAuditSeverity::from_exit_code(3), StateAuditSeverity::Hard);
+        assert_eq!(StateAuditSeverity::from_exit_code(4), StateAuditSeverity::SerializationFailure);
+        assert_eq!(StateAuditSeverity::from_exit_code(-1), StateAuditSeverity::Unknown);
+        assert_eq!(StateAuditSeverity::from_exit_code(99), StateAuditSeverity::Unknown);
+    }
+
+    #[test]
+    fn state_audit_severity_only_hard_requires_halt() {
+        assert!(!StateAuditSeverity::Ok.requires_halt());
+        assert!(!StateAuditSeverity::Advisory.requires_halt());
+        assert!(!StateAuditSeverity::Mandatory.requires_halt());
+        assert!(StateAuditSeverity::Hard.requires_halt());
+        // Fail-open: tool-internal anomalies are reported but do not halt.
+        assert!(!StateAuditSeverity::SerializationFailure.requires_halt());
+        assert!(!StateAuditSeverity::Unknown.requires_halt());
+    }
+
+    #[test]
+    fn state_audit_severity_kebab_serialization() {
+        let pairs: &[(StateAuditSeverity, &str)] = &[
+            (StateAuditSeverity::Ok, "ok"),
+            (StateAuditSeverity::Advisory, "advisory"),
+            (StateAuditSeverity::Mandatory, "mandatory"),
+            (StateAuditSeverity::Hard, "hard"),
+            (StateAuditSeverity::SerializationFailure, "serialization-failure"),
+            (StateAuditSeverity::Unknown, "unknown"),
+        ];
+        for (s, expected) in pairs {
+            assert_eq!(s.as_kebab(), *expected);
+            let serialized = serde_json::to_string(s).unwrap();
+            assert_eq!(serialized, format!("\"{expected}\""));
+        }
+    }
+
+    #[test]
+    fn failure_class_state_bound_exceeded_kebab() {
+        assert_eq!(FailureClass::StateBoundExceeded.as_kebab(), "state-bound-exceeded");
+    }
+
+    #[test]
+    fn state_audit_hard_severity_halts_cycle_before_super_step_sequence() {
+        // The pre-flight audit invocation returns exit code 3 (Hard). The
+        // cycle MUST halt before any super-step primitive runs — total
+        // invocation count must be 1 (audit only). last-cycle.json must
+        // record halt_reason=state-bound-exceeded and halt_step=
+        // state-audit-on-start.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 100);
+        let mock = MockInvoker::new();
+        mock.queue(fail_output(3, "")); // state-audit Hard
+        let mut out = Vec::new();
+        let r = run_cycle(&args, &ra, &mut out, &mock);
+        match r {
+            Err(RunnerError::CycleHalted { step, class, .. }) => {
+                assert_eq!(step, "state-audit-on-start");
+                assert_eq!(class, FailureClass::StateBoundExceeded);
+            }
+            other => panic!("expected halt at state-audit-on-start, got {other:?}"),
+        }
+        assert_eq!(
+            mock.invoke_count(),
+            1,
+            "no super-step primitive should be invoked when audit halts at session-start",
+        );
+        let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        assert_eq!(parsed["status"], "halted");
+        assert_eq!(parsed["halt_step"], "state-audit-on-start");
+        assert_eq!(parsed["halt_reason"], "state-bound-exceeded");
+        assert_eq!(parsed["steps_attempted"], 0);
+    }
+
+    #[test]
+    fn state_audit_advisory_severity_does_not_halt_cycle() {
+        // Exit code 1 = Advisory. Cycle MUST proceed.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 101);
+        let mock = MockInvoker::new();
+        mock.queue(fail_output(1, "")); // state-audit Advisory
+        // 10 super-step invocations default-ok.
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        assert_eq!(mock.invoke_count(), 11);
+    }
+
+    #[test]
+    fn state_audit_mandatory_severity_does_not_halt_cycle() {
+        // Exit code 2 = Mandatory. Cycle MUST proceed (mandatory triggers
+        // archival recommendation in audit, not session halt).
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 102);
+        let mock = MockInvoker::new();
+        mock.queue(fail_output(2, "")); // state-audit Mandatory
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        assert_eq!(mock.invoke_count(), 11);
+    }
+
+    #[test]
+    fn state_audit_serialization_failure_does_not_halt_cycle() {
+        // Exit code 4 = SerializationFailure (audit's own JSON-emit broke).
+        // Fail-open: do NOT halt — reported in cycle report, cycle proceeds.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 103);
+        let mock = MockInvoker::new();
+        mock.queue(fail_output(4, "internal: serialize failed"));
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        assert_eq!(mock.invoke_count(), 11);
+    }
+
+    #[test]
+    fn state_audit_outcome_serialized_on_cycle_report() {
+        // On non-halt path: cycle report's state_audit field must contain
+        // the audit outcome with severity, exit_code, and bin_path.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 104);
+        let mock = MockInvoker::new();
+        // Queue: audit ok + 10 step ok = 11 invocations.
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
+        let sa = report.get("state_audit").expect("state_audit field present");
+        assert!(!sa.is_null(), "state_audit must be Some on live run");
+        assert_eq!(sa["severity"], "ok");
+        assert_eq!(sa["exit_code"], 0);
+        assert!(sa["bin_path"].as_str().unwrap().ends_with("v2-state-audit"));
+        assert!(sa["executed"].as_bool().unwrap());
+    }
+
+    #[test]
+    fn state_audit_outcome_on_halt_at_audit_serialized_on_cycle_report() {
+        // On halt-at-audit path: cycle report's state_audit field must
+        // ALSO contain the audit outcome (severity=hard, exit_code=3).
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 105);
+        let mock = MockInvoker::new();
+        mock.queue(fail_output(3, ""));
+        let mut out = Vec::new();
+        let _ = run_cycle(&args, &ra, &mut out, &mock);
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
+        let sa = report.get("state_audit").expect("state_audit field present");
+        assert_eq!(sa["severity"], "hard");
+        assert_eq!(sa["exit_code"], 3);
+        assert_eq!(report["halt_step"], "state-audit-on-start");
+        assert_eq!(report["halt_class"], "state-bound-exceeded");
+    }
+
+    #[test]
+    fn state_audit_skipped_in_dry_run() {
+        // Dry-run skips state-audit entirely; state_audit field in report is null.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let mut ra = run_args_with_outputs(tmp.path(), 106);
+        ra.dry_run = true;
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        assert_eq!(mock.invoke_count(), 0, "dry-run must not invoke any primitive");
+        let s = String::from_utf8_lossy(&out).into_owned();
+        let json_start = s.find('{').expect("expected JSON report in stdout");
+        let report: serde_json::Value = serde_json::from_str(&s[json_start..]).unwrap();
+        assert!(
+            report["state_audit"].is_null(),
+            "dry-run state_audit must be null, got {:?}",
+            report["state_audit"]
+        );
+    }
+
+    #[test]
+    fn state_audit_missing_bin_errors_before_any_step() {
+        // If v2-state-audit binary is missing, the runner errors with
+        // PrimitiveMissing before invoking any super-step primitive.
+        let tmp = tempfile::tempdir().unwrap();
+        let mut args = synthetic_args(tmp.path());
+        args.state_audit_bin = tmp.path().join("does-not-exist/v2-state-audit");
+        let ra = run_args_with_outputs(tmp.path(), 107);
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        let r = run_cycle(&args, &ra, &mut out, &mock);
+        match r {
+            Err(RunnerError::PrimitiveMissing { name, .. }) => {
+                assert_eq!(name, "v2-state-audit");
+            }
+            other => panic!("expected PrimitiveMissing(v2-state-audit), got {other:?}"),
+        }
+        assert_eq!(mock.invoke_count(), 0, "no invocation when audit bin missing");
     }
 }

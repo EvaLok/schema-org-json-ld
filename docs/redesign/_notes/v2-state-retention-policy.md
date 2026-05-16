@@ -195,6 +195,18 @@ Source: audit cycle 221 R2. Main's risk surface:
 
 Hard-threshold breach produces `halt_reason=state-bound-exceeded`. This is a new halt-class for `v2-cycle-runner` (cycle 149 design scope §3 enumerates 4 halt classes; this would be a 5th class). The halt-class catalog should be updated when this policy is implemented, not before.
 
+**Cycle 162 status (IMPLEMENTED):** wired as a pre-flight session-start check at `tools/rust/crates/v2-cycle-runner/src/main.rs` (cycle 161 design scope `v2-state-dispatch-policy-enforcement.md` §2.3 enforcer layer). On `Hard` severity (exit code 3 from `v2-state-audit`), the runner halts BEFORE the 10-step super-step sequence begins — no super-step state mutation occurs. `last-cycle.json` records `halt_reason=state-bound-exceeded` + `halt_step=state-audit-on-start`. Halt classes:
+
+| # | Class | Halt point | Catalog source |
+|---|---|---|---|
+| 1 | `transient` | Per-step retry, then halt | cycle 149 §3.3 |
+| 2 | `role-session-empty` | Mid-cycle, at role step | cycle 149 §3.3 |
+| 3 | `channel-write-rejected` | Mid-cycle, at role step | cycle 149 §3.3 |
+| 4 | `super-step-out-of-order` | Mid-cycle, at any step | cycle 149 §3.3 |
+| 5 | `state-bound-exceeded` | Pre-flight, before super-step | cycle 162 extension (§7 here) |
+
+Cycle 161 design scope §4.2 Option B (separate `v2-state-dispatch-archive` sweep tool) is the archival counterpart; cycle 162 implements the halt-side enforcer only. Archive tool design scope is cycle 163+ forward priority #3.
+
 ### Hostile growth risk
 
 In the public-repo threat model (per SECURITY section of the orchestrator prompt), an attacker filing many issues could grow `state/reconciler/poll-history.json` via `input-from-eva` poll cursors recording reads of issues authored by non-Eva accounts. The retention thresholds bound the disk impact but the **rate of growth** under hostile conditions is also a concern. Defense: reconciler should rate-limit issue ingestion (out of scope for this document; named here as forward).

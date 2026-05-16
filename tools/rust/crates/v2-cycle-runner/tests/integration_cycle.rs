@@ -23,6 +23,12 @@ const PRIMITIVES: &[&str] = &[
     "v2-super-step-boundary",
     "v2-role-driver",
     "v2-reconciler-event-processor",
+    // Cycle 162: v2-state-audit is invoked as a pre-flight session-start
+    // check by v2-cycle-runner. Empty tempdir state surfaces report Ok
+    // (audit tolerates missing paths), so this addition does not change
+    // the integration expectations — but the binary MUST be built so
+    // v2-cycle-runner can find it.
+    "v2-state-audit",
 ];
 
 fn workspace_root() -> PathBuf {
@@ -94,6 +100,8 @@ fn primitive_bin_args(repo_root: &Path) -> Vec<String> {
         bin_to_string("v2-role-driver"),
         "--reconciler-event-processor-bin".into(),
         bin_to_string("v2-reconciler-event-processor"),
+        "--state-audit-bin".into(),
+        bin_to_string("v2-state-audit"),
     ]
 }
 
@@ -419,6 +427,131 @@ fn live_run_against_real_primitives_writes_completed_state_with_no_halt_marker()
             "expected channel {} state cycle=1, got {:?}",
             channel,
             state.get("cycle")
+        );
+    }
+}
+
+/// Cycle 162: pre-flight state-audit on session-start halts the cycle when
+/// the live state surface breaches a `Hard` threshold. This test populates
+/// `docs/state.json` with 600 synthetic agent_sessions entries (above
+/// the cycle 158 policy DISPATCHES_HARD = 500), runs the runner, and
+/// asserts:
+///   - non-zero exit
+///   - last-cycle.json records halt_reason=state-bound-exceeded
+///     and halt_step=state-audit-on-start
+///   - no super-step state mutation occurs (no super-step-history entries)
+#[test]
+fn live_run_halts_with_state_bound_exceeded_when_audit_reports_hard() {
+    build_primitives_once();
+
+    let temp = TempDir::new().expect("create temp dir");
+    let repo_root = temp.path();
+
+    init_state_in(repo_root);
+
+    // Populate docs/state.json with enough agent_sessions entries to
+    // breach DISPATCHES_HARD (500). Each entry is a minimal placeholder
+    // — only count matters for the audit's array-length probe.
+    let docs_dir = repo_root.join("docs");
+    fs::create_dir_all(&docs_dir).expect("create docs/ dir");
+    let mut entries: Vec<serde_json::Value> = Vec::with_capacity(600);
+    for i in 0..600 {
+        entries.push(serde_json::json!({
+            "issue_number": 100_000 + i,
+            "status": "merged",
+        }));
+    }
+    let state_body = serde_json::json!({ "agent_sessions": entries });
+    fs::write(
+        docs_dir.join("state.json"),
+        serde_json::to_vec(&state_body).expect("serialize state.json"),
+    )
+    .expect("write state.json");
+
+    // Prepare session-output files anyway (validate_session_output_files
+    // runs before the audit pre-flight). Their contents don't matter
+    // here — execution halts at the audit step before any role-driver
+    // invocation.
+    let session_dir = repo_root.join("session-outputs");
+    let reconciler_out = session_dir.join("reconciler.json");
+    let planner_out = session_dir.join("planner.json");
+    let executor_out = session_dir.join("executor.json");
+    let curator_out = session_dir.join("curator.json");
+    for p in [&reconciler_out, &planner_out, &executor_out, &curator_out] {
+        write_json(p, &serde_json::json!({}));
+    }
+
+    let mut args = primitive_bin_args(repo_root);
+    args.extend([
+        "run".into(),
+        "--cycle".into(),
+        "1".into(),
+        "--issue".into(),
+        "99999".into(),
+        "--reconciler-output-file".into(),
+        reconciler_out.to_string_lossy().into_owned(),
+        "--planner-output-file".into(),
+        planner_out.to_string_lossy().into_owned(),
+        "--executor-output-file".into(),
+        executor_out.to_string_lossy().into_owned(),
+        "--curator-output-file".into(),
+        curator_out.to_string_lossy().into_owned(),
+    ]);
+
+    let output = run_cycle_runner(&args);
+    assert!(
+        !output.status.success(),
+        "expected non-zero exit when audit halts at state-bound-exceeded; \
+         stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    let runner_last = repo_root.join("state/v2-cycle-runner/last-cycle.json");
+    assert!(
+        runner_last.exists(),
+        "expected v2-cycle-runner/last-cycle.json after halt-at-audit"
+    );
+    let last = read_json(&runner_last);
+    assert_eq!(
+        last.get("status").and_then(|v| v.as_str()),
+        Some("halted"),
+        "expected status=halted, got {:?}",
+        last.get("status"),
+    );
+    assert_eq!(
+        last.get("halt_step").and_then(|v| v.as_str()),
+        Some("state-audit-on-start"),
+        "expected halt_step=state-audit-on-start, got {:?}",
+        last.get("halt_step"),
+    );
+    assert_eq!(
+        last.get("halt_reason").and_then(|v| v.as_str()),
+        Some("state-bound-exceeded"),
+        "expected halt_reason=state-bound-exceeded, got {:?}",
+        last.get("halt_reason"),
+    );
+    assert_eq!(
+        last.get("steps_attempted").and_then(|v| v.as_u64()),
+        Some(0),
+        "expected steps_attempted=0 when audit halts pre-flight, got {:?}",
+        last.get("steps_attempted"),
+    );
+
+    // No super-step state mutation: super-step-history must be empty (the
+    // post-init shape is `{ "cycles": [] }`).
+    let super_step_hist = repo_root.join("state/super-step-history.json");
+    if super_step_hist.exists() {
+        let hist = read_json(&super_step_hist);
+        let entries = hist
+            .get("cycles")
+            .and_then(|v| v.as_array())
+            .expect("super-step-history.cycles is an array");
+        assert_eq!(
+            entries.len(),
+            0,
+            "expected no super-step-history entries after audit halt, got {}",
+            entries.len(),
         );
     }
 }
