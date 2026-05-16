@@ -1,0 +1,117 @@
+redesign(phase-3): cycle 162 Track 1 — v2-state-audit session-start wiring with state-bound-exceeded halt (cycle 161 forward priority #1 CLOSED)
+
+Wires `v2-state-audit` as a pre-flight session-start check in
+`v2-cycle-runner`'s `run` subcommand, before the 10-step super-step
+sequence begins. On `Hard` severity (audit exit code 3), the runner
+halts with `halt_reason=state-bound-exceeded` and
+`halt_step=state-audit-on-start` BEFORE any super-step state mutation
+occurs. Closes cycle 161 forward priority #1 / cycle 161 design scope
+`v2-state-dispatch-policy-enforcement.md` §2.3 enforcer layer.
+
+Three-layer-ownership recap (writer/transitioner/enforcer): writer is
+v1 `record-dispatch` (frozen zone); transitioner is
+`v2-state-dispatch-sync`; enforcer is `v2-state-audit` invoked at
+session-start by `v2-cycle-runner`. This commit implements the
+enforcer wiring. Archival (Option B `v2-state-dispatch-archive` sweep
+tool) is cycle 163+ forward priority #3.
+
+5th halt class extends the cycle 149 §3.3 catalog (transient,
+role-session-empty, channel-write-rejected, super-step-out-of-order,
++ state-bound-exceeded). The new class halts BEFORE the sequence
+begins, not mid-sequence — distinguishing it from the existing 4.
+
+Fail-open posture: `SerializationFailure` (audit exit 4) and `Unknown`
+(any other non-zero exit) DO NOT halt — they are reported in the cycle
+report's `state_audit` field but the cycle proceeds. Only `Hard`
+mandates halt. Preserves cycle's ability to make progress on
+tool-internal anomalies.
+
+Changes:
+
+* `tools/rust/crates/v2-cycle-runner/src/main.rs`:
+  - New `--state-audit-bin` CLI arg (default `./target/debug/v2-state-audit`).
+  - New `FailureClass::StateBoundExceeded` variant + `as_kebab` arm
+    (`"state-bound-exceeded"`).
+  - New `StateAuditSeverity` enum mirroring `v2-state-audit`'s exit
+    code mapping (Ok=0, Advisory=1, Mandatory=2, Hard=3,
+    SerializationFailure=4, Unknown=anything else).
+  - New `StateAuditOutcome` struct capturing bin_path, args,
+    exit_code, severity, stdout (audit JSON report), stderr,
+    executed=true. Serialized on `CycleReport.state_audit`.
+  - New `invoke_state_audit_on_start` helper invoking audit with
+    `--repo-root <root> --json`. Returns `RunnerError::PrimitiveMissing`
+    if bin absent (same convention as the 4 existing primitives).
+  - New `halt_cycle_at_state_audit` routing the Hard-severity halt
+    through the standard `halt_cycle` machinery with synthetic stderr
+    naming severity + exit code + forward-pointer to the design scope.
+  - `run_cycle` wires the pre-flight check between
+    `validate_session_output_files` and the super-step loop. Skipped
+    under `--dry-run` (consistent with primitives not being invoked);
+    `CycleReport.state_audit` is `None` in dry-run, `Some` in live
+    regardless of severity.
+  - `halt_cycle` signature extended to thread `state_audit:
+    Option<StateAuditOutcome>` through to the report for both
+    halt-at-audit and step-failure-halt paths.
+  - `emit_cycle_report` text mode now surfaces
+    `state_audit: severity=<kebab> (exit_code=N)` when present.
+
+* 12 new unit tests covering:
+  - `StateAuditSeverity::from_exit_code` for all 6 cases (0/1/2/3/4/-1/99).
+  - `requires_halt` is true only for Hard (fail-open for
+    SerializationFailure + Unknown).
+  - Kebab-case serialization for all 6 severities.
+  - `FailureClass::StateBoundExceeded.as_kebab() == "state-bound-exceeded"`.
+  - Hard halts cycle before super-step (1 invocation, halt_step =
+    state-audit-on-start, halt_reason = state-bound-exceeded,
+    steps_attempted = 0).
+  - Advisory / Mandatory / SerializationFailure do NOT halt (cycle
+    proceeds, 11 invocations).
+  - `state_audit` field serialized on cycle report (both live-success
+    and halt-at-audit paths).
+  - Dry-run skips audit entirely (`state_audit` is null in report).
+  - Missing v2-state-audit binary errors with
+    `PrimitiveMissing { name: "v2-state-audit" }` before any
+    super-step invocation.
+
+* 6 existing unit tests updated to account for state-audit as
+  invocation 0 in the MockInvoker queue.
+
+* `tools/rust/crates/v2-cycle-runner/tests/integration_cycle.rs`:
+  - `PRIMITIVES` includes `v2-state-audit` (built once for tests).
+  - `primitive_bin_args` adds `--state-audit-bin <path>`.
+  - New integration test
+    `live_run_halts_with_state_bound_exceeded_when_audit_reports_hard`:
+    seeds `docs/state.json` with 600 synthetic `agent_sessions`
+    entries (above DISPATCHES_HARD=500), runs the real cycle-runner
+    binary, asserts non-zero exit, `halt_reason=state-bound-exceeded`,
+    `halt_step=state-audit-on-start`, `steps_attempted=0`, no
+    super-step-history mutation.
+
+* `docs/redesign/_notes/v2-state-retention-policy.md`: §7
+  `state-bound-as-halt-reason` annotated with **Cycle 162 status
+  (IMPLEMENTED)** including the full 5-row halt-class catalog
+  (cycles 149 §3.3 entries 1-4 + cycle 162 entry 5). The annotation
+  honors the cycle 158 §7 directive "halt-class catalog should be
+  updated when this policy is implemented."
+
+Verification:
+
+* `cargo build -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml`:
+  clean.
+* `cargo test -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml`:
+  48 unit + 3 integration = 51/51 green (was 36+2; +12 unit + 1
+  integration).
+* `cargo clippy -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml
+  --all-targets -- -D warnings`: clean.
+
+References:
+
+* cycle 161 design scope:
+  `docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md` §2.3 +
+  §4.3 ordering step 1 + §6 forward priorities (this commit closes
+  the first item).
+* cycle 158 policy: `docs/redesign/_notes/v2-state-retention-policy.md`
+  §7 `state-bound-as-halt-reason` (now annotated implemented).
+* cycle 149 design scope:
+  `docs/redesign/_notes/cycle-149-v2-cycle-runner-design-scope.md` §3.3
+  halt-class catalog (extended here as 5th class).

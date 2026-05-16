@@ -1,0 +1,71 @@
+redesign(phase-3): cycle 162 Track 2 — dispatch-brief discipline addendum canonical record (cycle 161 forward priority #2 CLOSED)
+
+Records the cycle 148 absorption L2.4 AGREE-ACT-NOW action as a
+canonical file at `docs/redesign/_notes/dispatch-brief-discipline.md`.
+Closes cycle 161 forward priority #2 (carried since cycle 148 absorption
+as "AGREE-ACT-NOW finding #7 — dispatch-brief discipline addendum
+document-only").
+
+The discipline: dispatch briefs that will produce multiple sibling
+prompts MUST NOT instruct literal-mirror template-following.
+Contract-equivalent sections (role identity, inputs, output contract
+keys, constraints, session structure) are preserved; section anatomy
+(tag names, ordering, decomposition) is role-native.
+
+Verbatim wording adopted from L2.4 critique (PR #2877 dispatched
+cycle 146, returned cycle 147, absorbed cycle 148):
+
+  "Preserve contract-equivalent sections (role identity, inputs,
+   output contract, constraints, session structure), but rename/
+   repartition sections so tag names match role semantics exactly.
+   Prefer role-native structure over literal template parity. If a
+   planner section is inapplicable, drop or replace it and justify
+   in meta."
+
+The addendum file specifies:
+
+* The discipline statement (§1) and rationale (§2).
+* Contract-surface preservation rules with a 5-row table (§3).
+* What structural-reference looks like in practice (§4).
+* Three anti-patterns (§5) — tag-name reuse where content differs,
+  empty mirror-sections, stretching role-content into wrong containers.
+* Scope of applicability (§6) — role prompts, multi-instance dispatches,
+  template-naming dispatches; NOT single-instance authoring or
+  contract-validation tooling or v1 frozen prompts.
+* L2.5 forward-pointer (§7) — paired tool-scoped finding
+  `v2-prompt-tag-semantic-fidelity` is NOT closed by this addendum;
+  remains as cycle 161 forward priority #8.
+* 6 explicit non-doings (§8) — does not modify existing v2 prompts,
+  does not impose a tool check, does not close L2.2 / L2.3 / framework
+  doc, does not add forward priorities.
+* Cross-references (§9) — source critique PR, absorption record,
+  forward-priority lineage, pattern recurrence.
+
+The addendum closes the AGREE-ACT-NOW residue without modifying any
+existing artifact: the cycle 145 v2 prompts (planner / reconciler /
+executor / curator XML) are frozen reference; the discipline applies
+to FUTURE dispatches by being consulted at dispatch-brief authoring
+time.
+
+Pattern updates:
+
+* `agree-act-now-residue-closed-by-canonical-recording-file` NOVEL@1
+  cycle 162. Where the action is "adopt for future use," the closure
+  shape is a canonical file the action consults — not a code change
+  or a tool. Distinct from `agree-act-now-bounded-fix-via-tracksecond-pattern`
+  (which closes code-side bounded fixes). Adds a NEW shape to the
+  Track 2 closure pattern catalog.
+
+References:
+
+* `docs/redesign/_notes/cycle-148-two-track-absorption-and-landing.md`
+  §L2.4 (lines 76-80) — original action.
+* `docs/redesign/_notes/cycle-149-two-track-composition.md` §3 priority
+  #5 — first forward-listing.
+* `docs/redesign/_notes/cycle-155-cycle-152-critique-absorption.md`
+  §6 — AGREE-ACT-NOW reaffirmation.
+* `docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md` (no
+  direct cross-ref; cycle 161 design scope is Track 1 substantive
+  focal, this addendum is Track 2).
+* Forward-priority history: carried in cycle 148-161 renumbered lists
+  as the document-only AGREE-ACT-NOW finding.
