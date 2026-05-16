@@ -1,0 +1,61 @@
+redesign(phase-3): cycle 161 Track 1 — v2-state-dispatch-policy-enforcement design scope (cycle 158 priority #3+#4 paired CLOSED)
+
+Closes cycle 160 forward priorities #3 (v2-state-dispatch-sync refuse-to-write
+hard-threshold enforcement) + #4 (threshold recalibration for state-json-dispatches
+axis), paired as a single design-scope cycle because they share the same
+architectural problem surfaced by cycle 159 v2-state-audit live smoke.
+
+Cycle 160's forward note explicitly flagged this as design-scope shape rather than
+direct code work: the actual `agent_sessions.push` happens in v1 `record-dispatch`
+(frozen zone per AUTHORITY > direct-push-zones); v2-state-dispatch-sync only does
+in_flight → terminal transitions, not new appends. This document settles the
+naming.
+
+Three-layer ownership clarification (§2):
+- Writer (append): v1 record-dispatch (FROZEN; workflow-change PR path)
+- Transitioner (status updates): v2 v2-state-dispatch-sync (direct-push)
+- Enforcer (cross-axis ceiling + halt): v2 v2-state-audit + v2-cycle-runner
+  session-start wiring (direct-push; CORE-DESIGN-PRINCIPLE-aligned)
+
+Cycle 161 live population analysis (§3):
+- 930 entries total, 922 (99.1%) terminal, 3 (0.3%) operationally live
+- Distribution: 819 merged + 62 failed + 25 closed_without_pr + 15 closed +
+  6 closed_without_merge + 2 reviewed_awaiting_eva + 1 in_flight
+- The population is overwhelmingly historical-retention, not live-state.
+
+Recalibration (§4.1): split per status class — live thresholds (3/100/500) catch
+operational anomaly; total thresholds (1000/2000) catch archival neglect. The
+cycle 158 flat 50/200/500 conflated both.
+
+Archival mechanism (§4.2): three options sketched. Option B (v2-state-dispatch-archive
+periodic age-based sweep tool, separate from v2-state-dispatch-sync) recommended.
+Option A (transition-time archival) rejected for scope-expansion. Option C
+(in-place compaction) rejected for audit-trail-destruction.
+
+Implementation order (§4.3):
+1. Cycle 162+: wire v2-state-audit at v2-cycle-runner session-start with halt
+2. Cycle 163+: v2-state-dispatch-archive tool design scope
+3. Cycle 164+: backlog archival run (819 merged → archive; live → ~111)
+4. Cycle 165+: v2-state-retention-policy.md §4 Axis 6 patch
+
+Anti-patterns explicitly avoided (§5):
+- "Refuse-to-write in v2-state-dispatch-sync" — no-op against actual growth driver
+- "Modify v1 record-dispatch directly" — forbidden by direct-push-zones
+- "Flat threshold bump" — preserves the misframing
+- "v2-state-dispatch-sync archives at transition" — scope expansion
+
+5 new forward sub-priorities produced (§6); 10 explicit non-doings (§7).
+
+Pairs with v2-state-retention-policy.md (cycle 158); refines and replaces the
+"v2-state-dispatch-sync refuse-to-write" interpretation in cycle 159's §4
+Axis 6 storage-key clarification. v2-state-retention-policy.md itself NOT
+edited this cycle — patches deferred to cycle 165+ per §4.3 ordering.
+
+Refs cycle 160 _notes forward priorities; cycle 159 v2-state-audit live smoke;
+cycle 158 v2-state-retention-policy.
+
+42 LOC additions to docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md
+(new ~210-line file).
+
+Track 1 (substantive focal) of cycle 161 two-track composition.
+Track 2 (X5 commit-governance scope) commits separately.

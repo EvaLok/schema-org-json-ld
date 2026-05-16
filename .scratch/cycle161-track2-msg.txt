@@ -1,0 +1,45 @@
+redesign(phase-3): cycle 161 Track 2 — X5 commit-governance scope clarification (cycle 158 priority #1 CLOSED)
+
+Closes cycle 160 forward priority #1 (X5 commit-governance scope clarification),
+deferred since cycle 155 absorption of PR #2961 cycle 152 v2-cycle-runner critique
+(AGREE-WITH-CARVEOUT verdict at cycle-155-cycle-152-critique-absorption.md:101).
+
+Adds a //-style module-level scope-declaration header to
+tools/rust/crates/v2-cycle-runner/src/main.rs declaring commit-governance OUT
+of v2-cycle-runner scope. Matches the pattern used by v2-state-audit and
+v2-dispatch-status.
+
+The X5 finding (cycle-152-v2-cycle-runner-adversarial-critique.md:146-150)
+raised that the runner does not verify single-direct-push or push-cleanliness
+assumptions named in redesign notes. The cycle 155 absorption verdict was
+AGREE-WITH-CARVEOUT: the issue is real, but the resolution is "commit
+governance lives outside v2-cycle-runner."
+
+The new header:
+- Names the OUT-OF-SCOPE explicitly (commit-shape / commit-governance discipline).
+- Cites the CORE-DESIGN-PRINCIPLE separation between (a) the runner's per-cycle
+  step-execution responsibility and (b) sibling-tool responsibilities like
+  state-surface auditing (v2-state-audit), dispatch-state reconciliation
+  (v2-state-dispatch-sync), and channel-write validation (v2-channel-router).
+- Forward-points to a hypothetical sibling `v2-commit-discipline-check` tool
+  if commit-shape verification becomes wanted later.
+- Cross-references the cycle 149 design scope, cycle 152 critique X5, and
+  cycle 155 absorption verdict for traceability.
+
+No code semantics change — comment-only addition above the existing
+`use clap::...` statement. The existing `#[command(about = ...)]` macro
+description preserved unchanged.
+
+Verification (single-purpose bash invocations, cycle 137 lesson + cycle 149 in-cycle
+CWD-drift discipline):
+- cargo build -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml: clean
+- cargo test -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml: 36 unit + 2 integration = 38/38 green
+- cargo clippy -p v2-cycle-runner --manifest-path tools/rust/Cargo.toml --all-targets -- -D warnings: clean
+
++32 LOC additions to tools/rust/crates/v2-cycle-runner/src/main.rs (header block).
+
+Track 2 (bounded textual fix) of cycle 161 two-track composition.
+Pairs with Track 1 (v2-state-dispatch-policy-enforcement design scope, commit c5e4bb27).
+
+agree-act-now-bounded-fix-via-tracksecond-pattern RECURRENCE-AT-6 (cycles 150,
+155, 156, 159, 160, 161).
