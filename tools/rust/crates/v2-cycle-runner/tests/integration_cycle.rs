@@ -234,7 +234,8 @@ fn live_run_against_real_primitives_writes_completed_state_with_no_halt_marker()
 
     // Hand-prepare session-output files with payload shapes matching channel-router's
     // required_keys per channel:
-    //   inbound-channel  (reconciler) -> eva-responses, audit-posts, dispatch-returns
+    //   inbound-channel  (reconciler) -> eva-responses, audit-posts, dispatch-returns,
+    //                                    inbound-completeness-marker
     //   plan-channel     (planner)    -> substantive-focal, per-role-tasks
     //   work-channel     (executor)   -> artifacts-written
     //   memory-channel   (curator)    -> consolidated-insights
@@ -249,7 +250,8 @@ fn live_run_against_real_primitives_writes_completed_state_with_no_halt_marker()
         &serde_json::json!({
             "eva-responses": [],
             "audit-posts": [],
-            "dispatch-returns": []
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "quiet"
         }),
     );
     write_json(

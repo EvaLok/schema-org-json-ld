@@ -145,7 +145,8 @@ fn inbound_payload_body(cycle: u32) -> String {
         "payload": {
             "eva-responses": [],
             "audit-posts": [],
-            "dispatch-returns": []
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "quiet"
         }
     })
     .to_string()

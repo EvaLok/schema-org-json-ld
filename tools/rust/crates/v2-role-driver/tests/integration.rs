@@ -91,7 +91,7 @@ fn payload_for(role: &str) -> serde_json::Value {
         "planner" => json!({"substantive-focal": "scaffold v2-role-driver", "per-role-tasks": {"executor": "wire output channel write"}}),
         "executor" => json!({"artifacts-written": ["tools/rust/crates/v2-role-driver/src/main.rs"]}),
         "curator" => json!({"consolidated-insights": ["multi-agent topology scaffold consolidation"]}),
-        "reconciler" => json!({"eva-responses": [], "audit-posts": [], "dispatch-returns": []}),
+        "reconciler" => json!({"eva-responses": [], "audit-posts": [], "dispatch-returns": [], "inbound-completeness-marker": "quiet"}),
         _ => panic!("unknown role: {role}"),
     }
 }

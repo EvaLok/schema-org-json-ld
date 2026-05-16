@@ -189,7 +189,12 @@ fn required_payload_keys(channel: &str) -> &'static [&'static str] {
         "plan-channel" => &["substantive-focal", "per-role-tasks"],
         "work-channel" => &["artifacts-written"],
         "memory-channel" => &["consolidated-insights"],
-        "inbound-channel" => &["eva-responses", "audit-posts", "dispatch-returns"],
+        "inbound-channel" => &[
+            "eva-responses",
+            "audit-posts",
+            "dispatch-returns",
+            "inbound-completeness-marker",
+        ],
         _ => &[],
     }
 }
@@ -1201,7 +1206,12 @@ mod tests {
         );
         assert_eq!(
             required_payload_keys("inbound-channel"),
-            &["eva-responses", "audit-posts", "dispatch-returns"]
+            &[
+                "eva-responses",
+                "audit-posts",
+                "dispatch-returns",
+                "inbound-completeness-marker",
+            ]
         );
         assert!(required_payload_keys("nonexistent").is_empty());
     }

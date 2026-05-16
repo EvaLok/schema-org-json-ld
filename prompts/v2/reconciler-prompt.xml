@@ -152,6 +152,23 @@
       Array of events from dispatch-return source newer than dispatch
       cursor. Array may be empty in quiet cycles.
     </required-key>
+    <required-key name="inbound-completeness-marker" type="string">
+      One of three values declaring how confident this payload is about
+      the inbound picture this cycle:
+        - "complete" — all three sources polled successfully and at
+          least one new event was found across them.
+        - "quiet" — all three sources polled successfully and zero new
+          events across all three.
+        - "partial" — at least one source poll failed; the payload
+          contains only confidently collected events from successful
+          polls; the failed-source arrays may be empty or
+          under-populated. Reconciler MUST emit "partial" instead of
+          silently degrading to "complete" or "quiet" when any source
+          poll did not succeed.
+      The marker exists so that downstream consumers (planner, harness
+      logging, cycle-history) can distinguish "no events" from "did not
+      observe events because polling failed."
+    </required-key>
 
     Optional metadata keys are allowed only when they do not violate the
     required schema and are explicitly expected by harness logging.
@@ -194,7 +211,8 @@
         "label": "agent-task"
       }
     }
-  ]
+  ],
+  "inbound-completeness-marker": "complete"
 }
   </example>
 
@@ -202,18 +220,38 @@
 {
   "eva-responses": [],
   "audit-posts": [],
-  "dispatch-returns": []
+  "dispatch-returns": [],
+  "inbound-completeness-marker": "quiet"
 }
   </quiet-cycle-example>
 
+  <partial-cycle-example>
+{
+  "eva-responses": [],
+  "audit-posts": [],
+  "dispatch-returns": [
+    {
+      "id": "2941",
+      "at": "2026-05-14T08:58:40Z",
+      "raw": {"pr_number": 2941, "state": "closed", "merged": true}
+    }
+  ],
+  "inbound-completeness-marker": "partial"
+}
+  </partial-cycle-example>
+
   <validation>
     v2-channel-router enforces, at write time, that the inbound-channel
-    payload is a JSON object containing all three required keys:
-    eva-responses, audit-posts, dispatch-returns. Value types are NOT
-    router-enforced in the current minimal scope (router's TODO arc
-    covers type checks). Reconciler must therefore self-enforce that
-    each of these three values is an array (empty arrays are valid and
-    expected in many cycles).
+    payload is a JSON object containing all four required keys:
+    eva-responses, audit-posts, dispatch-returns,
+    inbound-completeness-marker. Value types are NOT router-enforced in
+    the current minimal scope (router's TODO arc covers type checks).
+    Reconciler must therefore self-enforce that the three event keys
+    are arrays (empty arrays are valid and expected in many cycles) and
+    that inbound-completeness-marker is a string with value
+    "complete", "partial", or "quiet". The v2-reconciler-event-processor
+    enforces marker shape strictly when it is the writer; the fallback
+    manual path must enforce the same shape.
   </validation>
 </output-contract>
 
@@ -283,7 +321,8 @@
     is unavailable in-session. Manual path must still obey:
     1) read source surfaces,
     2) apply per-source cursor filtering,
-    3) build payload with all 3 required keys,
+    3) build payload with all 4 required keys (the three event arrays
+       plus inbound-completeness-marker),
     4) write JSON payload to RECONCILER_SESSION_OUTPUT_FILE,
     5) leave channel persistence and reducer enforcement to harness.
 
@@ -294,12 +333,19 @@
     If a source poll fails, surface explicit failure context on stderr
     and avoid writing malformed payload. If harness/pipeline policy
     requires best-effort continuation, emit structurally valid payload
-    with arrays present and include only confidently collected events.
+    with arrays present, include only confidently collected events from
+    successful polls, AND set inbound-completeness-marker to "partial".
+    A best-effort payload MUST NOT claim "complete" or "quiet" — those
+    values are reserved for payloads where all three source polls
+    succeeded. Silent best-effort (emitting partial data with marker
+    "complete") is the L1.3 / L3.6 failure mode this contract closes.
   </error-handling>
 
   <quiet-cycle-handling>
-    Quiet cycle (no new events across all three sources) is success, not
-    failure. Emit three empty arrays and complete normally.
+    Quiet cycle (no new events across all three sources after successful
+    polling) is success, not failure. Emit three empty arrays AND set
+    inbound-completeness-marker to "quiet". The "quiet" value asserts
+    that polling succeeded; do not use it to hide a poll failure.
   </quiet-cycle-handling>
 </polling-procedure>
 

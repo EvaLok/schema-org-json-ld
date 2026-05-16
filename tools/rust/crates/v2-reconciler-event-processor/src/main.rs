@@ -544,8 +544,14 @@ fn verify_super_step(repo_root: &Path, invoked_cycle: u32) -> Result<(), Process
 
 // ----- inbound-channel write (local reducer-rule duplicating v2-channel-router) -----
 
-/// Validate the inbound-channel payload. The 3 required keys (`eva-responses`,
-/// `audit-posts`, `dispatch-returns`) must be present and must be arrays.
+/// Allowed values of `inbound-completeness-marker` per reconciler prompt contract.
+const COMPLETENESS_MARKER_VALUES: &[&str] = &["complete", "partial", "quiet"];
+
+/// Validate the inbound-channel payload. The 4 required keys are:
+/// - `eva-responses`, `audit-posts`, `dispatch-returns` (must be arrays)
+/// - `inbound-completeness-marker` (must be a string with value
+///   "complete", "partial", or "quiet"; see reconciler-prompt.xml
+///   output-contract for semantics).
 fn validate_inbound_payload(payload: &serde_json::Value) -> Result<(), ProcessorError> {
     let obj = payload.as_object().ok_or_else(|| {
         ProcessorError::InvalidInboundPayload(format!(
@@ -564,7 +570,40 @@ fn validate_inbound_payload(payload: &serde_json::Value) -> Result<(), Processor
             )));
         }
     }
+    let marker = obj.get("inbound-completeness-marker").ok_or_else(|| {
+        ProcessorError::InvalidInboundPayload(
+            "missing required key 'inbound-completeness-marker'".to_string(),
+        )
+    })?;
+    let marker_str = marker.as_str().ok_or_else(|| {
+        ProcessorError::InvalidInboundPayload(format!(
+            "key 'inbound-completeness-marker' must be a string, got {}",
+            describe_json_type(marker)
+        ))
+    })?;
+    if !COMPLETENESS_MARKER_VALUES.contains(&marker_str) {
+        return Err(ProcessorError::InvalidInboundPayload(format!(
+            "key 'inbound-completeness-marker' must be one of {:?}, got {:?}",
+            COMPLETENESS_MARKER_VALUES, marker_str
+        )));
+    }
     Ok(())
+}
+
+/// Derive `inbound-completeness-marker` for the processor path: the processor
+/// aborts on source-poll failure (it never emits "partial"), so the marker is
+/// always "quiet" (zero events across all three sources) or "complete"
+/// (at least one event observed).
+fn derive_processor_marker(
+    eva_events: &[Event],
+    audit_events: &[Event],
+    dispatch_events: &[Event],
+) -> &'static str {
+    if eva_events.is_empty() && audit_events.is_empty() && dispatch_events.is_empty() {
+        "quiet"
+    } else {
+        "complete"
+    }
 }
 
 fn describe_json_type(v: &serde_json::Value) -> &'static str {
@@ -748,11 +787,14 @@ fn cmd_poll(
     let (dispatch_events, dispatch_summary, dispatch_new_cursor) =
         process_source(repo_root, Source::Dispatch, dispatch_source_file)?;
 
-    // Build inbound payload.
+    // Build inbound payload. The processor aborts on source-poll failure so it
+    // never emits "partial"; marker is "quiet" or "complete" only.
+    let marker = derive_processor_marker(&eva_events, &audit_events, &dispatch_events);
     let payload = serde_json::json!({
         Source::Eva.output_key(): eva_events,
         Source::Audit.output_key(): audit_events,
         Source::Dispatch.output_key(): dispatch_events,
+        "inbound-completeness-marker": marker,
     });
 
     // Validate (defensive — payload is constructed by this crate).
@@ -894,7 +936,12 @@ fn cmd_schema() -> SchemaOutput {
         sources,
         inbound_channel: INBOUND_CHANNEL,
         inbound_writer: Role::Reconciler,
-        inbound_required_keys: vec!["eva-responses", "audit-posts", "dispatch-returns"],
+        inbound_required_keys: vec![
+            "eva-responses",
+            "audit-posts",
+            "dispatch-returns",
+            "inbound-completeness-marker",
+        ],
         poll_outcomes: vec![PollOutcome::Success.name(), PollOutcome::WriteSkipped.name()],
         poll_history_path_template: "state/reconciler/poll-history.json".to_string(),
     }
@@ -1275,9 +1322,95 @@ mod tests {
         let v = serde_json::json!({
             "eva-responses": [],
             "audit-posts": [],
-            "dispatch-returns": []
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "quiet"
         });
         assert!(validate_inbound_payload(&v).is_ok());
+    }
+
+    #[test]
+    fn validate_inbound_rejects_missing_completeness_marker() {
+        let v = serde_json::json!({
+            "eva-responses": [],
+            "audit-posts": [],
+            "dispatch-returns": []
+        });
+        let err = validate_inbound_payload(&v).unwrap_err();
+        match err {
+            ProcessorError::InvalidInboundPayload(msg) => {
+                assert!(msg.contains("inbound-completeness-marker"), "msg = {msg}");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_inbound_rejects_non_string_marker() {
+        let v = serde_json::json!({
+            "eva-responses": [],
+            "audit-posts": [],
+            "dispatch-returns": [],
+            "inbound-completeness-marker": 42
+        });
+        let err = validate_inbound_payload(&v).unwrap_err();
+        match err {
+            ProcessorError::InvalidInboundPayload(msg) => {
+                assert!(msg.contains("inbound-completeness-marker"));
+                assert!(msg.contains("string"));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_inbound_rejects_invalid_marker_value() {
+        let v = serde_json::json!({
+            "eva-responses": [],
+            "audit-posts": [],
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "definitely-not-valid"
+        });
+        let err = validate_inbound_payload(&v).unwrap_err();
+        match err {
+            ProcessorError::InvalidInboundPayload(msg) => {
+                assert!(msg.contains("inbound-completeness-marker"));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_inbound_accepts_each_valid_marker_value() {
+        for value in COMPLETENESS_MARKER_VALUES {
+            let v = serde_json::json!({
+                "eva-responses": [],
+                "audit-posts": [],
+                "dispatch-returns": [],
+                "inbound-completeness-marker": value
+            });
+            assert!(
+                validate_inbound_payload(&v).is_ok(),
+                "value {value} should validate"
+            );
+        }
+    }
+
+    #[test]
+    fn derive_processor_marker_quiet_when_all_empty() {
+        assert_eq!(derive_processor_marker(&[], &[], &[]), "quiet");
+    }
+
+    #[test]
+    fn derive_processor_marker_complete_when_any_source_has_events() {
+        let evt = Event {
+            id: "1".to_string(),
+            at: "t".to_string(),
+            raw: serde_json::Value::Null,
+        };
+        let one = std::slice::from_ref(&evt);
+        assert_eq!(derive_processor_marker(one, &[], &[]), "complete");
+        assert_eq!(derive_processor_marker(&[], one, &[]), "complete");
+        assert_eq!(derive_processor_marker(&[], &[], one), "complete");
     }
 
     #[test]

@@ -270,6 +270,7 @@ fn poll_with_all_empty_sources_writes_empty_inbound_payload() {
     assert!(v["payload"]["eva-responses"].as_array().unwrap().is_empty());
     assert!(v["payload"]["audit-posts"].as_array().unwrap().is_empty());
     assert!(v["payload"]["dispatch-returns"].as_array().unwrap().is_empty());
+    assert_eq!(v["payload"]["inbound-completeness-marker"], json!("quiet"));
 }
 
 #[test]
@@ -296,6 +297,10 @@ fn poll_with_events_in_all_sources_populates_inbound_payload() {
     assert_eq!(v["payload"]["eva-responses"].as_array().unwrap().len(), 2);
     assert_eq!(v["payload"]["audit-posts"].as_array().unwrap().len(), 1);
     assert_eq!(v["payload"]["dispatch-returns"].as_array().unwrap().len(), 0);
+    assert_eq!(
+        v["payload"]["inbound-completeness-marker"],
+        json!("complete")
+    );
 }
 
 #[test]
@@ -990,6 +995,7 @@ fn schema_text_lists_three_sources_and_inbound_binding() {
     assert!(s.contains("eva-responses"));
     assert!(s.contains("audit-posts"));
     assert!(s.contains("dispatch-returns"));
+    assert!(s.contains("inbound-completeness-marker"));
     assert!(s.contains("eva"));
     assert!(s.contains("audit"));
     assert!(s.contains("dispatch"));
@@ -1007,7 +1013,12 @@ fn schema_json_is_well_formed() {
     assert_eq!(v["inbound_channel"], json!("inbound-channel"));
     assert_eq!(v["inbound_writer"], json!("reconciler"));
     let req = v["inbound_required_keys"].as_array().unwrap();
-    assert_eq!(req.len(), 3);
+    assert_eq!(req.len(), 4);
+    let req_strs: Vec<&str> = req.iter().map(|s| s.as_str().unwrap()).collect();
+    assert!(req_strs.contains(&"eva-responses"));
+    assert!(req_strs.contains(&"audit-posts"));
+    assert!(req_strs.contains(&"dispatch-returns"));
+    assert!(req_strs.contains(&"inbound-completeness-marker"));
     let sources = v["sources"].as_array().unwrap();
     assert_eq!(sources.len(), 3);
 }

@@ -119,7 +119,12 @@ impl Channel {
             Channel::PlanChannel => &["substantive-focal", "per-role-tasks"],
             Channel::WorkChannel => &["artifacts-written"],
             Channel::MemoryChannel => &["consolidated-insights"],
-            Channel::InboundChannel => &["eva-responses", "audit-posts", "dispatch-returns"],
+            Channel::InboundChannel => &[
+                "eva-responses",
+                "audit-posts",
+                "dispatch-returns",
+                "inbound-completeness-marker",
+            ],
         }
     }
 }
@@ -810,10 +815,30 @@ mod tests {
             &serde_json::json!({
                 "eva-responses": [],
                 "audit-posts": [],
-                "dispatch-returns": []
+                "dispatch-returns": [],
+                "inbound-completeness-marker": "quiet"
             }),
         )
         .unwrap();
+    }
+
+    #[test]
+    fn validate_payload_rejects_inbound_missing_completeness_marker() {
+        let err = validate_payload(
+            Channel::InboundChannel,
+            &serde_json::json!({
+                "eva-responses": [],
+                "audit-posts": [],
+                "dispatch-returns": []
+            }),
+        )
+        .unwrap_err();
+        match err {
+            RouterError::InvalidPayload(msg) => {
+                assert!(msg.contains("inbound-completeness-marker"), "msg = {msg}");
+            }
+            other => panic!("expected InvalidPayload, got {other:?}"),
+        }
     }
 
     #[test]
