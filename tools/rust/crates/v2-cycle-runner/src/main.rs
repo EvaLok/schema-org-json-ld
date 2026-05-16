@@ -461,6 +461,42 @@ enum StepKind {
     SuperStepCycleEnd,
 }
 
+/// Phase category for a step, derived from `StepKind`. Per cycle 152
+/// v2-cycle-runner critique C2 (L1.2): the linear step list mixes
+/// semantic-workflow phases (reconciler/planner/executor/curator) with
+/// transition mechanics (super-step-advance-*) and cycle boundaries
+/// (super-step-init/settle). Phase exposes this categorization so trace
+/// consumers can group steps by semantic intent without parsing
+/// step-name strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum Phase {
+    /// Cycle boundary: super-step-init or super-step-settle.
+    Boundary,
+    /// Reconciler phase: poll (preparatory) + reconciler-session.
+    Reconciler,
+    /// Planner phase: planner-session.
+    Planner,
+    /// Executor phase: executor-session.
+    Executor,
+    /// Curator phase: curator-session.
+    Curator,
+    /// Inter-role transition mechanics: super-step-advance-N.
+    Transition,
+}
+
+fn phase_for(kind: StepKind) -> Phase {
+    match kind {
+        StepKind::SuperStepCycleStart | StepKind::SuperStepCycleEnd => Phase::Boundary,
+        StepKind::ReconcilerPoll => Phase::Reconciler,
+        StepKind::RoleInvoke(Role::Reconciler) => Phase::Reconciler,
+        StepKind::RoleInvoke(Role::Planner) => Phase::Planner,
+        StepKind::RoleInvoke(Role::Executor) => Phase::Executor,
+        StepKind::RoleInvoke(Role::Curator) => Phase::Curator,
+        StepKind::SuperStepAdvance => Phase::Transition,
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct Step {
     index: u8,
@@ -553,6 +589,12 @@ struct StepTrace {
     /// `CycleReport.dry_run` or `CycleReport.status == "dry-run-traced"` —
     /// defense-in-depth per cycle 152 v2-cycle-runner critique C5 (L1.5).
     executed: bool,
+    /// Phase category derived from `StepKind`. Distinguishes semantic-
+    /// workflow phases (reconciler/planner/executor/curator) from
+    /// transition mechanics (super-step-advance-*) and cycle boundaries
+    /// (super-step-init/settle). Per cycle 152 v2-cycle-runner critique
+    /// C2 (L1.2) absorbed cycle 159.
+    phase: Phase,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -636,6 +678,7 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
             // the step), true for live (the invoke_with_retry_once below
             // ran the primitive, whether it succeeded or failed).
             executed: !run_args.dry_run,
+            phase: phase_for(step.kind),
         };
 
         if run_args.dry_run {
@@ -1483,6 +1526,144 @@ mod tests {
                 Some(true),
                 "live-halt trace {i} expected executed=true, got {t:?}"
             );
+        }
+    }
+
+    #[test]
+    fn phase_for_each_step_kind_variant() {
+        // C2 (L1.2) cycle 152 critique absorbed cycle 159: phase categorizes
+        // every StepKind variant into Boundary/Reconciler/Planner/Executor/
+        // Curator/Transition. Pin the derivation so phase semantics don't
+        // drift with future StepKind changes.
+        assert_eq!(phase_for(StepKind::SuperStepCycleStart), Phase::Boundary);
+        assert_eq!(phase_for(StepKind::SuperStepCycleEnd), Phase::Boundary);
+        assert_eq!(phase_for(StepKind::ReconcilerPoll), Phase::Reconciler);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Reconciler)), Phase::Reconciler);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Planner)), Phase::Planner);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Executor)), Phase::Executor);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Curator)), Phase::Curator);
+        assert_eq!(phase_for(StepKind::SuperStepAdvance), Phase::Transition);
+    }
+
+    #[test]
+    fn super_step_sequence_phase_distribution_matches_design() {
+        // Pin the per-step phase mapping under the canonical 10-step
+        // super-step sequence. The distribution should be:
+        //   step 1  (super-step-init)       -> Boundary
+        //   step 2  (reconciler-pre-poll)   -> Reconciler
+        //   step 3  (reconciler-session)    -> Reconciler
+        //   step 4  (super-step-advance-1)  -> Transition
+        //   step 5  (planner-session)       -> Planner
+        //   step 6  (super-step-advance-2)  -> Transition
+        //   step 7  (executor-session)      -> Executor
+        //   step 8  (super-step-advance-3)  -> Transition
+        //   step 9  (curator-session)       -> Curator
+        //   step 10 (super-step-settle)     -> Boundary
+        // i.e. 2 Boundary + 2 Reconciler + 1 Planner + 1 Executor +
+        // 1 Curator + 3 Transition.
+        let seq = super_step_sequence();
+        let phases: Vec<Phase> = seq.iter().map(|s| phase_for(s.kind)).collect();
+        let expected = [
+            Phase::Boundary,
+            Phase::Reconciler,
+            Phase::Reconciler,
+            Phase::Transition,
+            Phase::Planner,
+            Phase::Transition,
+            Phase::Executor,
+            Phase::Transition,
+            Phase::Curator,
+            Phase::Boundary,
+        ];
+        assert_eq!(phases, expected);
+        let count = |p: Phase| phases.iter().filter(|&&q| q == p).count();
+        assert_eq!(count(Phase::Boundary), 2);
+        assert_eq!(count(Phase::Reconciler), 2);
+        assert_eq!(count(Phase::Planner), 1);
+        assert_eq!(count(Phase::Executor), 1);
+        assert_eq!(count(Phase::Curator), 1);
+        assert_eq!(count(Phase::Transition), 3);
+    }
+
+    #[test]
+    fn dry_run_traces_carry_phase_in_json() {
+        // Phase field must be present on every dry-run trace and use
+        // kebab-case serialization.
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let mut ra = run_args_with_outputs(tmp.path(), 13);
+        ra.dry_run = true;
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        // Dry-run path also writes "step N name: ..." lines to stdout, so
+        // strip everything before the first `{` to isolate the JSON report
+        // (same pattern as dry_run_traces_have_executed_false).
+        let s = String::from_utf8_lossy(&out).into_owned();
+        let json_start = s.find('{').expect("expected JSON report in stdout");
+        let parsed: serde_json::Value = serde_json::from_str(&s[json_start..]).unwrap();
+        let traces = parsed["traces"].as_array().unwrap();
+        assert_eq!(traces.len(), 10);
+        // Pin the kebab-case strings the consumers will read.
+        let expected_phases = [
+            "boundary",
+            "reconciler",
+            "reconciler",
+            "transition",
+            "planner",
+            "transition",
+            "executor",
+            "transition",
+            "curator",
+            "boundary",
+        ];
+        for (i, t) in traces.iter().enumerate() {
+            let p = t["phase"].as_str().unwrap_or_else(|| panic!(
+                "trace {i} missing phase field: {t:?}"
+            ));
+            assert_eq!(p, expected_phases[i], "trace {i} phase mismatch");
+        }
+    }
+
+    #[test]
+    fn live_traces_carry_phase_in_json() {
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 14);
+        let mock = MockInvoker::new();
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
+        let traces = report["traces"].as_array().unwrap();
+        assert_eq!(traces.len(), 10);
+        // Same phase order as dry-run — phase derives from StepKind, not
+        // execution mode.
+        let expected = [
+            "boundary", "reconciler", "reconciler", "transition",
+            "planner", "transition", "executor", "transition",
+            "curator", "boundary",
+        ];
+        for (i, t) in traces.iter().enumerate() {
+            assert_eq!(t["phase"].as_str(), Some(expected[i]), "live trace {i} phase");
+        }
+    }
+
+    #[test]
+    fn phase_uses_kebab_case_serialization() {
+        // Single-shot serialization smoke covering every variant — guards
+        // against accidental rename_all drift in the derive macro.
+        let pairs: &[(Phase, &str)] = &[
+            (Phase::Boundary, "boundary"),
+            (Phase::Reconciler, "reconciler"),
+            (Phase::Planner, "planner"),
+            (Phase::Executor, "executor"),
+            (Phase::Curator, "curator"),
+            (Phase::Transition, "transition"),
+        ];
+        for (p, expected) in pairs {
+            let s = serde_json::to_string(p).unwrap();
+            assert_eq!(s, format!("\"{expected}\""), "phase {p:?} serialization");
         }
     }
 
