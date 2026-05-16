@@ -1,0 +1,10 @@
+[package]
+name = "v2-dispatch-status"
+version = "0.1.0"
+edition = "2021"
+description = "Probe canonical absorption-readiness signal for a Copilot dispatch issue (v2 redesign prototype). Extracts the cycle 155 false-negative dispatch-return-detection pattern into a reusable tool per CORE-DESIGN-PRINCIPLE."
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }

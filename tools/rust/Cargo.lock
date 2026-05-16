@@ -944,6 +944,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "v2-dispatch-status"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "v2-gardening-sweep"
 version = "0.1.0"
 dependencies = [
