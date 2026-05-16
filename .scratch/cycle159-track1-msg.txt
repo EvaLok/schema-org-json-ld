@@ -1,0 +1,44 @@
+redesign(phase-3): cycle 159 Track 1 — v2-state-audit Rust tool (cycle 158 forward priority #6 CLOSED)
+
+Implements the cross-axis enforcement surface named in cycle 158 v2-state-retention-policy §5: walks state/ + docs/state.json, classifies per-axis size/count against advisory/mandatory/hard thresholds, emits per-axis breakdown + cross-axis ceiling check + overall severity rollup with recommended-action label (no-op / journal-observation / trigger-archival / halt-session-start). CORE-DESIGN-PRINCIPLE-aligned tool extraction of policy §5 enforcement surface.
+
+Implementation:
+- New crate `tools/rust/crates/v2-state-audit/` (~720 prod LOC + ~330 test LOC ≈ 1050 LOC total)
+- Embedded thresholds match policy v1 (cycle 158) §4 axis values per-axis (9 axes total: channels-history, super-step-history, 4 role-histories, reconciler-poll-history, cycle-runner-cycle-history, state-json-dispatches) + cross-axis ceiling (500MB / 2GB / 4GB)
+- 3 measurement primitives: file-size, directory-size (recursive), json-array-count — all tolerate missing paths (SCAFFOLD-correct: state/ does not yet exist)
+- Classification: at-or-above advisory but below mandatory = Advisory; at-or-above mandatory but below hard = Mandatory; at-or-above hard = Hard
+- Overall = max severity across all axes and cross-axis
+- Exit codes 0/1/2/3 map to Ok/Advisory/Mandatory/Hard (no-JSON-parse consumers can read severity from exit code)
+- CLI: `--repo-root <path>` (default `.`), `--json` flag (default human-readable)
+- POLICY_VERSION=1 baked into report; stale-tool detection explicit
+
+Cycle 159 finding (tool-extraction-surfaces-prior-cycle-error):
+
+Live smoke against this repo exposed a cycle 158 policy authoring gap. Policy §4 Axis 6 names "docs/state.json dispatches array" but the actual storage key in legacy v1 state.json is `agent_sessions` (used by v2-state-dispatch-sync). Cycle 158 authored the policy without verifying against the implementation. Cycle 159 tool implementation targeted the actual key (`agent_sessions`) and surfaced 930 entries — nearly 2x the policy's hard threshold of 500. Policy doc patched in §4 Axis 6 with "Storage-key clarification (cycle 159)" recording (a) the actual storage key, (b) the live-measurement finding, (c) forward options (refuse-to-write enforcement vs threshold recalibration against 3-month growth data).
+
+The audit tool currently exits with code 3 (hard) against this repo. This is not an active halt — hard-threshold "refuse-to-write" semantics are owner-enforced (v2-state-dispatch-sync would refuse the append); the audit tool only reports. v2-state-dispatch-sync does not yet implement refuse-to-write, so the 930-entry state is observable-but-tolerated until either enforcement is added or thresholds are recalibrated.
+
+Pattern observations cycle 159:
+- `tool-extraction-surfaces-prior-cycle-errors` RECURRENCE-AT-2 (cycle 156 v2-dispatch-status surfaced cycle 155 false-positive on PR-not-opened; cycle 159 v2-state-audit surfaces cycle 158 policy/implementation key mismatch). Pattern: tool extraction is a debugging mechanism on prior cycles, not only an automation. CORE-DESIGN-PRINCIPLE adjacent.
+- `policy-implementation-naming-divergence` NOVEL@1 cycle 159. Policy-author-side names a conceptual axis ("dispatches"); implementation uses different storage key ("agent_sessions"). Recurrence test: any future policy doc referencing concrete storage keys should be verified against implementation source. Mitigation: design docs that name keys should grep the implementation before landing.
+- `live-smoke-as-policy-calibration-mechanism` NOVEL@1 cycle 159. Cycle 158 policy estimated 50/200/500 thresholds for dispatches based on "audit retrospective measurements"; live smoke cycle 159 showed 930 actual entries. The gap (~2x hard) was invisible to cycle 158 because policy author didn't query the actual data.
+
+Tests: 39 unit tests (classify boundary semantics, action mapping, Kind ordering, file-size / directory-size / json-array-count primitives, axis-report construction, cross-axis sum, overall max rollup, JSON output shape, axis-table sanity (uniqueness + monotonic thresholds + 9-axis count)). All green. cargo clippy -p v2-state-audit --all-targets -- -D warnings clean.
+
+Live smoke confirmation:
+- Exit code 3 (hard)
+- state-json-dispatches: 930 entries / [hard] / halt-session-start
+- All state/ axes: 0 B / [ok] / no-op (SCAFFOLD-correct; state/ does not exist)
+- Cross-axis: 0 B / [ok] / no-op
+
+Not in scope cycle 159:
+- Per-axis archival mechanism implementation (cycle 158 forward priority #15; deferred until first cron-driven cycle produces real measurements)
+- Per-cycle growth budget enforcement (policy §4 cross-axis growth budget; deferred — requires cached prior-cycle baseline)
+- Threshold recalibration based on cycle 159 finding (defer to either operator review of 930-entry case OR archival-mechanism cycle)
+- v2-state-dispatch-sync refuse-to-write hard-threshold enforcement (cycle 160+ candidate)
+
+Refs:
+- Policy doc: docs/redesign/_notes/v2-state-retention-policy.md (cycle 158 commit f6205702; cycle 159 patches §4 Axis 6 with storage-key clarification)
+- Pattern lineage: cycle 156 v2-dispatch-status (commit 6f9b516f) established the tool-extraction-surfaces-prior-cycle-error pattern; cycle 159 is RECURRENCE-AT-2.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

@@ -1,0 +1,55 @@
+redesign(phase-3): cycle 159 Track 2 — C2 phase marker in StepTrace (cycle 158 forward priority #1 CLOSED)
+
+C2 (L1.2) from cycle 152 v2-cycle-runner adversarial critique (29 findings, cycle 155 absorbed): "Step granularity is inconsistent and obscures phase boundaries — the linear step list mixes workflow phases (`reconciler-pre-poll`) and transition mechanics (`super-step-advance-*`)". Cycle 155 verdict was AGREE-WITH-CARVEOUT; the carveout was to add a phase field rather than restructure the linear step list (which works well for testing). Cycle 156's C5 added `executed: bool` to StepTrace; cycle 159 adds the paired `phase: Phase` field.
+
+Implementation:
+- New `Phase` enum (Boundary | Reconciler | Planner | Executor | Curator | Transition), kebab-case serialized
+- New `phase_for(kind: StepKind) -> Phase` derivation function
+- New `phase: Phase` field on `StepTrace`
+- Construction site updated to derive phase from `step.kind` at trace-build time
+- Phase derives from StepKind alone, independent of run mode (dry-run and live carry the same phase value per step)
+
+Phase distribution across the canonical 10-step super-step sequence:
+  step 1  super-step-init       -> Boundary
+  step 2  reconciler-pre-poll   -> Reconciler
+  step 3  reconciler-session    -> Reconciler
+  step 4  super-step-advance-1  -> Transition
+  step 5  planner-session       -> Planner
+  step 6  super-step-advance-2  -> Transition
+  step 7  executor-session      -> Executor
+  step 8  super-step-advance-3  -> Transition
+  step 9  curator-session       -> Curator
+  step 10 super-step-settle     -> Boundary
+
+= 2 Boundary + 2 Reconciler + 1 Planner + 1 Executor + 1 Curator + 3 Transition
+
+The pre-poll is grouped under Reconciler (preparatory work for the reconciler-session, not a separate phase). Super-step-advance-N steps are grouped under Transition (control plumbing between role phases). Cycle boundaries (init/settle) are Boundary.
+
+Tests added: 5 new unit tests in `tests` module
+- `phase_for_each_step_kind_variant`: pin derivation for every StepKind variant
+- `super_step_sequence_phase_distribution_matches_design`: pin per-step phase + distribution counts
+- `dry_run_traces_carry_phase_in_json`: phase serialized on dry-run traces
+- `live_traces_carry_phase_in_json`: phase serialized on live traces
+- `phase_uses_kebab_case_serialization`: kebab-case smoke for every variant
+
+Test result: 36 unit + 2 integration = 38/38 green (was 33/33 cycle 156; +5 cycle 159).
+cargo clippy -p v2-cycle-runner --all-targets -- -D warnings clean.
+
+Trace consumers can now group by phase without parsing step-name strings — e.g., "show me only the role-invoke phases" filters on `phase != "boundary" && phase != "transition" && phase != "reconciler"` (or affirmatively `phase in {planner, executor, curator}`). This is the C2 critique's load-bearing fix: semantic-workflow steps are distinguishable from transition mechanics in the trace shape itself.
+
+Not in scope cycle 159:
+- Step granularity restructuring (the linear list stays; only the categorization is exposed)
+- StepKind redesign (Phase is derived, not replacing StepKind)
+- Per-phase metrics aggregation (out of scope; trace consumers compute)
+- Backwards-compat shim — Phase is added to existing StepTrace, no migration; new field appears in all serialized traces
+
+Pattern continuation:
+- `agree-act-now-bounded-fix-via-tracksecond-pattern` RECURRENCE-AT-4 (cycle 150 executor 4-fix, cycle 155 C8 docstring, cycle 156 C5 executed:bool, cycle 159 C2 phase marker). Pattern: bounded ACT-NOW critique findings make excellent Track 2 work — small enough to fit alongside substantive Track 1, large enough to demonstrate visible progress on critique absorption.
+- StepTrace shape progression: cycle 149 design (5 fields: index, name, primitive, args, bin_path) → cycle 156 +executed (6 fields) → cycle 159 +phase (7 fields). Each addition resolves one cycle 152 critique finding.
+
+Refs:
+- Critique: docs/redesign/_critique/cycle-152-v2-cycle-runner-adversarial-critique.md C2 (L1.2)
+- Cycle 155 absorption verdict: docs/redesign/_notes/cycle-155-cycle-152-critique-absorption.md (C2 AGREE-WITH-CARVEOUT)
+- Cycle 156 C5 pair: docs/redesign/_notes/cycle-156-dispatch-status-tool-and-c5-fix.md
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

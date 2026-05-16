@@ -1,0 +1,47 @@
+redesign(phase-3): cycle 159 _notes + journal — two-track v2-state-audit + C2 phase marker (HARDENING-AT-12, 44th consecutive HONORING)
+
+Cycle 159 closes two cycle 158 forward priorities:
+- #6 v2-state-audit Rust tool (NEW from cycle 158 Track 1 §5) — commit 7fcc39a5
+- #1 C2 (L1.2) phase marker in StepTrace (inherited from cycle 157 #5) — commit a44ab023
+
+12th consecutive two-track-composition cycle (HARDENING-AT-12 post cycle 151 single-track exception; 8 consecutive post-exception; 13 of 14 in arc 146-159).
+
+44th consecutive HONORING of named forward priority.
+
+Track 1 substantive focal: v2-state-audit codifies the cycle 158 v2-state-retention-policy §5 enforcement surface. New crate ~1280 LOC + 39 unit tests + clippy clean. Live smoke against this repo produced exit code 3 (hard) — state-json-dispatches reports 930 entries against the 500-entry hard threshold (~2× over). Root-cause: cycle 158 policy named axis "dispatches" without verifying against the implementation; actual storage key is `agent_sessions` (used by v2-state-dispatch-sync). Cycle 159 actions: (1) v2-state-audit axis spec updated to read the actual storage key (axis name `state-json-dispatches` preserved as the policy-conceptual name); (2) policy doc §4 Axis 6 patched with "Storage-key clarification (cycle 159)" recording the actual key + live finding + forward options. Hard-threshold semantics are owner-enforced (v2-state-dispatch-sync would refuse the write); audit tool only reports; v2-state-dispatch-sync does not yet implement refuse-to-write, so the 930-entry state is observable-but-tolerated.
+
+Track 2 bounded ACT-NOW: C2 (L1.2) phase marker — new Phase enum (Boundary | Reconciler | Planner | Executor | Curator | Transition) + `phase: Phase` field on StepTrace + `phase_for(StepKind) -> Phase` derivation. 181 LOC + 5 new tests. Phase distribution across 10-step super-step: 2 Boundary + 2 Reconciler + 1 Planner + 1 Executor + 1 Curator + 3 Transition. Trace consumers can now group by phase without parsing step-name strings.
+
+Pattern observations cycle 159:
+- `tool-extraction-surfaces-prior-cycle-errors` RECURRENCE-AT-2 (cycle 156 surfaced cycle 155 false-positive; cycle 159 surfaces cycle 158 policy/key mismatch). CORE-DESIGN-PRINCIPLE adjacent.
+- `policy-implementation-naming-divergence` NOVEL@1 — design docs that name concrete storage keys should grep implementation before landing.
+- `live-smoke-as-policy-calibration-mechanism` NOVEL@1 — policy estimates (50/200/500) vs live data (930) gap was invisible to cycle 158 because policy author didn't query actual data. Recurrence test: future policy thresholds should be validated against live measurement before landing.
+- `tool-as-codification-of-design-scope` NOVEL@1 — v2-state-audit is the executable form of v2-state-retention-policy; every threshold has a corresponding const, every axis has an AxisSpec, the tool fails exactly when the policy says enforcement should trigger.
+- `asymmetric-closure-of-cycle-N-priorities-in-cycle-N-plus-1` NOVEL@1 — cycle 158 produced 2 new priorities #6 + #15; cycle 159 closed #6 but not gate-bounded #15. Symmetric closure (cycle 158) was a special case, not a discipline.
+- `agree-act-now-bounded-fix-via-tracksecond-pattern` RECURRENCE-AT-4 (cycle 150 executor 4-fix, cycle 155 C8 docstring, cycle 156 C5 executed:bool, cycle 159 C2 phase marker).
+- `two-track-composition` HARDENING-AT-12 (8 consecutive post-exception).
+- `cycle-159-test-pattern-mirror-existing-control-flow` NOVEL@1 — in-session typo recovery via mirroring existing tests rather than inventing field names.
+
+Cycle 159 produced 2 new forward priorities by cycle 159 live finding (in addition to cycle 158 inherited 14):
+- #5 v2-state-dispatch-sync refuse-to-write hard-threshold enforcement (implement owner-side hard-threshold semantic)
+- #6 threshold recalibration for state-json-dispatches axis (or implement archival)
+
+Substantive measurements:
+- Track 1 (v2-state-audit crate + policy patch): 1280 LOC
+- Track 2 (Phase enum + field + tests): 181 LOC
+- Detail _notes: ~380 lines
+- Total ~1840+ lines / 3 commits (Track 1 + Track 2 + this close)
+- 6 cargo invocations (2× build + 2× test + 2× clippy) all clean
+- 0 dispatches, 0 issue closures (5 open issues — cycle issue + 4 standing input-from-eva)
+- Audit HEAD unchanged at 8285b7d3 (same as cycle 157/158 session-start; no new audit content)
+
+Cycle 158 commitments preserved:
+- Cycle 120 L2 preserved (2-selection.md untouched)
+- Cycle 128 lesson preserved (.scratch/ via Write tool)
+- Cycle 134 lesson preserved (audit HEAD via gh api at session-start)
+- Cycle 137 lessons re-validated 13-cycle-running
+- Cycle 149 in-cycle CWD-drift lesson re-validated (--manifest-path tools/rust/Cargo.toml)
+- Cycle 155 dispatch-return-detection lesson preserved (not exercised cycle 159)
+- Journal-immutability preserved (cycle 159 appends NEW section via Edit anchor; cycle 148-158 sections NOT back-edited)
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
