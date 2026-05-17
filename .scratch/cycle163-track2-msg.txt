@@ -1,0 +1,51 @@
+redesign(phase-3): cycle 163 Track 2 — Missing Integration Scenario 3 super-step-out-of-order live test (cycle 162 forward priority #14 CLOSED)
+
+Adds the long-deferred live integration test for super-step out-of-order
+halt, unblocked by cycle 160 Track 2 C10 amendment. The test asserts the
+dual cycle 160 C10 invariants:
+
+  1. State-mutation-PRESENT for runner-local observability state:
+     last-cycle.json contains status=out-of-order, halt_step=super-step-init,
+     halt_reason=super-step-out-of-order, steps_attempted=1.
+  2. State-mutation-ABSENT for super-step state machine state:
+     super-step-history.json and super-step.json are byte-identical
+     pre/post run (the boundary refused the cycle-start without mutating).
+
+The test pre-populates super-step-history.json with a synthetic cycle-5
+completion record, runs v2-cycle-runner with --cycle 1, and verifies
+v2-super-step-boundary's cycle-start refuses with OutOfOrderCycleStart
+(cycles must be sequential: last completed 5, requested 1, expected 6).
+
+Implementation discovery: v2-super-step-boundary's OutOfOrderCycleStart
+Display message did NOT contain text matching v2-cycle-runner's
+classify_failure SuperStepOutOfOrder keywords ("super-step" + one of
+"out of order" / "ordering" / "wrong super-step" / "not at expected").
+Without that match, the runtime stderr would have classified as Transient
+and the test could not assert halt_reason=super-step-out-of-order.
+
+Fix: prepend "super-step out of order: " to the OutOfOrderCycleStart
+Display text. Minimal change — single Edit in
+tools/rust/crates/v2-super-step-boundary/src/main.rs touching only the
+two write! arms of OutOfOrderCycleStart. No existing test depended on
+the old phrasing (no test asserts on the boundary's stderr message text;
+classify_failure unit tests use synthetic strings).
+
+Honors cycle 160 §"Track 2 — C10 (L2.5) design-scope amendment" which
+recorded that "halt_cycle ... calls write_runner_state for ALL halt
+classes including out-of-order before returning Err" and "the test can
+now assert state-mutation-absent for super-step state AND
+state-mutation-present for runner-local observability state."
+
+Closes cycle 162 forward priority #14 (was cycle 161 priority #16,
+unblocked by cycle 160 C10 amendment, deferred until cycle 163).
+
+Verification: cargo build / test / clippy clean.
+- v2-cycle-runner: 48 unit + 4 integration = 52/52 (was 48+3; +1 integ).
+- v2-super-step-boundary: 32 unit = 32/32 (Display change does not affect
+  any test).
+
+Target files:
+- tools/rust/crates/v2-super-step-boundary/src/main.rs (+2 -2 LOC net,
+  Display prefix change only).
+- tools/rust/crates/v2-cycle-runner/tests/integration_cycle.rs (+139 LOC,
+  one new test live_run_halts_super_step_out_of_order_when_history_diverges).

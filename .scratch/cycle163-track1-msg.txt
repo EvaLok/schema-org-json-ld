@@ -1,0 +1,38 @@
+redesign(phase-3): cycle 163 Track 1 — v2-state-dispatch-archive design scope (cycle 162 forward priority #1 CLOSED)
+
+Authors docs/redesign/_notes/v2-state-dispatch-archive.md (new, 260 lines)
+as the design scope for the archival counterpart to v2-state-audit.
+Cycle 161 v2-state-dispatch-policy-enforcement.md §4.2 selected
+Option B (separate sweep tool); this scope settles its boundary,
+sweep criteria, archive schema, invocation contract, atomicity
+semantics, and ordering vs other v2-state-* tools.
+
+Closes cycle 162 forward priority #1 (was cycle 161 priority #3,
+renumbered for cycle 163+ priority list per cycle 162 _notes).
+
+Key design decisions captured:
+- Single-purpose discipline: tool reports + acts on agent_sessions[]
+  Axis 6 only; rejects coupling with v2-state-audit (§9.1) and rejects
+  expanding v2-state-dispatch-sync scope (cycle 161 §4.2 Option A).
+- Status-whitelist + age-threshold sweep (§3.1, §3.2) with explicit
+  missing-timestamp handling (§3.3) — silently archiving entries
+  with unparseable timestamps is rejected as audit-trail-destroying.
+- Archive schema preserves entries byte-for-byte (§4.2). Schema
+  versioned (archive_version: 1) for future-migration safety (§4.4).
+- Dated-file convention per audit-side Step 13.1 precedent (§9.4
+  rejects single-archive-file-forever).
+- Atomicity: archive-write BEFORE state-mutation; hash-check
+  for concurrent-mutation detection (§6.2); lock file for v2-tool
+  collisions (§6.3); v1 record-dispatch collision handled by hash
+  abort (not by lock — v1 is frozen).
+- Forward priorities: implementation (priority #1 for cycle 164+),
+  backlog archival run (priority #2), policy §4 Axis 6 patch
+  (priority #3 — completes the cycle 159 storage-key-clarification
+  forward-work stub).
+
+Cycle 163 measurement confirms cycle 161 measurement: 930 agent_sessions
+entries, 819 merged + 62 failed + 25 closed_without_pr + 15 closed +
+6 closed_without_merge + 2 reviewed_awaiting_eva + 1 in_flight. Of
+the 819 merged, 3 have null merged_at (informed §3.3 fallback design).
+
+No state mutation this commit. Direct-push to docs/redesign/_notes/.
