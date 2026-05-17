@@ -73,7 +73,11 @@ fn init_is_idempotent() {
     let out1 = run_cmd(&repo, &["init"]);
     assert!(out1.status.success());
     let out2 = run_cmd(&repo, &["init"]);
-    assert!(out2.status.success(), "second init failed: {}", stderr_str(&out2));
+    assert!(
+        out2.status.success(),
+        "second init failed: {}",
+        stderr_str(&out2)
+    );
     let stdout = stdout_str(&out2);
     assert!(
         stdout.contains("present"),
@@ -92,7 +96,10 @@ fn init_json_reports_creation_status() {
     let out2 = run_cmd_json(&repo, &["init"]);
     let value2: serde_json::Value = serde_json::from_slice(&out2.stdout).unwrap();
     assert_eq!(value2["state_file_created"], serde_json::Value::Bool(false));
-    assert_eq!(value2["history_file_created"], serde_json::Value::Bool(false));
+    assert_eq!(
+        value2["history_file_created"],
+        serde_json::Value::Bool(false)
+    );
 }
 
 // ----- current (no cycle in progress) -----
@@ -140,9 +147,19 @@ fn cycle_start_happy_path_enters_reconciler() {
     run_cmd(&repo, &["init"]);
     let out = run_cmd(
         &repo,
-        &["cycle-start", "--cycle", "141", "--timestamp", "2026-05-14T00:00:00Z"],
+        &[
+            "cycle-start",
+            "--cycle",
+            "141",
+            "--timestamp",
+            "2026-05-14T00:00:00Z",
+        ],
     );
-    assert!(out.status.success(), "cycle-start failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "cycle-start failed: {}",
+        stderr_str(&out)
+    );
     let cur = run_cmd(&repo, &["current"]);
     let stdout = stdout_str(&cur);
     assert!(
@@ -157,11 +174,23 @@ fn cycle_start_idempotent_on_same_cycle_first_super_step() {
     run_cmd(&repo, &["init"]);
     run_cmd(
         &repo,
-        &["cycle-start", "--cycle", "141", "--timestamp", "2026-05-14T00:00:00Z"],
+        &[
+            "cycle-start",
+            "--cycle",
+            "141",
+            "--timestamp",
+            "2026-05-14T00:00:00Z",
+        ],
     );
     let out = run_cmd(
         &repo,
-        &["cycle-start", "--cycle", "141", "--timestamp", "2026-05-14T00:01:00Z"],
+        &[
+            "cycle-start",
+            "--cycle",
+            "141",
+            "--timestamp",
+            "2026-05-14T00:01:00Z",
+        ],
     );
     assert!(
         out.status.success(),
@@ -195,7 +224,11 @@ fn cycle_start_first_cycle_can_be_arbitrary_number() {
     let (_td, repo) = fresh_repo();
     run_cmd(&repo, &["init"]);
     let out = run_cmd(&repo, &["cycle-start", "--cycle", "1000"]);
-    assert!(out.status.success(), "first cycle at 1000 should succeed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "first cycle at 1000 should succeed: {}",
+        stderr_str(&out)
+    );
 }
 
 #[test]
@@ -214,7 +247,11 @@ fn cycle_start_after_completed_cycle_must_be_sequential() {
     );
     // Sequential start succeeds
     let out = run_cmd(&repo, &["cycle-start", "--cycle", "142"]);
-    assert!(out.status.success(), "sequential cycle-start failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "sequential cycle-start failed: {}",
+        stderr_str(&out)
+    );
 }
 
 // ----- advance happy path -----
@@ -228,19 +265,31 @@ fn advance_full_happy_path_reaches_curator() {
     // reconciler writes inbound-channel, then advance
     write_channel_state(&repo, "inbound-channel", "reconciler", 141);
     let out = run_cmd(&repo, &["advance"]);
-    assert!(out.status.success(), "reconciler→planner failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "reconciler→planner failed: {}",
+        stderr_str(&out)
+    );
     assert!(stdout_str(&out).contains("'reconciler' to 'planner'"));
 
     // planner writes plan-channel, then advance
     write_channel_state(&repo, "plan-channel", "planner", 141);
     let out = run_cmd(&repo, &["advance"]);
-    assert!(out.status.success(), "planner→executor failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "planner→executor failed: {}",
+        stderr_str(&out)
+    );
     assert!(stdout_str(&out).contains("'planner' to 'executor'"));
 
     // executor writes work-channel, then advance
     write_channel_state(&repo, "work-channel", "executor", 141);
     let out = run_cmd(&repo, &["advance"]);
-    assert!(out.status.success(), "executor→curator failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "executor→curator failed: {}",
+        stderr_str(&out)
+    );
     assert!(stdout_str(&out).contains("'executor' to 'curator'"));
 
     // Now at curator; advance must fail
@@ -326,7 +375,11 @@ fn advance_with_skip_verify_works_without_channel_write() {
     run_cmd(&repo, &["init"]);
     run_cmd(&repo, &["cycle-start", "--cycle", "141"]);
     let out = run_cmd(&repo, &["advance", "--skip-verify"]);
-    assert!(out.status.success(), "skip-verify advance failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "skip-verify advance failed: {}",
+        stderr_str(&out)
+    );
     let stdout = stdout_str(&out);
     assert!(stdout.contains("verification skipped"));
 }
@@ -454,7 +507,11 @@ fn history_with_limit_returns_newest_first() {
     run_full_happy_cycle(&repo, 142);
     run_full_happy_cycle(&repo, 143);
     let out = run_cmd_json(&repo, &["history", "--limit", "2"]);
-    assert!(out.status.success(), "history --limit failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "history --limit failed: {}",
+        stderr_str(&out)
+    );
     let value: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
     let cycles = value["cycles"].as_array().unwrap();
     assert_eq!(cycles.len(), 2);
@@ -472,10 +529,21 @@ fn schema_text_lists_4_roles_4_channels_and_rules() {
     assert!(out.status.success(), "schema failed: {}", stderr_str(&out));
     let stdout = stdout_str(&out);
     for role in ["reconciler", "planner", "executor", "curator"] {
-        assert!(stdout.contains(role), "expected role '{role}' in schema text output");
+        assert!(
+            stdout.contains(role),
+            "expected role '{role}' in schema text output"
+        );
     }
-    for ch in ["inbound-channel", "plan-channel", "work-channel", "memory-channel"] {
-        assert!(stdout.contains(ch), "expected channel '{ch}' in schema text output");
+    for ch in [
+        "inbound-channel",
+        "plan-channel",
+        "work-channel",
+        "memory-channel",
+    ] {
+        assert!(
+            stdout.contains(ch),
+            "expected channel '{ch}' in schema text output"
+        );
     }
     assert!(stdout.contains("ordering"));
     assert!(stdout.contains("transition rules"));
@@ -489,7 +557,11 @@ fn schema_json_is_well_formed() {
         .arg("schema")
         .output()
         .unwrap();
-    assert!(out.status.success(), "schema --format json failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "schema --format json failed: {}",
+        stderr_str(&out)
+    );
     let value: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
     let ordering = value["ordering"].as_array().unwrap();
     assert_eq!(ordering.len(), 4);
@@ -544,7 +616,16 @@ fn corrupt_state_file_gives_clean_json_error() {
 fn state_file_has_expected_shape_after_advance() {
     let (_td, repo) = fresh_repo();
     run_cmd(&repo, &["init"]);
-    run_cmd(&repo, &["cycle-start", "--cycle", "141", "--timestamp", "2026-05-14T00:00:00Z"]);
+    run_cmd(
+        &repo,
+        &[
+            "cycle-start",
+            "--cycle",
+            "141",
+            "--timestamp",
+            "2026-05-14T00:00:00Z",
+        ],
+    );
     write_channel_state(&repo, "inbound-channel", "reconciler", 141);
     run_cmd(&repo, &["advance", "--timestamp", "2026-05-14T00:01:00Z"]);
 
@@ -590,7 +671,11 @@ fn cycle_end_leaves_state_in_empty_sentinel() {
 fn run_full_happy_cycle(repo: &Path, cycle: u32) {
     let cycle_str = cycle.to_string();
     let out = run_cmd(repo, &["cycle-start", "--cycle", &cycle_str]);
-    assert!(out.status.success(), "cycle-start {cycle} failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "cycle-start {cycle} failed: {}",
+        stderr_str(&out)
+    );
     let writers = [
         ("inbound-channel", "reconciler"),
         ("plan-channel", "planner"),
@@ -602,10 +687,18 @@ fn run_full_happy_cycle(repo: &Path, cycle: u32) {
     }
     for _ in 0..3 {
         let out = run_cmd(repo, &["advance"]);
-        assert!(out.status.success(), "advance at cycle {cycle} failed: {}", stderr_str(&out));
+        assert!(
+            out.status.success(),
+            "advance at cycle {cycle} failed: {}",
+            stderr_str(&out)
+        );
     }
     let out = run_cmd(repo, &["cycle-end", "--cycle", &cycle_str]);
-    assert!(out.status.success(), "cycle-end {cycle} failed: {}", stderr_str(&out));
+    assert!(
+        out.status.success(),
+        "cycle-end {cycle} failed: {}",
+        stderr_str(&out)
+    );
 }
 
 /// Run cycle-start through three advances (reaches curator super-step) but does

@@ -385,9 +385,11 @@ fn is_copilot_login(login: &str) -> bool {
 }
 
 fn parse_dispatch_response(body: &Value, issue: u64) -> Result<DispatchSnapshotRaw, StatusError> {
-    let issue_obj = body
-        .pointer("/data/repository/issue")
-        .ok_or_else(|| StatusError::Gh(format!("issue {issue}: response missing data.repository.issue")))?;
+    let issue_obj = body.pointer("/data/repository/issue").ok_or_else(|| {
+        StatusError::Gh(format!(
+            "issue {issue}: response missing data.repository.issue"
+        ))
+    })?;
 
     if issue_obj.is_null() {
         return Ok(DispatchSnapshotRaw {
@@ -442,7 +444,10 @@ fn parse_dispatch_response(body: &Value, issue: u64) -> Result<DispatchSnapshotR
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let merged = node.get("merged").and_then(|v| v.as_bool()).unwrap_or(false);
+            let merged = node
+                .get("merged")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let merged_at = node
                 .get("mergedAt")
                 .and_then(|v| v.as_str())
@@ -465,7 +470,10 @@ fn parse_dispatch_response(body: &Value, issue: u64) -> Result<DispatchSnapshotR
         .and_then(|v| v.as_array())
     {
         for node in nodes {
-            let typename = node.get("__typename").and_then(|v| v.as_str()).unwrap_or("");
+            let typename = node
+                .get("__typename")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             match typename {
                 "AssignedEvent" => {
                     let login = node
@@ -569,10 +577,12 @@ fn parse_dispatch_response(body: &Value, issue: u64) -> Result<DispatchSnapshotR
 }
 
 /// Returns (page, next_cursor).
-fn parse_branches_response(body: &Value) -> Result<(Vec<CopilotBranch>, Option<String>), StatusError> {
-    let refs = body
-        .pointer("/data/repository/refs")
-        .ok_or_else(|| StatusError::Gh("branches response missing data.repository.refs".to_string()))?;
+fn parse_branches_response(
+    body: &Value,
+) -> Result<(Vec<CopilotBranch>, Option<String>), StatusError> {
+    let refs = body.pointer("/data/repository/refs").ok_or_else(|| {
+        StatusError::Gh("branches response missing data.repository.refs".to_string())
+    })?;
 
     let mut out = Vec::new();
     if let Some(nodes) = refs.get("nodes").and_then(|v| v.as_array()) {
@@ -744,7 +754,10 @@ fn render_human(snapshot: &DispatchSnapshot, signal: &DispatchSignal) -> String 
             .map(|s| format!(" at={s}"))
             .unwrap_or_default()
     ));
-    out.push_str(&format!("copilot comments: {}\n", snapshot.copilot_comments));
+    out.push_str(&format!(
+        "copilot comments: {}\n",
+        snapshot.copilot_comments
+    ));
     if !snapshot.linked_copilot_prs.is_empty() {
         out.push_str("linked copilot/* PRs:\n");
         for pr in &snapshot.linked_copilot_prs {
@@ -784,7 +797,11 @@ fn signal_kind(signal: &DispatchSignal) -> &'static str {
     }
 }
 
-fn run<W: std::io::Write>(args: Args, client: &dyn GhClient, out: &mut W) -> Result<i32, StatusError> {
+fn run<W: std::io::Write>(
+    args: Args,
+    client: &dyn GhClient,
+    out: &mut W,
+) -> Result<i32, StatusError> {
     let (owner, name) = parse_repo(&args.repo)?;
     match &args.command {
         SubCmd::Check { issue } => {
@@ -844,10 +861,9 @@ mod tests {
             _name: &str,
             issue: u64,
         ) -> Result<DispatchSnapshotRaw, StatusError> {
-            self.dispatch
-                .get(&issue)
-                .cloned()
-                .ok_or_else(|| StatusError::Gh(format!("mock: no canned response for issue {issue}")))
+            self.dispatch.get(&issue).cloned().ok_or_else(|| {
+                StatusError::Gh(format!("mock: no canned response for issue {issue}"))
+            })
         }
         fn query_copilot_branches(
             &self,
@@ -1006,7 +1022,10 @@ mod tests {
         let raw = parse_dispatch_response(&body, 100).unwrap();
         assert!(raw.copilot_ever_assigned);
         assert!(raw.copilot_connected);
-        assert_eq!(raw.copilot_connected_at.as_deref(), Some("2026-05-15T10:59:04Z"));
+        assert_eq!(
+            raw.copilot_connected_at.as_deref(),
+            Some("2026-05-15T10:59:04Z")
+        );
     }
 
     #[test]
@@ -1025,7 +1044,10 @@ mod tests {
             "comments": {"nodes": []}
         }}}});
         let raw = parse_dispatch_response(&body, 100).unwrap();
-        assert_eq!(raw.copilot_connected_at.as_deref(), Some("2026-05-15T10:59:04Z"));
+        assert_eq!(
+            raw.copilot_connected_at.as_deref(),
+            Some("2026-05-15T10:59:04Z")
+        );
     }
 
     #[test]
@@ -1235,12 +1257,21 @@ mod tests {
     fn filter_recent_branches_keeps_at_or_after_cutoff() {
         let cutoff = "2026-05-15T11:00:00Z";
         let bs = vec![
-            CopilotBranch { name: "copilot/old".into(), head_sha: "1".into(),
-                            head_committed_at: "2026-04-01T00:00:00Z".into() },
-            CopilotBranch { name: "copilot/new".into(), head_sha: "2".into(),
-                            head_committed_at: "2026-05-15T11:02:57Z".into() },
-            CopilotBranch { name: "copilot/exact".into(), head_sha: "3".into(),
-                            head_committed_at: "2026-05-15T11:00:00Z".into() },
+            CopilotBranch {
+                name: "copilot/old".into(),
+                head_sha: "1".into(),
+                head_committed_at: "2026-04-01T00:00:00Z".into(),
+            },
+            CopilotBranch {
+                name: "copilot/new".into(),
+                head_sha: "2".into(),
+                head_committed_at: "2026-05-15T11:02:57Z".into(),
+            },
+            CopilotBranch {
+                name: "copilot/exact".into(),
+                head_sha: "3".into(),
+                head_committed_at: "2026-05-15T11:00:00Z".into(),
+            },
         ];
         let filtered = filter_recent_branches(bs, cutoff);
         let names: Vec<_> = filtered.iter().map(|b| b.name.as_str()).collect();
@@ -1362,7 +1393,10 @@ mod tests {
         match classify(&s) {
             DispatchSignal::BranchCandidates { branches, .. } => {
                 assert_eq!(branches.len(), 1);
-                assert_eq!(branches[0].name, "copilot/redesign-critique-v2-cycle-runner");
+                assert_eq!(
+                    branches[0].name,
+                    "copilot/redesign-critique-v2-cycle-runner"
+                );
             }
             other => panic!("expected BranchCandidates, got {other:?}"),
         }
@@ -1507,15 +1541,27 @@ mod tests {
             DispatchSignal::NotFound,
             DispatchSignal::NotDispatched,
             DispatchSignal::DispatchedNoConnect,
-            DispatchSignal::ConnectedNoOutput { connected_at: "x".into() },
+            DispatchSignal::ConnectedNoOutput {
+                connected_at: "x".into(),
+            },
             DispatchSignal::BranchCandidates {
                 connected_at: "x".into(),
                 branches: Vec::new(),
                 copilot_comments: 0,
             },
-            DispatchSignal::PrOpen { pr: 1, head_ref: "copilot/x".into() },
-            DispatchSignal::PrClosedUnmerged { pr: 1, head_ref: "copilot/x".into() },
-            DispatchSignal::PrMerged { pr: 1, head_ref: "copilot/x".into(), merged_at: "x".into() },
+            DispatchSignal::PrOpen {
+                pr: 1,
+                head_ref: "copilot/x".into(),
+            },
+            DispatchSignal::PrClosedUnmerged {
+                pr: 1,
+                head_ref: "copilot/x".into(),
+            },
+            DispatchSignal::PrMerged {
+                pr: 1,
+                head_ref: "copilot/x".into(),
+                merged_at: "x".into(),
+            },
         ];
         for s in &signals {
             let a = s.recommended_action();
@@ -1553,7 +1599,10 @@ mod tests {
             }],
         };
         let s = build_snapshot(&client, "EvaLok", "schema-org-json-ld", 100).unwrap();
-        assert!(s.candidate_branches.is_empty(), "branch probe should be skipped when PR is linked");
+        assert!(
+            s.candidate_branches.is_empty(),
+            "branch probe should be skipped when PR is linked"
+        );
     }
 
     #[test]
@@ -1642,8 +1691,14 @@ mod tests {
         let code = run(args, &client, &mut buf).unwrap();
         let text = String::from_utf8(buf).unwrap();
         assert_eq!(code, 0);
-        assert!(text.contains("signal: branch-candidates"), "text was: {text}");
-        assert!(text.contains("recommended action: absorb-from-branch"), "text was: {text}");
+        assert!(
+            text.contains("signal: branch-candidates"),
+            "text was: {text}"
+        );
+        assert!(
+            text.contains("recommended action: absorb-from-branch"),
+            "text was: {text}"
+        );
         assert!(text.contains("copilot/new"));
     }
 
@@ -1666,7 +1721,10 @@ mod tests {
         assert_eq!(code, 0);
         let parsed: Value = serde_json::from_str(&text).unwrap();
         assert_eq!(parsed["signal_kind"].as_str(), Some("not-dispatched"));
-        assert_eq!(parsed["recommended_action"].as_str(), Some("check-dispatch-tooling"));
+        assert_eq!(
+            parsed["recommended_action"].as_str(),
+            Some("check-dispatch-tooling")
+        );
         assert!(parsed["snapshot"].is_object());
     }
 
@@ -1695,10 +1753,18 @@ mod tests {
         // Lock in the kebab-case strings — these become part of the tool's
         // observable contract (state.json, journal entries, scripts).
         assert_eq!(signal_kind(&DispatchSignal::NotFound), "not-found");
-        assert_eq!(signal_kind(&DispatchSignal::NotDispatched), "not-dispatched");
-        assert_eq!(signal_kind(&DispatchSignal::DispatchedNoConnect), "dispatched-no-connect");
         assert_eq!(
-            signal_kind(&DispatchSignal::ConnectedNoOutput { connected_at: "x".into() }),
+            signal_kind(&DispatchSignal::NotDispatched),
+            "not-dispatched"
+        );
+        assert_eq!(
+            signal_kind(&DispatchSignal::DispatchedNoConnect),
+            "dispatched-no-connect"
+        );
+        assert_eq!(
+            signal_kind(&DispatchSignal::ConnectedNoOutput {
+                connected_at: "x".into()
+            }),
             "connected-no-output"
         );
         assert_eq!(
@@ -1710,11 +1776,17 @@ mod tests {
             "branch-candidates"
         );
         assert_eq!(
-            signal_kind(&DispatchSignal::PrOpen { pr: 1, head_ref: "x".into() }),
+            signal_kind(&DispatchSignal::PrOpen {
+                pr: 1,
+                head_ref: "x".into()
+            }),
             "pr-open"
         );
         assert_eq!(
-            signal_kind(&DispatchSignal::PrClosedUnmerged { pr: 1, head_ref: "x".into() }),
+            signal_kind(&DispatchSignal::PrClosedUnmerged {
+                pr: 1,
+                head_ref: "x".into()
+            }),
             "pr-closed-unmerged"
         );
         assert_eq!(

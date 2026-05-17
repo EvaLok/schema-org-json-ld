@@ -103,11 +103,7 @@ fn full_fixture() -> TempDir {
         "cycle-history-append.txt",
         "state/cycle-history/137.json\n",
     );
-    write_fixture(
-        dir.path(),
-        "git-commit-sha.txt",
-        "abc1234567def890\n",
-    );
+    write_fixture(dir.path(), "git-commit-sha.txt", "abc1234567def890\n");
     write_fixture(
         dir.path(),
         "issue-comment-url.txt",
@@ -136,7 +132,10 @@ fn fixture_mode_all_done() {
     assert_eq!(v["summary"]["failed"], 0);
     assert_eq!(v["fixture_mode"], true);
     assert_eq!(v["dry_run"], true);
-    assert_eq!(v["receipt"]["cycle_history_path"], "state/cycle-history/137.json");
+    assert_eq!(
+        v["receipt"]["cycle_history_path"],
+        "state/cycle-history/137.json"
+    );
     assert_eq!(v["receipt"]["commit_sha"], "abc1234567def890");
     assert_eq!(
         v["receipt"]["issue_comment_url"],
@@ -147,7 +146,10 @@ fn fixture_mode_all_done() {
     // issue-state is "skipped: no --issue-number provided" because the fixture test doesn't pass --issue-number.
     assert_eq!(v["receipt"]["state_pointer_check"], "skipped: dry-run");
     assert_eq!(v["receipt"]["push_confirmation"], "skipped: dry-run");
-    assert_eq!(v["receipt"]["issue_state_check"], "skipped: no --issue-number provided");
+    assert_eq!(
+        v["receipt"]["issue_state_check"],
+        "skipped: no --issue-number provided"
+    );
 }
 
 #[test]
@@ -170,7 +172,10 @@ fn fixture_gardening_with_findings_warns() {
     assert_eq!(code, 0);
     let v = parse_json(&stdout);
     let stages = v["stages"].as_array().unwrap();
-    let gs = stages.iter().find(|s| s["name"] == "gardening-sweep").unwrap();
+    let gs = stages
+        .iter()
+        .find(|s| s["name"] == "gardening-sweep")
+        .unwrap();
     assert_eq!(gs["status"], "warn");
     assert!(gs["details"].as_str().unwrap().contains("2 findings"));
     assert_eq!(v["receipt"]["gardening_findings_count"], 2);
@@ -245,13 +250,7 @@ fn fixture_malformed_gardening_json_fails() {
     write_fixture(dir.path(), "git-commit-sha.txt", "x");
     write_fixture(dir.path(), "issue-comment-url.txt", "x");
     let p = dir.path().to_string_lossy().to_string();
-    let (code, stdout, _) = run(&[
-        "--cycle-n",
-        "1",
-        "--skip-pre-check",
-        "--fixture-dir",
-        &p,
-    ]);
+    let (code, stdout, _) = run(&["--cycle-n", "1", "--skip-pre-check", "--fixture-dir", &p]);
     assert_eq!(code, 2);
     let v = parse_json(&stdout);
     let gs = v["stages"]
@@ -316,7 +315,10 @@ fn dry_run_no_corpus_warns() {
         .find(|s| s["name"] == "gardening-sweep")
         .unwrap();
     assert_eq!(gs["status"], "warn");
-    assert!(gs["details"].as_str().unwrap().contains("no --gardening-corpus"));
+    assert!(gs["details"]
+        .as_str()
+        .unwrap()
+        .contains("no --gardening-corpus"));
 }
 
 #[test]
@@ -338,7 +340,10 @@ fn dry_run_no_history_payload_warns() {
         .find(|s| s["name"] == "cycle-history-append")
         .unwrap();
     assert_eq!(ch["status"], "warn");
-    assert!(ch["details"].as_str().unwrap().contains("--history-payload"));
+    assert!(ch["details"]
+        .as_str()
+        .unwrap()
+        .contains("--history-payload"));
 }
 
 #[test]
@@ -405,7 +410,10 @@ fn dry_run_no_close_comment_body_warns() {
         .find(|s| s["name"] == "issue-close")
         .unwrap();
     assert_eq!(ic["status"], "warn");
-    assert!(ic["details"].as_str().unwrap().contains("--close-comment-body"));
+    assert!(ic["details"]
+        .as_str()
+        .unwrap()
+        .contains("--close-comment-body"));
 }
 
 // -----------------------------------------------------------------------------
@@ -481,13 +489,7 @@ fn output_to_file_writes_serialized_report() {
 fn receipt_validate_in_fixture_mode_is_skipped() {
     let dir = full_fixture();
     let p = dir.path().to_string_lossy().to_string();
-    let (_, stdout, _) = run(&[
-        "--cycle-n",
-        "1",
-        "--skip-pre-check",
-        "--fixture-dir",
-        &p,
-    ]);
+    let (_, stdout, _) = run(&["--cycle-n", "1", "--skip-pre-check", "--fixture-dir", &p]);
     let v = parse_json(&stdout);
     let rv = v["stages"]
         .as_array()
@@ -497,10 +499,19 @@ fn receipt_validate_in_fixture_mode_is_skipped() {
         .unwrap();
     // Fixture mode is dry-run; all 3 sub-checks are "skipped: dry-run"; no real validation ran.
     assert_eq!(rv["status"], "skipped");
-    assert!(rv["details"].as_str().unwrap().contains("state-pointer[OK]: skipped: dry-run"));
-    assert!(rv["details"].as_str().unwrap().contains("push-confirmation[OK]: skipped: dry-run"));
+    assert!(rv["details"]
+        .as_str()
+        .unwrap()
+        .contains("state-pointer[OK]: skipped: dry-run"));
+    assert!(rv["details"]
+        .as_str()
+        .unwrap()
+        .contains("push-confirmation[OK]: skipped: dry-run"));
     // No --issue-number passed → "skipped: no --issue-number provided" (not "skipped: dry-run")
-    assert!(rv["details"].as_str().unwrap().contains("issue-state[OK]: skipped: no --issue-number provided"));
+    assert!(rv["details"]
+        .as_str()
+        .unwrap()
+        .contains("issue-state[OK]: skipped: no --issue-number provided"));
 }
 
 #[test]
@@ -549,7 +560,10 @@ fn receipt_validate_skip_flag_is_honored() {
         .find(|s| s["name"] == "receipt-validate")
         .unwrap();
     assert_eq!(rv["status"], "skipped");
-    assert!(rv["details"].as_str().unwrap().contains("--skip-receipt-validate"));
+    assert!(rv["details"]
+        .as_str()
+        .unwrap()
+        .contains("--skip-receipt-validate"));
 }
 
 // -----------------------------------------------------------------------------
@@ -604,12 +618,7 @@ fn pre_check_in_dry_run_is_skipped_with_dry_run_detail() {
 fn pre_check_in_fixture_mode_is_skipped() {
     let dir = full_fixture();
     let p = dir.path().to_string_lossy().to_string();
-    let (_, stdout, _) = run(&[
-        "--cycle-n",
-        "1",
-        "--fixture-dir",
-        &p,
-    ]);
+    let (_, stdout, _) = run(&["--cycle-n", "1", "--fixture-dir", &p]);
     let v = parse_json(&stdout);
     let pc = v["stages"]
         .as_array()
@@ -735,13 +744,7 @@ fn stage_order_is_stable() {
 fn dry_run_when_fixture_dir_set() {
     let dir = full_fixture();
     let p = dir.path().to_string_lossy().to_string();
-    let (_, stdout, _) = run(&[
-        "--cycle-n",
-        "1",
-        "--skip-pre-check",
-        "--fixture-dir",
-        &p,
-    ]);
+    let (_, stdout, _) = run(&["--cycle-n", "1", "--skip-pre-check", "--fixture-dir", &p]);
     let v = parse_json(&stdout);
     assert_eq!(v["dry_run"], true);
     assert_eq!(v["fixture_mode"], true);
@@ -759,12 +762,6 @@ fn exit_code_failed_outranks_warn() {
     write_fixture(dir.path(), "git-commit-sha.txt", "x");
     write_fixture(dir.path(), "issue-comment-url.txt", "y");
     let p = dir.path().to_string_lossy().to_string();
-    let (code, _, _) = run(&[
-        "--cycle-n",
-        "1",
-        "--skip-pre-check",
-        "--fixture-dir",
-        &p,
-    ]);
+    let (code, _, _) = run(&["--cycle-n", "1", "--skip-pre-check", "--fixture-dir", &p]);
     assert_eq!(code, 2);
 }

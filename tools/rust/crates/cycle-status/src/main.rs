@@ -1262,7 +1262,10 @@ fn to_numeric_set(values: &[i64]) -> HashSet<u64> {
 }
 
 fn to_audit_set(values: &[AuditProcessedEntry]) -> HashSet<u64> {
-    values.iter().map(AuditProcessedEntry::audit_issue).collect()
+    values
+        .iter()
+        .map(AuditProcessedEntry::audit_issue)
+        .collect()
 }
 
 fn to_simple_issue(value: &Value) -> Option<SimpleIssue> {

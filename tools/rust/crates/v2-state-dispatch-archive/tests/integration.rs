@@ -124,7 +124,10 @@ fn happy_path_archives_old_terminal_leaves_live_and_recent() {
         }
     ]);
 
-    make_state(dir.path(), serde_json::json!({ "agent_sessions": sessions }));
+    make_state(
+        dir.path(),
+        serde_json::json!({ "agent_sessions": sessions }),
+    );
 
     let status = Command::new(binary_path())
         .args([
@@ -140,11 +143,15 @@ fn happy_path_archives_old_terminal_leaves_live_and_recent() {
     assert!(status.success(), "expected exit 0, got {status:?}");
 
     // Verify state.json was mutated: 2 entries remain (recent merged + in_flight).
-    let state_text =
-        fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
+    let state_text = fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
     let state: serde_json::Value = serde_json::from_str(&state_text).unwrap();
     let remaining = state["agent_sessions"].as_array().unwrap();
-    assert_eq!(remaining.len(), 2, "expected 2 entries to remain, got {}", remaining.len());
+    assert_eq!(
+        remaining.len(),
+        2,
+        "expected 2 entries to remain, got {}",
+        remaining.len()
+    );
 
     let statuses: Vec<&str> = remaining
         .iter()
@@ -159,7 +166,11 @@ fn happy_path_archives_old_terminal_leaves_live_and_recent() {
         .path()
         .join("docs/state-archive")
         .join(format!("dispatches-{today}.json"));
-    assert!(archive_path.exists(), "archive file must exist at {}", archive_path.display());
+    assert!(
+        archive_path.exists(),
+        "archive file must exist at {}",
+        archive_path.display()
+    );
 
     let archive_text = fs::read_to_string(&archive_path).unwrap();
     let archive: serde_json::Value = serde_json::from_str(&archive_text).unwrap();
@@ -186,9 +197,11 @@ fn dry_run_reports_but_does_not_mutate() {
         }
     ]);
 
-    make_state(dir.path(), serde_json::json!({ "agent_sessions": sessions }));
-    let state_before =
-        fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
+    make_state(
+        dir.path(),
+        serde_json::json!({ "agent_sessions": sessions }),
+    );
+    let state_before = fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
 
     let output = Command::new(binary_path())
         .args([
@@ -202,12 +215,18 @@ fn dry_run_reports_but_does_not_mutate() {
         .output()
         .expect("failed to run binary");
 
-    assert!(output.status.success(), "expected exit 0, got {:?}", output.status);
+    assert!(
+        output.status.success(),
+        "expected exit 0, got {:?}",
+        output.status
+    );
 
     // state.json must be unchanged.
-    let state_after =
-        fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
-    assert_eq!(state_before, state_after, "state.json must not be mutated in dry-run");
+    let state_after = fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
+    assert_eq!(
+        state_before, state_after,
+        "state.json must not be mutated in dry-run"
+    );
 
     // Archive directory must not exist.
     assert!(
@@ -283,8 +302,7 @@ fn concurrent_mutation_detected_exits_3() {
     //
     // For a true exit-code-2 result we would need to wait 30s. Instead we
     // verify that state.json is unchanged (no archive was started).
-    let state_after =
-        fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
+    let state_after = fs::read_to_string(dir.path().join("docs/state.json")).unwrap();
     let state: serde_json::Value = serde_json::from_str(&state_after).unwrap();
     let sessions_after = state["agent_sessions"].as_array().unwrap();
     // State must still have 1 entry (the lock prevented archival).

@@ -71,7 +71,10 @@ fn init_git_repo(repo_root: &Path) {
     run_git(repo_root, &["init"]);
     run_git(repo_root, &["config", "user.name", "Test User"]);
     run_git(repo_root, &["config", "user.email", "test@example.com"]);
-    run_git(repo_root, &["init", "--bare", remote_root.to_str().unwrap()]);
+    run_git(
+        repo_root,
+        &["init", "--bare", remote_root.to_str().unwrap()],
+    );
     run_git(&remote_root, &["symbolic-ref", "HEAD", "refs/heads/master"]);
     run_git(
         repo_root,

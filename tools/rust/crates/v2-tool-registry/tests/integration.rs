@@ -82,22 +82,19 @@ fn json_output_is_valid_array_of_entries() {
     let parsed: serde_json::Value = serde_json::from_str(&stdout).expect("valid JSON");
     let array = parsed.as_array().expect("array output");
     assert_eq!(array.len(), 2);
-    let names: Vec<&str> = array
-        .iter()
-        .map(|e| e["name"].as_str().unwrap())
-        .collect();
+    let names: Vec<&str> = array.iter().map(|e| e["name"].as_str().unwrap()).collect();
     assert_eq!(names, vec!["alpha", "v2-beta"]);
-    let v2_flags: Vec<bool> = array.iter().map(|e| e["is_v2"].as_bool().unwrap()).collect();
+    let v2_flags: Vec<bool> = array
+        .iter()
+        .map(|e| e["is_v2"].as_bool().unwrap())
+        .collect();
     assert_eq!(v2_flags, vec![false, true]);
 }
 
 #[test]
 fn v2_only_filter_excludes_legacy() {
     let temp = tempfile::tempdir().unwrap();
-    make_repo_root_with_crates(
-        &temp,
-        &[("legacy-tool", "old"), ("v2-new-tool", "new")],
-    );
+    make_repo_root_with_crates(&temp, &[("legacy-tool", "old"), ("v2-new-tool", "new")]);
     let output = Command::new(binary_path())
         .arg("--repo-root")
         .arg(temp.path())
@@ -117,11 +114,7 @@ fn filter_substring_match() {
     let temp = tempfile::tempdir().unwrap();
     make_repo_root_with_crates(
         &temp,
-        &[
-            ("foo-bar", "foo"),
-            ("baz-qux", "baz"),
-            ("foo-baz", "both"),
-        ],
+        &[("foo-bar", "foo"), ("baz-qux", "baz"), ("foo-baz", "both")],
     );
     let output = Command::new(binary_path())
         .arg("--repo-root")

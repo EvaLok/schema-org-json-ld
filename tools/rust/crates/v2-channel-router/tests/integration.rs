@@ -107,8 +107,15 @@ fn plan_payload_body(cycle: u32) -> String {
         "payload": {
             "substantive-focal": format!("focal-{cycle}"),
             "per-role-tasks": {
-                "executor": format!("executor-task-{cycle}"),
-                "curator": format!("curator-task-{cycle}")
+                "executor": {
+                    "action": format!("executor-task-{cycle}")
+                },
+                "curator": {
+                    "action": format!("curator-task-{cycle}")
+                },
+                "reconciler": {
+                    "action": format!("reconciler-task-{cycle}")
+                }
             }
         }
     })
@@ -393,10 +400,7 @@ fn read_text_output_for_empty_state_is_human_friendly() {
     run(&["init"], tmp.path());
     let (stdout, _stderr, code) = run(&["read", "--channel", "plan-channel"], tmp.path());
     assert_eq!(code, 0);
-    assert!(
-        stdout.contains("empty (never written)"),
-        "stdout: {stdout}"
-    );
+    assert!(stdout.contains("empty (never written)"), "stdout: {stdout}");
 }
 
 #[test]
@@ -436,8 +440,11 @@ fn multiple_writes_to_same_channel_accumulate_in_history() {
     let tmp = TempDir::new().unwrap();
     run(&["init"], tmp.path());
     for cycle in [140u32, 141, 142] {
-        let payload =
-            write_payload_file(tmp.path(), &format!("plan-{cycle}.json"), &plan_payload_body(cycle));
+        let payload = write_payload_file(
+            tmp.path(),
+            &format!("plan-{cycle}.json"),
+            &plan_payload_body(cycle),
+        );
         let (v, stderr, code) = run_json(
             &[
                 "write",
@@ -469,8 +476,11 @@ fn history_limit_returns_newest_first_capped() {
     let tmp = TempDir::new().unwrap();
     run(&["init"], tmp.path());
     for cycle in [140u32, 141, 142, 143, 144] {
-        let payload =
-            write_payload_file(tmp.path(), &format!("plan-{cycle}.json"), &plan_payload_body(cycle));
+        let payload = write_payload_file(
+            tmp.path(),
+            &format!("plan-{cycle}.json"),
+            &plan_payload_body(cycle),
+        );
         run(
             &[
                 "write",
@@ -511,14 +521,15 @@ fn schema_all_channels_default() {
     let tmp = TempDir::new().unwrap();
     let (v, _stderr, code) = run_json(&["schema"], tmp.path());
     assert_eq!(code, 0);
-    let arr = v.as_array().unwrap();
+    assert_eq!(v["schema_format_version"].as_u64().unwrap(), 2);
+    let arr = v["channels"].as_array().unwrap();
     assert_eq!(arr.len(), 4);
-    let names: Vec<&str> = arr.iter().map(|s| s["channel"].as_str().unwrap()).collect();
+    let names: Vec<&str> = arr.iter().map(|s| s["name"].as_str().unwrap()).collect();
     assert!(names.contains(&"plan-channel"));
     assert!(names.contains(&"work-channel"));
     assert!(names.contains(&"memory-channel"));
     assert!(names.contains(&"inbound-channel"));
-    let plan = arr.iter().find(|s| s["channel"] == "plan-channel").unwrap();
+    let plan = arr.iter().find(|s| s["name"] == "plan-channel").unwrap();
     assert_eq!(plan["allowed_writer"].as_str().unwrap(), "planner");
     assert_eq!(
         plan["state_path_template"].as_str().unwrap(),
@@ -531,9 +542,9 @@ fn schema_single_channel_selection() {
     let tmp = TempDir::new().unwrap();
     let (v, _stderr, code) = run_json(&["schema", "--channel", "inbound-channel"], tmp.path());
     assert_eq!(code, 0);
-    let arr = v.as_array().unwrap();
+    let arr = v["channels"].as_array().unwrap();
     assert_eq!(arr.len(), 1);
-    assert_eq!(arr[0]["channel"].as_str().unwrap(), "inbound-channel");
+    assert_eq!(arr[0]["name"].as_str().unwrap(), "inbound-channel");
     assert_eq!(arr[0]["allowed_writer"].as_str().unwrap(), "reconciler");
 }
 
@@ -718,6 +729,7 @@ fn schema_text_output_lists_each_channel_block() {
     let tmp = TempDir::new().unwrap();
     let (stdout, _stderr, code) = run(&["schema"], tmp.path());
     assert_eq!(code, 0);
+    assert!(stdout.contains("schema_format_version: 2"));
     for ch in [
         "plan-channel",
         "work-channel",
@@ -727,6 +739,80 @@ fn schema_text_output_lists_each_channel_block() {
         assert!(stdout.contains(ch), "stdout missing '{ch}': {stdout}");
     }
     for role in ["planner", "executor", "curator", "reconciler"] {
-        assert!(stdout.contains(role), "stdout missing role '{role}': {stdout}");
+        assert!(
+            stdout.contains(role),
+            "stdout missing role '{role}': {stdout}"
+        );
     }
+}
+
+#[test]
+fn validate_payload_strict_mode_default_rejects_type_mismatch() {
+    let tmp = TempDir::new().unwrap();
+    run(&["init"], tmp.path());
+    let bad_body = serde_json::json!({
+        "cycle": 140,
+        "timestamp": "2026-05-14T01:00:00Z",
+        "payload": {
+            "substantive-focal": "x",
+            "per-role-tasks": "wrong"
+        }
+    })
+    .to_string();
+    let payload = write_payload_file(tmp.path(), "bad.json", &bad_body);
+    let (_stdout, stderr, code) = run(
+        &[
+            "write",
+            "--channel",
+            "plan-channel",
+            "--writer",
+            "planner",
+            "--payload-file",
+            payload.to_str().unwrap(),
+        ],
+        tmp.path(),
+    );
+    assert_ne!(code, 0);
+    assert!(stderr.contains("payload key 'per-role-tasks': expected type object, observed string"));
+}
+
+#[test]
+fn validate_payload_lenient_mode_logs_and_accepts() {
+    let tmp = TempDir::new().unwrap();
+    run(&["init"], tmp.path());
+    let bad_body = serde_json::json!({
+        "cycle": 140,
+        "timestamp": "2026-05-14T01:00:00Z",
+        "payload": {
+            "substantive-focal": "x",
+            "per-role-tasks": "wrong"
+        }
+    })
+    .to_string();
+    let payload = write_payload_file(tmp.path(), "bad.json", &bad_body);
+    let (_stdout, stderr, code) = run(
+        &[
+            "--mode",
+            "lenient",
+            "write",
+            "--channel",
+            "plan-channel",
+            "--writer",
+            "planner",
+            "--payload-file",
+            payload.to_str().unwrap(),
+        ],
+        tmp.path(),
+    );
+    assert_eq!(code, 0, "stderr: {stderr}");
+    assert!(stderr.contains("[router-lenient]"));
+    assert!(stderr.contains("payload key 'per-role-tasks'"));
+}
+
+#[test]
+fn schema_subcommand_emits_format_version_2() {
+    let tmp = TempDir::new().unwrap();
+    let (v, _stderr, code) = run_json(&["schema"], tmp.path());
+    assert_eq!(code, 0);
+    assert_eq!(v["schema_format_version"].as_u64().unwrap(), 2);
 }

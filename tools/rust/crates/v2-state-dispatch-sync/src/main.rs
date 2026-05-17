@@ -161,9 +161,11 @@ impl GhClient for GhCliClient {
 }
 
 fn parse_issue_response(body: &Value, issue: u64) -> Result<IssueStatus, SyncError> {
-    let issue_obj = body
-        .pointer("/data/repository/issue")
-        .ok_or_else(|| SyncError::Gh(format!("issue {issue}: response missing data.repository.issue")))?;
+    let issue_obj = body.pointer("/data/repository/issue").ok_or_else(|| {
+        SyncError::Gh(format!(
+            "issue {issue}: response missing data.repository.issue"
+        ))
+    })?;
 
     if issue_obj.is_null() {
         return Err(SyncError::Gh(format!("issue {issue}: not found")));
@@ -181,7 +183,10 @@ fn parse_issue_response(body: &Value, issue: u64) -> Result<IssueStatus, SyncErr
         .and_then(|v| v.as_array())
     {
         for node in nodes {
-            let merged = node.get("merged").and_then(|v| v.as_bool()).unwrap_or(false);
+            let merged = node
+                .get("merged")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             if !merged {
                 continue;
             }
@@ -256,7 +261,8 @@ fn compute_plan(
     scope: Option<&[u64]>,
 ) -> Result<Vec<Plan>, SyncError> {
     let in_flight = find_in_flight(state)?;
-    let scope_set: Option<std::collections::HashSet<u64>> = scope.map(|s| s.iter().copied().collect());
+    let scope_set: Option<std::collections::HashSet<u64>> =
+        scope.map(|s| s.iter().copied().collect());
 
     let mut plans = Vec::new();
     for issue in in_flight {
@@ -329,9 +335,11 @@ fn apply_plan(state: &mut Value, plans: &[Plan]) -> Result<usize, SyncError> {
             Some(p) => *p,
             None => continue,
         };
-        let obj = entry
-            .as_object_mut()
-            .ok_or_else(|| SyncError::Schema(format!("agent_sessions entry for #{issue} is not an object")))?;
+        let obj = entry.as_object_mut().ok_or_else(|| {
+            SyncError::Schema(format!(
+                "agent_sessions entry for #{issue} is not an object"
+            ))
+        })?;
         mutate_entry(obj, plan)?;
         mutated += 1;
     }
@@ -386,7 +394,10 @@ fn update_in_flight_sessions(state: &mut Value, count: u64) -> Result<(), SyncEr
     let obj = state
         .as_object_mut()
         .ok_or_else(|| SyncError::Schema("state.json top-level is not an object".to_string()))?;
-    obj.insert("in_flight_sessions".to_string(), Value::Number(count.into()));
+    obj.insert(
+        "in_flight_sessions".to_string(),
+        Value::Number(count.into()),
+    );
     Ok(())
 }
 
@@ -395,17 +406,33 @@ fn print_plan(plans: &[Plan], in_flight_after: u64) {
         println!("No in_flight agent_sessions entries found.");
         return;
     }
-    let unchanged: Vec<&Plan> = plans.iter().filter(|p| p.new_status == "in_flight").collect();
-    let changed: Vec<&Plan> = plans.iter().filter(|p| p.new_status != "in_flight").collect();
+    let unchanged: Vec<&Plan> = plans
+        .iter()
+        .filter(|p| p.new_status == "in_flight")
+        .collect();
+    let changed: Vec<&Plan> = plans
+        .iter()
+        .filter(|p| p.new_status != "in_flight")
+        .collect();
 
-    println!("Plan: {} entries audited, {} transitions, {} unchanged", plans.len(), changed.len(), unchanged.len());
+    println!(
+        "Plan: {} entries audited, {} transitions, {} unchanged",
+        plans.len(),
+        changed.len(),
+        unchanged.len()
+    );
     println!();
     for p in &changed {
         match p.new_status.as_str() {
             "merged" => {
-                let pr = p.pr.map(|n| n.to_string()).unwrap_or_else(|| "?".to_string());
+                let pr =
+                    p.pr.map(|n| n.to_string())
+                        .unwrap_or_else(|| "?".to_string());
                 let ts = p.merged_at.clone().unwrap_or_else(|| "?".to_string());
-                println!("  #{}: in_flight → merged (pr=#{pr}, merged_at={ts})", p.issue);
+                println!(
+                    "  #{}: in_flight → merged (pr=#{pr}, merged_at={ts})",
+                    p.issue
+                );
             }
             "closed_without_pr" => {
                 println!("  #{}: in_flight → closed_without_pr", p.issue);
@@ -466,7 +493,10 @@ fn run(args: Args, client: &dyn GhClient) -> Result<i32, SyncError> {
                 .unwrap_or(0);
             print_plan(&plans, count);
             println!();
-            println!("Wrote {} ({mutated} entries mutated).", args.state_file.display());
+            println!(
+                "Wrote {} ({mutated} entries mutated).",
+                args.state_file.display()
+            );
             Ok(0)
         }
     }
@@ -500,7 +530,12 @@ mod tests {
     }
 
     impl GhClient for MockGh {
-        fn query_issue(&self, _owner: &str, _name: &str, issue: u64) -> Result<IssueStatus, SyncError> {
+        fn query_issue(
+            &self,
+            _owner: &str,
+            _name: &str,
+            issue: u64,
+        ) -> Result<IssueStatus, SyncError> {
             self.responses
                 .get(&issue)
                 .cloned()
@@ -745,10 +780,8 @@ mod tests {
 
     #[test]
     fn apply_plan_merges_and_updates_count() {
-        let mut state = state_with_sessions(vec![
-            session(2952, "in_flight"),
-            session(2960, "in_flight"),
-        ]);
+        let mut state =
+            state_with_sessions(vec![session(2952, "in_flight"), session(2960, "in_flight")]);
         let plans = vec![
             Plan {
                 issue: 2952,
@@ -1000,10 +1033,8 @@ mod tests {
     fn run_sync_with_scope_only_touches_scoped_issues() {
         let dir = tempfile::tempdir().unwrap();
         let state_path = dir.path().join("state.json");
-        let state = state_with_sessions(vec![
-            session(2950, "in_flight"),
-            session(2952, "in_flight"),
-        ]);
+        let state =
+            state_with_sessions(vec![session(2950, "in_flight"), session(2952, "in_flight")]);
         write_state(&state_path, &state).unwrap();
 
         let mock = MockGh {

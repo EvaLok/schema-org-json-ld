@@ -337,10 +337,7 @@ name = "foo"
 # description = "commented out"
 description = "real value"
 "#;
-        assert_eq!(
-            extract_description(content),
-            Some("real value".to_string())
-        );
+        assert_eq!(extract_description(content), Some("real value".to_string()));
     }
 
     #[test]

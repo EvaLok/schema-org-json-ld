@@ -313,7 +313,10 @@ fn detect_stale_accepted(
 }
 
 fn build_processed_set(processed: &[AuditProcessedEntry]) -> Result<HashSet<u64>, String> {
-    Ok(processed.iter().map(AuditProcessedEntry::audit_issue).collect())
+    Ok(processed
+        .iter()
+        .map(AuditProcessedEntry::audit_issue)
+        .collect())
 }
 
 fn extract_accepted_audit_references(issue: &AuditInboundIssue) -> Vec<AcceptedAuditReference> {

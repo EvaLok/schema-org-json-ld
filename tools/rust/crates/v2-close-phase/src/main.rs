@@ -380,11 +380,7 @@ fn run(args: &Args) -> Result<u8, String> {
 // Stage 1: gardening-sweep
 // -------------------------------------------------------------------
 
-fn run_gardening_sweep(
-    args: &Args,
-    dry_run: bool,
-    receipt: &mut ReceiptScaffold,
-) -> StageResult {
+fn run_gardening_sweep(args: &Args, dry_run: bool, receipt: &mut ReceiptScaffold) -> StageResult {
     if let Some(fixture_dir) = &args.fixture_dir {
         let path = fixture_dir.join("gardening-sweep.json");
         return match fs::read_to_string(&path) {
@@ -523,11 +519,7 @@ fn count_gardening_findings(v: &Value) -> u64 {
 // Stage 2: cycle-history append
 // -------------------------------------------------------------------
 
-fn run_history_append(
-    args: &Args,
-    dry_run: bool,
-    receipt: &mut ReceiptScaffold,
-) -> StageResult {
+fn run_history_append(args: &Args, dry_run: bool, receipt: &mut ReceiptScaffold) -> StageResult {
     if let Some(fixture_dir) = &args.fixture_dir {
         let path = fixture_dir.join("cycle-history-append.txt");
         return match fs::read_to_string(&path) {
@@ -556,8 +548,7 @@ fn run_history_append(
             return StageResult {
                 name: "cycle-history-append".to_string(),
                 status: StageStatus::Warn,
-                details: "--history-payload not set; cannot append cycle-history entry"
-                    .to_string(),
+                details: "--history-payload not set; cannot append cycle-history entry".to_string(),
                 output: None,
             };
         }
@@ -847,11 +838,7 @@ fn short_sha(sha: &str) -> String {
 // Stage 4: issue-close (comment + close)
 // -------------------------------------------------------------------
 
-fn run_issue_close(
-    args: &Args,
-    dry_run: bool,
-    receipt: &mut ReceiptScaffold,
-) -> StageResult {
+fn run_issue_close(args: &Args, dry_run: bool, receipt: &mut ReceiptScaffold) -> StageResult {
     if let Some(fixture_dir) = &args.fixture_dir {
         let path = fixture_dir.join("issue-comment-url.txt");
         return match fs::read_to_string(&path) {
@@ -922,7 +909,9 @@ fn run_issue_close(
             return StageResult {
                 name: "issue-close".to_string(),
                 status: StageStatus::Done,
-                details: format!("issue {issue_number} already closed (idempotent re-run; comment not posted)"),
+                details: format!(
+                    "issue {issue_number} already closed (idempotent re-run; comment not posted)"
+                ),
                 output: None,
             };
         }
@@ -930,7 +919,10 @@ fn run_issue_close(
 
     let mut comment_cmd = Command::new("gh");
     comment_cmd.current_dir(&args.repo_root);
-    comment_cmd.arg("issue").arg("comment").arg(issue_number.to_string());
+    comment_cmd
+        .arg("issue")
+        .arg("comment")
+        .arg(issue_number.to_string());
     comment_cmd.arg("--body-file").arg(&body_path);
     if let Some(slug) = &args.repo_slug {
         comment_cmd.arg("--repo").arg(slug);
@@ -966,7 +958,10 @@ fn run_issue_close(
 
     let mut close_cmd = Command::new("gh");
     close_cmd.current_dir(&args.repo_root);
-    close_cmd.arg("issue").arg("close").arg(issue_number.to_string());
+    close_cmd
+        .arg("issue")
+        .arg("close")
+        .arg(issue_number.to_string());
     if let Some(slug) = &args.repo_slug {
         close_cmd.arg("--repo").arg(slug);
     }
@@ -1101,11 +1096,7 @@ fn pre_check_git_safety(args: &Args, dry_run: bool) -> StageResult {
 /// or produced no SHA), the check is recorded as "skipped: <reason>" and the
 /// receipt field is left None. A check counts as failed only when an artifact
 /// WAS captured and validation rejected it.
-fn run_receipt_validate(
-    args: &Args,
-    dry_run: bool,
-    receipt: &mut ReceiptScaffold,
-) -> StageResult {
+fn run_receipt_validate(args: &Args, dry_run: bool, receipt: &mut ReceiptScaffold) -> StageResult {
     let mut checks: Vec<(&'static str, bool, String)> = Vec::new();
 
     // Check 1: state-pointer
@@ -1157,9 +1148,10 @@ fn run_receipt_validate(
                     Some(state) if state.eq_ignore_ascii_case("closed") => {
                         ("ok: closed".to_string(), true)
                     }
-                    Some(state) => {
-                        (format!("err: issue {n} state={state} (expected CLOSED)"), false)
-                    }
+                    Some(state) => (
+                        format!("err: issue {n} state={state} (expected CLOSED)"),
+                        false,
+                    ),
                     None => (format!("err: could not fetch state for issue {n}"), false),
                 }
             }
@@ -1275,7 +1267,9 @@ fn fetch_issue_state(args: &Args, issue_number: u64) -> Option<String> {
     }
     let stdout = String::from_utf8_lossy(&out.stdout);
     let v: Value = serde_json::from_str(&stdout).ok()?;
-    v.get("state").and_then(|s| s.as_str()).map(|s| s.to_string())
+    v.get("state")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_string())
 }
 
 // -------------------------------------------------------------------
@@ -1284,8 +1278,9 @@ fn fetch_issue_state(args: &Args, issue_number: u64) -> Option<String> {
 
 fn write_output(args: &Args, report: &CloseReport) -> Result<(), String> {
     let serialized = match args.format {
-        OutputFormat::Json => serde_json::to_string_pretty(report)
-            .map_err(|e| format!("serialization error: {e}"))?,
+        OutputFormat::Json => {
+            serde_json::to_string_pretty(report).map_err(|e| format!("serialization error: {e}"))?
+        }
         OutputFormat::Text => render_text(report),
     };
 
@@ -1297,7 +1292,8 @@ fn write_output(args: &Args, report: &CloseReport) -> Result<(), String> {
         writeln!(stdout).map_err(|e| format!("stdout write error: {e}"))?;
     } else {
         let path = Path::new(&args.output);
-        fs::write(path, serialized).map_err(|e| format!("write error at {}: {e}", path.display()))?;
+        fs::write(path, serialized)
+            .map_err(|e| format!("write error at {}: {e}", path.display()))?;
     }
     Ok(())
 }
@@ -1326,7 +1322,10 @@ fn render_text(report: &CloseReport) -> String {
             StageStatus::Failed => "FAIL",
             StageStatus::Skipped => "SKIP",
         };
-        out.push_str(&format!("  [{label:5}] {} — {}\n", stage.name, stage.details));
+        out.push_str(&format!(
+            "  [{label:5}] {} — {}\n",
+            stage.name, stage.details
+        ));
     }
     out
 }
@@ -1469,8 +1468,7 @@ mod tests {
         assert_eq!(count_gardening_findings(&v), 0);
         let v: Value = serde_json::from_str(r#"{"stale":[1,2]}"#).unwrap();
         assert_eq!(count_gardening_findings(&v), 2);
-        let v: Value =
-            serde_json::from_str(r#"{"stale":[1],"dead_links":[1,2,3]}"#).unwrap();
+        let v: Value = serde_json::from_str(r#"{"stale":[1],"dead_links":[1,2,3]}"#).unwrap();
         assert_eq!(count_gardening_findings(&v), 4);
     }
 }

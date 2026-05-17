@@ -171,12 +171,14 @@ fn build_payload(args: &Args) -> Result<Map<String, Value>, AppendError> {
 }
 
 fn split_field(spec: &str) -> Result<(String, Value), AppendError> {
-    let (key, raw) = spec
-        .split_once('=')
-        .ok_or_else(|| AppendError::Validation(format!("invalid --field (need KEY=VALUE): {spec}")))?;
+    let (key, raw) = spec.split_once('=').ok_or_else(|| {
+        AppendError::Validation(format!("invalid --field (need KEY=VALUE): {spec}"))
+    })?;
     let key = key.trim().to_string();
     if key.is_empty() {
-        return Err(AppendError::Validation(format!("--field key may not be empty: {spec}")));
+        return Err(AppendError::Validation(format!(
+            "--field key may not be empty: {spec}"
+        )));
     }
     Ok((key, parse_field_value(raw)))
 }
@@ -218,9 +220,13 @@ fn validate_payload(payload: &Map<String, Value>, cli_cycle_n: u64) -> Result<()
         }
     }
 
-    let cycle_number = payload.get("cycle_number").and_then(|v| v.as_u64()).ok_or(
-        AppendError::Validation("cycle_number must be an unsigned integer".to_string()),
-    )?;
+    let cycle_number =
+        payload
+            .get("cycle_number")
+            .and_then(|v| v.as_u64())
+            .ok_or(AppendError::Validation(
+                "cycle_number must be an unsigned integer".to_string(),
+            ))?;
     if cycle_number != cli_cycle_n {
         return Err(AppendError::Validation(format!(
             "cycle_number in payload ({cycle_number}) does not match --cycle-n ({cli_cycle_n})"
@@ -346,8 +352,14 @@ mod tests {
     fn validate_payload_accepts_complete() {
         let mut m = Map::new();
         m.insert("cycle_number".to_string(), Value::from(94u64));
-        m.insert("model".to_string(), Value::String("claude-opus-4-7".to_string()));
-        m.insert("started_at".to_string(), Value::String("2026-05-08T06:31:00Z".to_string()));
+        m.insert(
+            "model".to_string(),
+            Value::String("claude-opus-4-7".to_string()),
+        );
+        m.insert(
+            "started_at".to_string(),
+            Value::String("2026-05-08T06:31:00Z".to_string()),
+        );
         validate_payload(&m, 94).unwrap();
     }
 
@@ -355,7 +367,10 @@ mod tests {
     fn validate_payload_rejects_missing_field() {
         let mut m = Map::new();
         m.insert("cycle_number".to_string(), Value::from(94u64));
-        m.insert("started_at".to_string(), Value::String("2026-05-08T06:31:00Z".to_string()));
+        m.insert(
+            "started_at".to_string(),
+            Value::String("2026-05-08T06:31:00Z".to_string()),
+        );
         let err = validate_payload(&m, 94).unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains("model"), "msg = {msg}");
@@ -386,7 +401,10 @@ mod tests {
     #[test]
     fn validate_payload_rejects_non_integer_cycle() {
         let mut m = Map::new();
-        m.insert("cycle_number".to_string(), Value::String("ninety-four".to_string()));
+        m.insert(
+            "cycle_number".to_string(),
+            Value::String("ninety-four".to_string()),
+        );
         m.insert("model".to_string(), Value::String("x".to_string()));
         m.insert("started_at".to_string(), Value::String("t".to_string()));
         let err = validate_payload(&m, 94).unwrap_err();

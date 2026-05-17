@@ -460,15 +460,15 @@ fn write_cursor(repo_root: &Path, cursor: &Cursor) -> Result<(), ProcessorError>
 
 // ----- source file read + cursor filtering -----
 
-fn read_source_file(
-    source: Source,
-    path: Option<&Path>,
-) -> Result<Vec<Event>, ProcessorError> {
+fn read_source_file(source: Source, path: Option<&Path>) -> Result<Vec<Event>, ProcessorError> {
     let Some(path) = path else {
         return Ok(Vec::new());
     };
     if !path.exists() {
-        return Err(ProcessorError::SourceFileMissing(source, path.to_path_buf()));
+        return Err(ProcessorError::SourceFileMissing(
+            source,
+            path.to_path_buf(),
+        ));
     }
     let raw = fs::read_to_string(path)?;
     let file: SourceFile = serde_json::from_str(&raw).map_err(|e| {
@@ -499,10 +499,7 @@ fn filter_events_past_cursor(events: Vec<Event>, cursor: &Cursor) -> Vec<Event> 
     let Some(cv) = cursor.value.as_deref() else {
         return events;
     };
-    events
-        .into_iter()
-        .filter(|e| e.id.as_str() > cv)
-        .collect()
+    events.into_iter().filter(|e| e.id.as_str() > cv).collect()
 }
 
 /// Highest event id (lex max) among the supplied events, or `None` if events is empty.
@@ -625,7 +622,9 @@ fn write_inbound_channel(
 ) -> Result<(), ProcessorError> {
     // Verify the channels state directory exists (v2-channel-router init has been run).
     if !channels_dir(repo_root).exists() {
-        return Err(ProcessorError::ChannelsNotInitialized(channels_dir(repo_root)));
+        return Err(ProcessorError::ChannelsNotInitialized(channels_dir(
+            repo_root,
+        )));
     }
 
     validate_inbound_payload(&payload)?;
@@ -689,10 +688,7 @@ fn read_poll_history(repo_root: &Path) -> Result<PollHistory, ProcessorError> {
     Ok(history)
 }
 
-fn append_poll_history(
-    repo_root: &Path,
-    entry: PollHistoryEntry,
-) -> Result<(), ProcessorError> {
+fn append_poll_history(repo_root: &Path, entry: PollHistoryEntry) -> Result<(), ProcessorError> {
     let mut history = read_poll_history(repo_root)?;
     history.entries.push(entry);
     let path = poll_history_path(repo_root);
@@ -942,7 +938,10 @@ fn cmd_schema() -> SchemaOutput {
             "dispatch-returns",
             "inbound-completeness-marker",
         ],
-        poll_outcomes: vec![PollOutcome::Success.name(), PollOutcome::WriteSkipped.name()],
+        poll_outcomes: vec![
+            PollOutcome::Success.name(),
+            PollOutcome::WriteSkipped.name(),
+        ],
         poll_history_path_template: "state/reconciler/poll-history.json".to_string(),
     }
 }

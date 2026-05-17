@@ -116,7 +116,12 @@ impl Role {
     }
 
     fn all() -> &'static [Role] {
-        &[Role::Reconciler, Role::Planner, Role::Executor, Role::Curator]
+        &[
+            Role::Reconciler,
+            Role::Planner,
+            Role::Executor,
+            Role::Curator,
+        ]
     }
 
     /// The output channel this role writes to (matches v2-channel-router::Channel
@@ -493,8 +498,9 @@ fn write_channel(
                 entries: Vec::new(),
             }
         } else {
-            serde_json::from_str(&raw)
-                .map_err(|e| DriverError::Json(format!("decoding {}: {e}", history_path.display())))?
+            serde_json::from_str(&raw).map_err(|e| {
+                DriverError::Json(format!("decoding {}: {e}", history_path.display()))
+            })?
         }
     } else {
         ChannelHistory {
@@ -600,10 +606,7 @@ fn parse_session_output(
         .clone();
 
     if obj.contains_key("payload") {
-        let cycle = obj
-            .get("cycle")
-            .and_then(|v| v.as_u64())
-            .map(|n| n as u32);
+        let cycle = obj.get("cycle").and_then(|v| v.as_u64()).map(|n| n as u32);
         let timestamp = obj
             .get("timestamp")
             .and_then(|v| v.as_str())
@@ -728,7 +731,14 @@ fn cmd_invoke(
             channel
         );
     } else {
-        write_channel(repo_root, channel, role, cycle, &effective_timestamp, payload)?;
+        write_channel(
+            repo_root,
+            channel,
+            role,
+            cycle,
+            &effective_timestamp,
+            payload,
+        )?;
         outcome = Outcome::Success;
         notes = format!(
             "wrote channel '{}' from session output {}",
@@ -874,15 +884,13 @@ fn cmd_context(
                     let label = match &input.state {
                         ContextChannelState::NotInitialized => "not initialized".to_string(),
                         ContextChannelState::Empty => "empty".to_string(),
-                        ContextChannelState::Populated {
-                            cycle, writer, ..
-                        } => format!("populated (cycle {cycle} by {})", writer.name()),
+                        ContextChannelState::Populated { cycle, writer, .. } => {
+                            format!("populated (cycle {cycle} by {})", writer.name())
+                        }
                     };
                     println!(
                         "  - channel={} source={} state={}",
-                        input.channel,
-                        input.source,
-                        label
+                        input.channel, input.source, label
                     );
                 }
             }
@@ -1159,7 +1167,11 @@ mod tests {
     fn role_output_channels_are_distinct() {
         use std::collections::HashSet;
         let channels: HashSet<&str> = Role::all().iter().map(|r| r.output_channel()).collect();
-        assert_eq!(channels.len(), 4, "each role must have a unique output channel");
+        assert_eq!(
+            channels.len(),
+            4,
+            "each role must have a unique output channel"
+        );
     }
 
     #[test]
@@ -1175,10 +1187,12 @@ mod tests {
     fn role_input_bindings_per_cycle_139_scoping() {
         let p = Role::Planner.input_channels();
         assert_eq!(p.len(), 2, "planner reads memory + inbound");
-        assert!(p.iter().any(|b| b.channel == "memory-channel"
-            && b.source == InputSource::PreviousCycle));
-        assert!(p.iter().any(|b| b.channel == "inbound-channel"
-            && b.source == InputSource::CurrentCycle));
+        assert!(p
+            .iter()
+            .any(|b| b.channel == "memory-channel" && b.source == InputSource::PreviousCycle));
+        assert!(p
+            .iter()
+            .any(|b| b.channel == "inbound-channel" && b.source == InputSource::CurrentCycle));
 
         let e = Role::Executor.input_channels();
         assert_eq!(e.len(), 1, "executor reads plan-channel");
@@ -1199,7 +1213,10 @@ mod tests {
             required_payload_keys("plan-channel"),
             &["substantive-focal", "per-role-tasks"]
         );
-        assert_eq!(required_payload_keys("work-channel"), &["artifacts-written"]);
+        assert_eq!(
+            required_payload_keys("work-channel"),
+            &["artifacts-written"]
+        );
         assert_eq!(
             required_payload_keys("memory-channel"),
             &["consolidated-insights"]
@@ -1304,19 +1321,13 @@ mod tests {
     #[test]
     fn role_history_path_is_under_state_roles() {
         let p = role_history_path(Path::new("/x"), Role::Planner);
-        assert_eq!(
-            p,
-            PathBuf::from("/x/state/roles/planner-history.json"),
-        );
+        assert_eq!(p, PathBuf::from("/x/state/roles/planner-history.json"),);
     }
 
     #[test]
     fn default_prompt_path_kebab_case() {
         let p = default_prompt_path(Path::new("/x"), Role::Reconciler);
-        assert_eq!(
-            p,
-            PathBuf::from("/x/prompts/v2/reconciler-prompt.xml"),
-        );
+        assert_eq!(p, PathBuf::from("/x/prompts/v2/reconciler-prompt.xml"),);
     }
 
     #[test]

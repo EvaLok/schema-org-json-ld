@@ -972,7 +972,10 @@ fn build_numeric_processed_set(values: &[i64], field_name: &str) -> Result<HashS
 }
 
 fn build_audit_processed_set(values: &[AuditProcessedEntry]) -> Result<HashSet<u64>, String> {
-    Ok(values.iter().map(AuditProcessedEntry::audit_issue).collect())
+    Ok(values
+        .iter()
+        .map(AuditProcessedEntry::audit_issue)
+        .collect())
 }
 
 fn build_pending_request_set(values: &[Value]) -> Result<HashSet<u64>, String> {
