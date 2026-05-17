@@ -158,7 +158,7 @@ fn parse_iso8601(s: &str) -> Option<u64> {
 }
 
 fn days_from_civil(y: i64, m: i64, d: i64) -> Option<i64> {
-    if m < 1 || m > 12 || d < 1 || d > 31 {
+    if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
         return None;
     }
     let (y, m) = if m <= 2 { (y - 1, m + 9) } else { (y, m - 3) };
@@ -669,7 +669,7 @@ fn run(args: Args) -> ExitCode {
         .count();
     let terminal_retained = total_after - live_after;
 
-    let archive_file_rel = format!("{}/{}", args.archive_dir, format!("dispatches-{today}.json"));
+    let archive_file_rel = format!("{}/dispatches-{today}.json", args.archive_dir);
 
     // §6.1 Step 3: dry-run exit.
     if args.dry_run {
