@@ -1,0 +1,14 @@
+[package]
+name = "v2-state-dispatch-archive"
+version = "0.1.0"
+edition = "2021"
+description = "Periodic age-based archival sweep for docs/state.json agent_sessions[]. Moves terminal entries older than threshold to dated archive files under docs/state-archive/. Archival counterpart to v2-state-audit per cycle 163 design scope. CORE-DESIGN-PRINCIPLE-aligned tool extraction of v2-state-retention-policy §4 Axis 6 enforcement surface."
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
