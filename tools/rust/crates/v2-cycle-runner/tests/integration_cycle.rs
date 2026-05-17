@@ -555,3 +555,140 @@ fn live_run_halts_with_state_bound_exceeded_when_audit_reports_hard() {
         );
     }
 }
+
+/// Cycle 163 (Missing Integration Scenario 3, unblocked by cycle 160 C10
+/// amendment): super-step out-of-order halt. Pre-populates
+/// `state/super-step-history.json` with a synthetic cycle-5 completion
+/// record, leaving `state/super-step.json` as the post-init empty sentinel.
+/// Runs `v2-cycle-runner run --cycle 1`; v2-super-step-boundary's
+/// cycle-start step refuses with `OutOfOrderCycleStart` (cycles must be
+/// sequential: last completed 5, requested 1, expected 6). Cycle 163's
+/// boundary message-prefix change makes this stderr classify as
+/// `FailureClass::SuperStepOutOfOrder` in v2-cycle-runner. Asserts the
+/// dual cycle 160 C10 invariants:
+///
+///   1. **State-mutation-PRESENT for runner-local observability state**:
+///      `last-cycle.json` exists with `status=out-of-order`,
+///      `halt_step=super-step-init`, `halt_class=super-step-out-of-order`,
+///      `steps_attempted=1`.
+///   2. **State-mutation-ABSENT for super-step state machine state**:
+///      `super-step-history.json` is byte-identical to its pre-run
+///      state (still only the synthetic cycle-5 entry);
+///      `super-step.json` is byte-identical (still the empty sentinel).
+#[test]
+fn live_run_halts_super_step_out_of_order_when_history_diverges() {
+    build_primitives_once();
+
+    let temp = TempDir::new().expect("create temp dir");
+    let repo_root = temp.path();
+
+    init_state_in(repo_root);
+
+    // Pre-populate super-step-history.json with a synthetic completed
+    // cycle-5 entry. This makes any subsequent cycle-start at cycle != 6
+    // trigger OutOfOrderCycleStart.
+    let history_path = repo_root.join("state/super-step-history.json");
+    let synthetic_history = serde_json::json!({
+        "cycles": [
+            {
+                "cycle": 5,
+                "started_at": "1970-01-01T00:00:00Z",
+                "ended_at": "1970-01-01T00:00:00Z",
+                "transitions": []
+            }
+        ]
+    });
+    write_json(&history_path, &synthetic_history);
+
+    // Snapshot the super-step state files for state-mutation-absent
+    // assertion (cycle 160 C10 amendment).
+    let super_step_path = repo_root.join("state/super-step.json");
+    let history_before = fs::read(&history_path).expect("read history pre-run");
+    let super_step_before = fs::read(&super_step_path).expect("read super-step pre-run");
+
+    // Prepare session-output files (validate_session_output_files runs
+    // before the cycle-start step; contents don't matter because execution
+    // halts at step 1).
+    let session_dir = repo_root.join("session-outputs");
+    let reconciler_out = session_dir.join("reconciler.json");
+    let planner_out = session_dir.join("planner.json");
+    let executor_out = session_dir.join("executor.json");
+    let curator_out = session_dir.join("curator.json");
+    for p in [&reconciler_out, &planner_out, &executor_out, &curator_out] {
+        write_json(p, &serde_json::json!({}));
+    }
+
+    let mut args = primitive_bin_args(repo_root);
+    args.extend([
+        "run".into(),
+        "--cycle".into(),
+        "1".into(),
+        "--issue".into(),
+        "99999".into(),
+        "--reconciler-output-file".into(),
+        reconciler_out.to_string_lossy().into_owned(),
+        "--planner-output-file".into(),
+        planner_out.to_string_lossy().into_owned(),
+        "--executor-output-file".into(),
+        executor_out.to_string_lossy().into_owned(),
+        "--curator-output-file".into(),
+        curator_out.to_string_lossy().into_owned(),
+    ]);
+
+    let output = run_cycle_runner(&args);
+    assert!(
+        !output.status.success(),
+        "expected non-zero exit when boundary returns out-of-order; \
+         stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    // C10 invariant #1: runner-local observability state IS written.
+    let runner_last = repo_root.join("state/v2-cycle-runner/last-cycle.json");
+    assert!(
+        runner_last.exists(),
+        "expected v2-cycle-runner/last-cycle.json after super-step out-of-order halt"
+    );
+    let last = read_json(&runner_last);
+    assert_eq!(
+        last.get("status").and_then(|v| v.as_str()),
+        Some("out-of-order"),
+        "expected status=out-of-order, got {:?}\nfull last-cycle: {}",
+        last.get("status"),
+        last
+    );
+    assert_eq!(
+        last.get("halt_step").and_then(|v| v.as_str()),
+        Some("super-step-init"),
+        "expected halt_step=super-step-init, got {:?}",
+        last.get("halt_step"),
+    );
+    assert_eq!(
+        last.get("halt_reason").and_then(|v| v.as_str()),
+        Some("super-step-out-of-order"),
+        "expected halt_reason=super-step-out-of-order, got {:?}",
+        last.get("halt_reason"),
+    );
+    assert_eq!(
+        last.get("steps_attempted").and_then(|v| v.as_u64()),
+        Some(1),
+        "expected steps_attempted=1 (cycle-start was the step that failed), got {:?}",
+        last.get("steps_attempted"),
+    );
+
+    // C10 invariant #2: super-step state machine state is NOT mutated.
+    let history_after = fs::read(&history_path).expect("read history post-run");
+    assert_eq!(
+        history_before, history_after,
+        "expected super-step-history.json to be byte-identical after out-of-order halt; \
+         pre-run had synthetic cycle-5 only, post-run differs — boundary mutated \
+         super-step history despite refusing the cycle-start"
+    );
+    let super_step_after = fs::read(&super_step_path).expect("read super-step post-run");
+    assert_eq!(
+        super_step_before, super_step_after,
+        "expected super-step.json to be byte-identical after out-of-order halt; \
+         boundary mutated current super-step state despite refusing the cycle-start"
+    );
+}

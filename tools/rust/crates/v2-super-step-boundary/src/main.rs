@@ -208,12 +208,12 @@ impl std::fmt::Display for BoundaryError {
             BoundaryError::OutOfOrderCycleStart { last_complete, requested } => match last_complete {
                 Some(n) => write!(
                     f,
-                    "cycles must be sequential: last completed cycle was {n}, requested cycle {requested} (expected {})",
+                    "super-step out of order: cycles must be sequential: last completed cycle was {n}, requested cycle {requested} (expected {})",
                     n + 1
                 ),
                 None => write!(
                     f,
-                    "no completed cycles in history; requested cycle {requested} (expected first cycle to start)"
+                    "super-step out of order: no completed cycles in history; requested cycle {requested} (expected first cycle to start)"
                 ),
             },
             BoundaryError::CycleMismatch { in_progress, requested } => write!(
