@@ -108,6 +108,7 @@ struct PayloadKey {
 struct PayloadSchema {
     #[serde(default)]
     required: Vec<PayloadKey>,
+    #[allow(dead_code)]
     #[serde(default)]
     optional: Vec<PayloadKey>,
 }
@@ -712,12 +713,9 @@ fn parse_output_contract_payload_schema(xml: &str) -> Result<PromptPayloadSchema
                     && stack_ends_with(&stack, &[b"output-contract", b"format", b"required-key"])
                 {
                     if let Some(parent) = current_required.as_mut() {
-                        if let (Some(sub_name), Some(sub_ty)) = (
-                            attr_value(&e, b"name"),
-                            attr_value(&e, b"type")
-                                .and_then(parse_payload_type)
-                                .or(Some(PayloadType::Object)),
-                        ) {
+                        if let (Some(sub_name), Some(sub_ty)) =
+                            (attr_value(&e, b"name"), parse_sub_key_type(&e))
+                        {
                             parent.sub_keys.push(PromptPayloadKey {
                                 name: sub_name,
                                 ty: sub_ty,
@@ -761,12 +759,9 @@ fn parse_output_contract_payload_schema(xml: &str) -> Result<PromptPayloadSchema
                     && stack_ends_with(&stack, &[b"output-contract", b"format", b"required-key"])
                 {
                     if let Some(parent) = current_required.as_mut() {
-                        if let (Some(sub_name), Some(sub_ty)) = (
-                            attr_value(&e, b"name"),
-                            attr_value(&e, b"type")
-                                .and_then(parse_payload_type)
-                                .or(Some(PayloadType::Object)),
-                        ) {
+                        if let (Some(sub_name), Some(sub_ty)) =
+                            (attr_value(&e, b"name"), parse_sub_key_type(&e))
+                        {
                             parent.sub_keys.push(PromptPayloadKey {
                                 name: sub_name,
                                 ty: sub_ty,
@@ -1018,6 +1013,14 @@ fn parse_payload_type(raw: String) -> Option<PayloadType> {
     }
 }
 
+fn parse_sub_key_type(element: &BytesStart<'_>) -> Option<PayloadType> {
+    // Sub-keys are only valid under object-typed parent keys. If type is omitted in
+    // prompt XML, default to object so nested contract declarations stay parseable.
+    attr_value(element, b"type")
+        .and_then(parse_payload_type)
+        .or(Some(PayloadType::Object))
+}
+
 fn compare_payload_schema(
     prompt_file: &str,
     channel: &str,
@@ -1025,16 +1028,6 @@ fn compare_payload_schema(
     prompt_schema: &PromptPayloadSchema,
 ) -> Vec<Mismatch> {
     let mut mismatches = Vec::new();
-    let _router_optional_keys: BTreeSet<String> = router_schema
-        .optional
-        .iter()
-        .map(|k| k.name.clone())
-        .collect();
-    let _prompt_optional_keys: BTreeSet<String> = prompt_schema
-        .optional
-        .iter()
-        .map(|k| k.name.clone())
-        .collect();
     let router_required_map: HashMap<String, &PayloadKey> = router_schema
         .required
         .iter()

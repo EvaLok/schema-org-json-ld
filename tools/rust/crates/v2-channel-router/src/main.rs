@@ -575,6 +575,8 @@ fn validate_key_value(
     key_name: &str,
     value: &serde_json::Value,
     key_schema: PayloadKey,
+    // Optional top-level keys are type-checked only when present; their sub-key shape is
+    // not required in this scope, so callers pass false for optional entries.
     enforce_sub_keys: bool,
     mode: Mode,
     warnings: &mut Vec<String>,
@@ -598,27 +600,26 @@ fn validate_key_value(
             .as_object()
             .expect("object type already validated before sub-key validation");
         for sub_key in key_schema.sub_keys {
-            let Some(sub_value) = value_obj.get(sub_key.name) else {
+            if let Some(sub_value) = value_obj.get(sub_key.name) {
+                let sub_observed = describe_json_type(sub_value);
+                if !matches_payload_type(sub_value, sub_key.ty) {
+                    validation_failure(
+                        format!(
+                            "payload key '{}.{}': expected type {}, observed {}",
+                            key_name,
+                            sub_key.name,
+                            payload_type_name(sub_key.ty),
+                            sub_observed
+                        ),
+                        mode,
+                        warnings,
+                    )?;
+                }
+            } else {
                 validation_failure(
                     format!(
                         "payload key '{}' (type=object): missing required sub-key '{}'",
                         key_name, sub_key.name
-                    ),
-                    mode,
-                    warnings,
-                )?;
-                continue;
-            };
-
-            let sub_observed = describe_json_type(sub_value);
-            if !matches_payload_type(sub_value, sub_key.ty) {
-                validation_failure(
-                    format!(
-                        "payload key '{}.{}': expected type {}, observed {}",
-                        key_name,
-                        sub_key.name,
-                        payload_type_name(sub_key.ty),
-                        sub_observed
                     ),
                     mode,
                     warnings,
