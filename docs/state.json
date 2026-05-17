@@ -620,7 +620,7 @@
       "dispatched_at": "2026-05-15T10:58:54Z",
       "issue": 2960,
       "model": "gpt-5.4",
-      "status": "in_flight",
+      "status": "closed_without_pr",
       "title": "[redesign-critique] cycle 152 v2-cycle-runner adversarial critique"
     },
     {
@@ -628,7 +628,9 @@
       "title": "[redesign-impl] v2-state-dispatch-archive crate (cycle 164 per cycle 163 design scope)",
       "dispatched_at": "2026-05-17T03:09:31Z",
       "model": "gpt-5.4",
-      "status": "in_flight"
+      "status": "merged",
+      "pr": 2975,
+      "merged_at": "2026-05-17T05:26:18Z"
     },
     {
       "issue": 2978,
@@ -2213,7 +2215,7 @@
       }
     }
   },
-  "in_flight_sessions": 3,
+  "in_flight_sessions": 1,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
