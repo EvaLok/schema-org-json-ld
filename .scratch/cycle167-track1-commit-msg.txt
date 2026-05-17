@@ -1,0 +1,13 @@
+state(state-sync): cycle 167 Track 1 — reconcile stale in_flight entries (#2960 closed_without_pr, #2974 merged via PR #2975)
+
+Operational invocation of v2-state-dispatch-sync (cycle 154 tool, never run operationally
+until now). Closes cycle 166+ priority #2; remediates state-sync drift surfaced cycle 166
+Track 1 first-live-invocation of v2-state-dispatch-archive (NOVEL@1 pattern
+tool-first-live-invocation-surfaces-state-drift-in-adjacent-tool).
+
+Transitions:
+- #2960 in_flight → closed_without_pr (cycle 152 feedback-only return; no closing PR)
+- #2974 in_flight → merged (pr=#2975, merged_at=2026-05-17T05:26:18Z; cycle 165 merge)
+- #2978 unchanged (legitimately in_flight; cycle 166 Track 2 dispatch)
+
+Top-level in_flight_sessions counter: 3 → 1.

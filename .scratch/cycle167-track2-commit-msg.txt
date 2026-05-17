@@ -1,0 +1,36 @@
+redesign(phase-3): cycle 167 Track 2 — v2-state-retention-policy §4 Axis 6 recalibration (50/200/500 → 150/400/1000)
+
+Closes cycle 166+ priority #1. Gate cleared by cycle 166 Track 1 archival run
+(v2-state-dispatch-archive reduced docs/state.json agent_sessions[] 931→69).
+
+Old thresholds (cycle 158 initial) were sized against a slow steady-state stream
+assumption without an archival mechanism. Late-V1 ran ~10 dispatches/cycle and
+accumulated 930 entries over 3 months; cycle 159 made the assumption-vs-reality
+gap explicit. With archival operational (30-day age threshold sweep), the
+post-archival baseline is ~70 entries (4 live + ~65 terminal-but-within-window).
+
+New thresholds:
+- Advisory 150 (was 50): above heavy V2 cadence ceiling + safety margin.
+- Mandatory 400 (was 200): ~2× advisory; sustained excess OR archival lag.
+- Hard 1000 (was 500): V1-era no-archival rate × 3+ months; write-leak indicator.
+
+Empirical V2 dispatch cadence over cycle 138-167: 2 dispatches in 30 cycles
+(~0.07/cycle). Eva directive #2937 authorizes higher cadence; projections
+range 8-150 entries in 30-day window depending on activity level. New
+thresholds sit ABOVE the projected range so they signal anomaly, not normal V2.
+
+Files changed:
+- docs/redesign/_notes/v2-state-retention-policy.md: §4 Axis 6 table values +
+  cycle 167 recalibration rationale paragraph; cycle 159 commentary updated
+  to reflect post-archival reality + ownership clarification
+  (v2-state-dispatch-sync writes statuses; v2-state-dispatch-archive sweeps).
+- tools/rust/crates/v2-state-audit/src/main.rs: DISPATCHES_ADVISORY /
+  MANDATORY / HARD constants updated; 2 tests updated for new thresholds
+  (build_report_picks_up_state_json_dispatches uses 200 entries; renamed
+  dispatches_axis_classifies_hard_at_500_plus → ...at_1000_plus, uses 1000).
+
+Verification:
+- cargo build / test / clippy clean (39/39 v2-state-audit tests pass).
+- Live v2-state-audit against current 70-entry state.json: classification "ok"
+  (was "advisory" pre-recalibration due to 70 > 50). Post-archival baseline now
+  represented as the policy intends — normal operation, not a chronic warning.
