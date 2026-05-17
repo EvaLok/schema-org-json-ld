@@ -624,20 +624,27 @@
       "title": "[redesign-critique] cycle 152 v2-cycle-runner adversarial critique"
     },
     {
-      "issue": 2974,
-      "title": "[redesign-impl] v2-state-dispatch-archive crate (cycle 164 per cycle 163 design scope)",
       "dispatched_at": "2026-05-17T03:09:31Z",
+      "issue": 2974,
+      "merged_at": "2026-05-17T05:26:18Z",
       "model": "gpt-5.4",
-      "status": "merged",
       "pr": 2975,
-      "merged_at": "2026-05-17T05:26:18Z"
+      "status": "merged",
+      "title": "[redesign-impl] v2-state-dispatch-archive crate (cycle 164 per cycle 163 design scope)"
     },
     {
-      "issue": 2978,
-      "title": "[redesign-impl] v2-channel-router enforcement extension + v2-prompt-contract-check extension (cycle 166)",
       "dispatched_at": "2026-05-17T07:02:06Z",
+      "issue": 2978,
       "model": "gpt-5.4",
-      "status": "in_flight"
+      "status": "in_flight",
+      "title": "[redesign-impl] v2-channel-router enforcement extension + v2-prompt-contract-check extension (cycle 166)"
+    },
+    {
+      "dispatched_at": "2026-05-17T22:27:01Z",
+      "issue": 2984,
+      "model": "gpt-5.4",
+      "status": "in_flight",
+      "title": "[redesign-impl] v2-prompt-tag-semantic-fidelity Rust tool (cycle 168 design)"
     }
   ],
   "audit_dropped": [
@@ -1944,7 +1951,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2978 [redesign-impl] v2-channel-router enforcement extension + v2-prompt-contract-check extension (cycle 166) (cycle 545)",
+  "dispatch_log_latest": "#2984 [redesign-impl] v2-prompt-tag-semantic-fidelity Rust tool (cycle 168 design) (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -2215,13 +2222,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
     "number": 545,
-    "summary": "12 dispatches, 2 merges (PR #2732, PR #2734)",
-    "timestamp": "2026-05-17T07:02:06Z"
+    "summary": "13 dispatches, 2 merges (PR #2732, PR #2734)",
+    "timestamp": "2026-05-17T22:27:02Z"
   },
   "last_eva_comment_check": "2026-04-26T21:55:46Z",
   "last_tool_audit_cycle": 403,
