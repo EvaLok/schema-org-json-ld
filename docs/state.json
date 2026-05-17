@@ -10225,6 +10225,13 @@
       "model": "gpt-5.4",
       "status": "in_flight",
       "title": "[redesign-critique] cycle 152 v2-cycle-runner adversarial critique"
+    },
+    {
+      "issue": 2974,
+      "title": "[redesign-impl] v2-state-dispatch-archive crate (cycle 164 per cycle 163 design scope)",
+      "dispatched_at": "2026-05-17T03:09:31Z",
+      "model": "gpt-5.4",
+      "status": "in_flight"
     }
   ],
   "audit_dropped": [
@@ -11531,7 +11538,7 @@
       "resolved_ref": "#2731"
     }
   ],
-  "dispatch_log_latest": "#2960 [redesign-critique] cycle 152 v2-cycle-runner adversarial critique (cycle 545)",
+  "dispatch_log_latest": "#2974 [redesign-impl] v2-state-dispatch-archive crate (cycle 164 per cycle 163 design scope) (cycle 545)",
   "eva_input_issues": {
     "closed_prior_cycles": [
       180,
@@ -11802,13 +11809,13 @@
       }
     }
   },
-  "in_flight_sessions": 1,
+  "in_flight_sessions": 2,
   "last_cycle": {
     "duration_minutes": 4,
     "issue": 2735,
     "number": 545,
-    "summary": "10 dispatches, 2 merges (PR #2732, PR #2734)",
-    "timestamp": "2026-05-15T10:58:54Z"
+    "summary": "11 dispatches, 2 merges (PR #2732, PR #2734)",
+    "timestamp": "2026-05-17T03:09:31Z"
   },
   "last_eva_comment_check": "2026-04-26T21:55:46Z",
   "last_tool_audit_cycle": 403,
