@@ -73,9 +73,12 @@ const CYCLE_HISTORY_MANDATORY: u64 = 4 * MB;
 const CYCLE_HISTORY_HARD: u64 = 16 * MB;
 
 // Axis 6: docs/state.json dispatches array — entry count
-const DISPATCHES_ADVISORY: u64 = 50;
-const DISPATCHES_MANDATORY: u64 = 200;
-const DISPATCHES_HARD: u64 = 500;
+// Cycle 167 recalibration (was 50/200/500 from cycle 158). Sized against
+// post-archival baseline (~70 entries) + realistic V2 dispatch cadence + 30-day
+// window steady-state. See v2-state-retention-policy.md §4 Axis 6 for rationale.
+const DISPATCHES_ADVISORY: u64 = 150;
+const DISPATCHES_MANDATORY: u64 = 400;
+const DISPATCHES_HARD: u64 = 1000;
 
 // Cross-axis: total v2 state surface (live, all axes summed)
 const TOTAL_ADVISORY: u64 = 500 * MB;
@@ -1082,7 +1085,9 @@ mod tests {
         let tmp = tempdir();
         let docs = tmp.path().join("docs");
         std::fs::create_dir_all(&docs).unwrap();
-        let entries: Vec<Value> = (0..60).map(|i| serde_json::json!({"id": i})).collect();
+        // Cycle 167 recalibration: advisory threshold is 150 entries.
+        // 200 sits between advisory (150) and mandatory (400) → Advisory.
+        let entries: Vec<Value> = (0..200).map(|i| serde_json::json!({"id": i})).collect();
         // Policy axis is conceptual "dispatches"; storage key is the
         // legacy v1 `agent_sessions` array (see axis spec comment).
         let body = serde_json::json!({ "agent_sessions": entries });
@@ -1090,7 +1095,7 @@ mod tests {
         let r = build_report(tmp.path());
         let axis = r.axes.iter().find(|a| a.name == "state-json-dispatches").unwrap();
         assert!(axis.exists);
-        assert_eq!(axis.value, 60);
+        assert_eq!(axis.value, 200);
         assert_eq!(axis.classification, Kind::Advisory);
         assert_eq!(axis.unit, Unit::Entries);
         // Entry count does NOT contribute to byte total.
@@ -1100,16 +1105,17 @@ mod tests {
     }
 
     #[test]
-    fn dispatches_axis_classifies_hard_at_500_plus() {
+    fn dispatches_axis_classifies_hard_at_1000_plus() {
         let tmp = tempdir();
         let docs = tmp.path().join("docs");
         std::fs::create_dir_all(&docs).unwrap();
-        let entries: Vec<Value> = (0..500).map(|i| serde_json::json!({"id": i})).collect();
+        // Cycle 167 recalibration: hard threshold is 1000 entries.
+        let entries: Vec<Value> = (0..1000).map(|i| serde_json::json!({"id": i})).collect();
         let body = serde_json::json!({ "agent_sessions": entries });
         std::fs::write(docs.join("state.json"), serde_json::to_vec(&body).unwrap()).unwrap();
         let r = build_report(tmp.path());
         let axis = r.axes.iter().find(|a| a.name == "state-json-dispatches").unwrap();
-        assert_eq!(axis.value, 500);
+        assert_eq!(axis.value, 1000);
         assert_eq!(axis.classification, Kind::Hard);
         assert_eq!(axis.recommended_action, "halt-session-start");
         assert_eq!(r.overall.classification, Kind::Hard);
