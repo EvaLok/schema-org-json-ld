@@ -1,0 +1,22 @@
+redesign(phase-3): cycle 165 _notes + journal — straight-pair external-deliverable-absorption variant: PR #2975 absorption (HARDENING-AT-18, 50th consecutive HONORING) + audit #470 bifurcation-accept (audit-as-Priority-1-input HARDENING-AT-3, NEW cross-cycle pattern `directive-2937-copilot-role-bifurcation` NOVEL@1, external-deliverable-absorption-pair NOVEL@1, straight-pair HARDENING-AT-4)
+
+Cycle 165 closes cycle 164+ forward priorities #1 and #12 via the
+first all-external-deliverable straight-pair: Track 1 absorbs PR #2975
+(Copilot's v2-state-dispatch-archive implementation, 1678 LOC) — merged
+at 45a59cf5 with --admin (direct-push-zone files only), 22-scope-ref
+ACCEPT + 1 CARVEOUT + 0 DISAGREE per-finding verdict ledger, with
+clippy follow-up a8d581fa. Track 2 ACCEPTs audit #470's
+cross-perspective observation that directive #2937 is exercising
+Copilot in two structurally distinct roles (Role 1
+adversarial-critique 2 instances + Role 2 implementer 1 instance over
+18-cycle window 146-164) and names the cross-cycle pattern
+`directive-2937-copilot-role-bifurcation`.
+
+50th consecutive HONORING of named forward priority (115-165).
+14th consecutive two-track-composition post cycle 151 exception
+(HARDENING-AT-18). 4th consecutive straight-pair (HARDENING-AT-4 —
+modal two-track shape).
+
+Detail: docs/redesign/_notes/cycle-165-pr2975-absorption-and-audit-470-bifurcation-accept.md
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

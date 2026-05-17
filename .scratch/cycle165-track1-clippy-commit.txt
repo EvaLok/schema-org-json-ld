@@ -1,0 +1,21 @@
+redesign(phase-3): cycle 165 Track 1 follow-up — v2-state-dispatch-archive clippy lints
+
+PR #2975 absorption follow-up. Two cosmetic clippy lints in the
+freshly-merged crate, addressed in direct-push commit per
+AUTHORITY.direct-push-zones (crate is in `tools/rust/crates/v2-*`):
+
+- `main.rs:161` manual `!RangeInclusive::contains` (fired twice for
+  the m/d range checks in `days_from_civil`) → rewrite as
+  `!(1..=12).contains(&m) || !(1..=31).contains(&d)`
+- `main.rs:672` `format!` in `format!` args (nested format) →
+  inline as `format!("{}/dispatches-{today}.json", args.archive_dir)`
+
+Verification: `cargo clippy -p v2-state-dispatch-archive --all-targets`
+clean (was 3 warnings, now 0); `cargo test -p v2-state-dispatch-archive`
+26 unit + 3 integration = 29/29 passing (no regression).
+
+Cycle 165 Track 1 closes cycle 164+ forward priority #1
+(absorb PR #2975, the v2-state-dispatch-archive Copilot
+dispatch from cycle 164 per cycle 163 design scope).
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
