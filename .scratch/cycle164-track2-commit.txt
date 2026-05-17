@@ -1,0 +1,23 @@
+redesign(phase-3): cycle 164 Track 2 — v2-channel-router enforcement extension design scope (cycle 163 forward priority #4 CLOSED, C1/L3.1 from cycle 148)
+
+Authors `docs/redesign/_notes/v2-channel-router-enforcement-extension.md` (new, design scope only).
+
+The current `v2-channel-router::validate_payload` enforces only payload-is-object + required-keys-exist; the source comment at line 364-366 names the gap: "Does not type-check nested fields; that work is deferred to v2-channel-router COMPLETE arc." This scope is that arc.
+
+Architecture captured:
+- §2 tool-boundary: extension to existing v2-channel-router + v2-prompt-contract-check; no new crate.
+- §3 schema source-of-truth: Option B (`Channel::payload_schema()` new method, retain `required_payload_keys()` as thin wrapper for migration) recommended over in-place change / external JSON / prompt-XML-derived alternatives.
+- §4 type system: in-house vocabulary (PayloadType enum + PayloadKey struct with name/ty/sub_keys); one-level nesting only this scope; null-is-not-missing strict discipline; rejects JSON Schema dialect adoption for bounded 10-key surface (§4.6).
+- §5 enforcement points: write-time `validate_payload` extension + static `v2-prompt-contract-check` extension + `schema --format json` schema-format-version bump + `--mode strict|lenient` rollout flag.
+- §6 migration plan: 3 cycle-165+ priorities (router extension, contract-check extension, prompts honesty-pass per cycle 148 L3.2) + phased rollout via lenient cycle 1 before strict default.
+- §7 ordering: router-side lands first (contract-check needs schema-format-v2); prompts honesty-pass after both tools.
+- §9 anti-patterns rejected: runtime coupling with static check, JSON-Schema dialect, element-type enforcement, strict-from-day-one, deep-nesting recursion.
+- §10 11 explicit non-doings.
+
+Closes cycle 163 forward priority #4 (was cycle 162 priority #5, was cycle 161 priority #5; originally C1/L3.1 AGREE-RECORD+TOOL-SCOPED from cycle 148 absorption verdict).
+
+Pairs with cycle 164 Track 1 Copilot dispatch [#2974](https://github.com/EvaLok/schema-org-json-ld/issues/2974) (v2-state-dispatch-archive implementation per cycle 163 design scope) — straight-pair-with-dispatch composition variant; both priorities from the renumbered list with no coupling.
+
+Cycle 164's two-track composition continues HARDENING-AT-17 post cycle 151 single-track exception (13 consecutive). 49th consecutive HONORING of named forward priority. First Track-1 dispatch application of Eva directive #2937.
+
+`docs/redesign/_notes/v2-channel-router-enforcement-extension.md` (new, 279 lines).

@@ -1,0 +1,12 @@
+redesign(phase-3): cycle 164 _notes + journal — straight-pair-with-dispatch-variant closure (HARDENING-AT-17, 49th consecutive HONORING, 2 NOVEL@1 patterns, straight-pair HARDENING-AT-3, first Track-1 dispatch under directive #2937)
+
+Cycle 164 two-track composition closed with:
+- Track 1: v2-state-dispatch-archive Copilot dispatch (cycle 163 priority #1, dispatched as #2974, receipt commit 0032c141)
+- Track 2: v2-channel-router enforcement extension design scope (cycle 163 priority #4, C1/L3.1 from cycle 148; 279 lines, commit b92cd258)
+
+Pattern updates: directive-2937-track-1-dispatch-fit-application NOVEL@1; straight-pair-with-dispatch-variant NOVEL@1; straight-pair-closure HARDENING-AT-3 (162/163/164); two-track HARDENING-AT-17 (13 consecutive post cycle 151 exception); carry-forward-from-cycle-N-absorption-verdict RECURRENCE-AT-2 (cycle 162 + 164 both closed cycle-148 findings); non-rust-cycle-cargo-discipline clarification (1 invocation when no Rust modified).
+
+Process: 49th consecutive HONORING, 77th bottleneck-asynchronous, 54th non-per-candidate-sharpening. Cycle 154 gh api graphql subprocess pattern preserved — FIRST cycle since 154 to exercise via Track-1 dispatch.
+
+`docs/redesign/_notes/cycle-164-state-dispatch-archive-dispatch-and-channel-router-enforcement-extension.md` (new, ~265 lines)
+`docs/journal/2026-05-17.md` (appended cycle 164 section; cycle 163 section preserved)
