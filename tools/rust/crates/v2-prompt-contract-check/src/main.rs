@@ -8,6 +8,8 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+const EXPECTED_SCHEMA_FORMAT_VERSION: u32 = 2;
+
 const EXPECTED_PROMPT_FILES: &[&str] = &[
     "planner-prompt.xml",
     "reconciler-prompt.xml",
@@ -81,11 +83,60 @@ impl From<quick_xml::Error> for CheckError {
     }
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum PayloadType {
+    String,
+    Integer,
+    Number,
+    Boolean,
+    Array,
+    Object,
+    Null,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PayloadKey {
+    name: String,
+    #[serde(rename = "type")]
+    ty: PayloadType,
+    #[serde(default)]
+    sub_keys: Vec<PayloadKey>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PayloadSchema {
+    #[serde(default)]
+    required: Vec<PayloadKey>,
+    #[allow(dead_code)]
+    #[serde(default)]
+    optional: Vec<PayloadKey>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct ChannelSchema {
-    channel: String,
+    name: String,
     allowed_writer: String,
-    required_payload_keys: Vec<String>,
+    payload_schema: PayloadSchema,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RouterSchemaOutput {
+    schema_format_version: u32,
+    channels: Vec<ChannelSchema>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PromptPayloadKey {
+    name: String,
+    ty: PayloadType,
+    sub_keys: Vec<PromptPayloadKey>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PromptPayloadSchema {
+    required: Vec<PromptPayloadKey>,
+    optional: Vec<PromptPayloadKey>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -95,11 +146,15 @@ struct KeyDelta {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "snake_case")]
 enum MismatchKind {
-    ExtraInPrompt,
-    MissingInPrompt,
+    ExtraKey,
+    MissingKey,
     KeysMismatch,
+    TypeMismatch,
+    SubKeyMissingInPrompt,
+    SubKeyMissingInRouter,
+    SubKeyTypeMismatch,
     RoleMappingMissing,
     PromptFileMissing,
     ParseError,
@@ -193,7 +248,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
     let prompts_dir = resolve_prompts_dir(&args.prompts_dir)?;
     let schemas = read_router_schema(&args.channel_router_bin)?;
     let by_writer = map_channel_by_writer(&schemas);
-    let all_channels: BTreeSet<String> = schemas.iter().map(|s| s.channel.clone()).collect();
+    let all_channels: BTreeSet<String> = schemas.iter().map(|s| s.name.clone()).collect();
 
     let mut prompt_results = Vec::new();
     let mut mismatches = Vec::new();
@@ -202,7 +257,9 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
     for prompt_file in EXPECTED_PROMPT_FILES {
         let prompt_path = prompts_dir.join(prompt_file);
         let role = infer_role_from_prompt_filename(prompt_file).ok_or_else(|| {
-            CheckError::Invocation(format!("could not infer role from prompt filename: {prompt_file}"))
+            CheckError::Invocation(format!(
+                "could not infer role from prompt filename: {prompt_file}"
+            ))
         })?;
 
         let mut result = PromptResult {
@@ -251,54 +308,67 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
             }
         };
 
-        result.channel = schema.channel.clone();
+        result.channel = schema.name.clone();
 
         let xml = fs::read_to_string(&prompt_path)?;
-        let prompt_output_keys = match parse_output_contract_required_keys(&xml) {
+        let prompt_output_schema = match parse_output_contract_payload_schema(&xml) {
             Ok(keys) => keys,
             Err(err) => {
                 mismatches.push(Mismatch {
                     prompt_file: prompt_path.display().to_string(),
-                    channel: schema.channel.clone(),
+                    channel: schema.name.clone(),
                     kind: MismatchKind::ParseError,
-                    channel_router_keys: schema.required_payload_keys.clone(),
+                    channel_router_keys: schema
+                        .payload_schema
+                        .required
+                        .iter()
+                        .map(|k| k.name.clone())
+                        .collect(),
                     prompt_keys: Vec::new(),
                     delta: KeyDelta {
                         extra_in_prompt: Vec::new(),
-                        missing_in_prompt: schema.required_payload_keys.clone(),
+                        missing_in_prompt: schema
+                            .payload_schema
+                            .required
+                            .iter()
+                            .map(|k| k.name.clone())
+                            .collect(),
                     },
-                    details: Some(format!("failed to parse output-contract required keys: {err}")),
+                    details: Some(format!(
+                        "failed to parse output-contract required keys: {err}"
+                    )),
                 });
                 prompt_results.push(result);
                 continue;
             }
         };
 
-        let router_output_keys: BTreeSet<String> = schema.required_payload_keys.iter().cloned().collect();
-        let mut effective_prompt_output_keys = prompt_output_keys.clone();
-        let mut output_delta = compare_keys(&router_output_keys, &effective_prompt_output_keys);
-        if !output_delta.extra_in_prompt.is_empty() || !output_delta.missing_in_prompt.is_empty() {
+        let mut output_mismatches = compare_payload_schema(
+            &prompt_path.display().to_string(),
+            &schema.name,
+            &schema.payload_schema,
+            &prompt_output_schema,
+        );
+        if !output_mismatches.is_empty() {
             // Curator currently emits a multi-surface session output wrapper.
             // If output-contract top-level keys mismatch, try channel-specific
             // required payload keys from <output-surfaces><surface name="...">.
-            if let Some(surface_keys) = parse_surface_required_keys_for_channel(&xml, &schema.channel)? {
-                let surface_delta = compare_keys(&router_output_keys, &surface_keys);
-                if surface_delta.extra_in_prompt.is_empty() && surface_delta.missing_in_prompt.is_empty() {
-                    effective_prompt_output_keys = surface_keys;
-                    output_delta = surface_delta;
+            if let Some(surface_schema) =
+                parse_surface_payload_schema_for_channel(&xml, &schema.name)?
+            {
+                let surface_mismatches = compare_payload_schema(
+                    &prompt_path.display().to_string(),
+                    &schema.name,
+                    &schema.payload_schema,
+                    &surface_schema,
+                );
+                if surface_mismatches.is_empty() {
+                    output_mismatches = surface_mismatches;
                 }
             }
         }
-        if !output_delta.extra_in_prompt.is_empty() || !output_delta.missing_in_prompt.is_empty() {
-            mismatches.push(Mismatch {
-                prompt_file: prompt_path.display().to_string(),
-                channel: schema.channel.clone(),
-                kind: mismatch_kind_from_delta(&output_delta),
-                channel_router_keys: set_to_vec(&router_output_keys),
-                prompt_keys: set_to_vec(&effective_prompt_output_keys),
-                delta: output_delta,
-                details: None,
-            });
+        if !output_mismatches.is_empty() {
+            mismatches.extend(output_mismatches);
             prompt_results.push(result);
             continue;
         }
@@ -313,7 +383,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
             if !all_channels.contains(&input.channel) {
                 mismatches.push(Mismatch {
                     prompt_file: prompt_path.display().to_string(),
-                    channel: schema.channel.clone(),
+                    channel: schema.name.clone(),
                     kind: MismatchKind::InputChannelUnknown,
                     channel_router_keys: Vec::new(),
                     prompt_keys: set_to_vec(&input.required_keys),
@@ -329,11 +399,15 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
                 continue;
             }
 
-            let Some(input_schema) = schemas.iter().find(|s| s.channel == input.channel) else {
+            let Some(input_schema) = schemas.iter().find(|s| s.name == input.channel) else {
                 continue;
             };
-            let input_router_keys: BTreeSet<String> =
-                input_schema.required_payload_keys.iter().cloned().collect();
+            let input_router_keys: BTreeSet<String> = input_schema
+                .payload_schema
+                .required
+                .iter()
+                .map(|k| k.name.clone())
+                .collect();
             let unknown_input_keys: Vec<String> = input
                 .required_keys
                 .iter()
@@ -343,7 +417,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
             if !unknown_input_keys.is_empty() {
                 mismatches.push(Mismatch {
                     prompt_file: prompt_path.display().to_string(),
-                    channel: schema.channel.clone(),
+                    channel: schema.name.clone(),
                     kind: MismatchKind::InputKeyUnknown,
                     channel_router_keys: set_to_vec(&input_router_keys),
                     prompt_keys: set_to_vec(&input.required_keys),
@@ -353,7 +427,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<RunReport, CheckError> {
                     },
                     details: Some(format!(
                         "input required-key declaration contains keys not required by '{}': see delta.extra_in_prompt",
-                        input_schema.channel
+                        input_schema.name
                     )),
                 });
             }
@@ -403,7 +477,11 @@ fn resolve_prompts_dir(prompts_dir: &Path) -> Result<PathBuf, CheckError> {
     )))
 }
 
-fn emit_report<W: Write>(format: OutputFormat, report: &RunReport, out: &mut W) -> Result<(), CheckError> {
+fn emit_report<W: Write>(
+    format: OutputFormat,
+    report: &RunReport,
+    out: &mut W,
+) -> Result<(), CheckError> {
     match format {
         OutputFormat::Json => {
             let json = JsonReport {
@@ -470,8 +548,16 @@ fn emit_report<W: Write>(format: OutputFormat, report: &RunReport, out: &mut W) 
 }
 
 fn emit_mismatch_block<W: Write>(out: &mut W, mismatch: &Mismatch) -> Result<(), CheckError> {
-    writeln!(out, "  channel-router required_payload_keys: {:?}", mismatch.channel_router_keys)?;
-    writeln!(out, "  prompt declares:                       {:?}", mismatch.prompt_keys)?;
+    writeln!(
+        out,
+        "  channel-router required keys: {:?}",
+        mismatch.channel_router_keys
+    )?;
+    writeln!(
+        out,
+        "  prompt declares:                       {:?}",
+        mismatch.prompt_keys
+    )?;
     writeln!(
         out,
         "  EXTRA-IN-PROMPT: {:?}{}",
@@ -532,13 +618,19 @@ fn read_router_schema(channel_router_bin: &Path) -> Result<Vec<ChannelSchema>, C
         )));
     }
 
-    let schema: Vec<ChannelSchema> = serde_json::from_slice(&output.stdout)?;
-    if schema.is_empty() {
+    let schema: RouterSchemaOutput = serde_json::from_slice(&output.stdout)?;
+    if schema.schema_format_version != EXPECTED_SCHEMA_FORMAT_VERSION {
+        return Err(CheckError::Invocation(format!(
+            "[prompt-contract-check] schema-format-version mismatch: expected {EXPECTED_SCHEMA_FORMAT_VERSION}, got {} from v2-channel-router. Re-build v2-channel-router and re-run.",
+            schema.schema_format_version
+        )));
+    }
+    if schema.channels.is_empty() {
         return Err(CheckError::Invocation(
             "channel-router schema output was empty".to_string(),
         ));
     }
-    Ok(schema)
+    Ok(schema.channels)
 }
 
 fn infer_role_from_prompt_filename(file_name: &str) -> Option<&str> {
@@ -560,8 +652,8 @@ fn mismatch_kind_from_delta(delta: &KeyDelta) -> MismatchKind {
         delta.extra_in_prompt.is_empty(),
         delta.missing_in_prompt.is_empty(),
     ) {
-        (false, true) => MismatchKind::ExtraInPrompt,
-        (true, false) => MismatchKind::MissingInPrompt,
+        (false, true) => MismatchKind::ExtraKey,
+        (true, false) => MismatchKind::MissingKey,
         (false, false) => MismatchKind::KeysMismatch,
         (true, true) => unreachable!("mismatch kind requested for empty delta"),
     }
@@ -586,7 +678,7 @@ fn set_to_vec(set: &BTreeSet<String>) -> Vec<String> {
     set.iter().cloned().collect()
 }
 
-fn parse_output_contract_required_keys(xml: &str) -> Result<BTreeSet<String>, CheckError> {
+fn parse_output_contract_payload_schema(xml: &str) -> Result<PromptPayloadSchema, CheckError> {
     let output_contract_fragment = extract_tag_block(xml, "output-contract").ok_or_else(|| {
         CheckError::Invocation("missing <output-contract> block in prompt XML".to_string())
     })?;
@@ -595,15 +687,55 @@ fn parse_output_contract_required_keys(xml: &str) -> Result<BTreeSet<String>, Ch
 
     let mut buf = Vec::new();
     let mut stack: Vec<Vec<u8>> = Vec::new();
-    let mut keys = BTreeSet::new();
+    let mut required = Vec::new();
+    let mut optional = Vec::new();
+    let mut current_required: Option<PromptPayloadKey> = None;
 
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
                 let name = e.name().as_ref().to_vec();
-                if name == b"required-key" && stack_ends_with(&stack, &[b"output-contract", b"format"]) {
-                    if let Some(value) = attr_value(&e, b"name") {
-                        keys.insert(value);
+                if name == b"required-key"
+                    && stack_ends_with(&stack, &[b"output-contract", b"format"])
+                {
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        current_required = Some(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
+                    }
+                }
+                if name == b"sub-key"
+                    && stack_ends_with(&stack, &[b"output-contract", b"format", b"required-key"])
+                {
+                    if let Some(parent) = current_required.as_mut() {
+                        if let (Some(sub_name), Some(sub_ty)) =
+                            (attr_value(&e, b"name"), parse_sub_key_type(&e))
+                        {
+                            parent.sub_keys.push(PromptPayloadKey {
+                                name: sub_name,
+                                ty: sub_ty,
+                                sub_keys: Vec::new(),
+                            });
+                        }
+                    }
+                }
+                if name == b"optional-key"
+                    && stack_ends_with(&stack, &[b"output-contract", b"format"])
+                {
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        optional.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
                     }
                 }
                 stack.push(name);
@@ -612,12 +744,53 @@ fn parse_output_contract_required_keys(xml: &str) -> Result<BTreeSet<String>, Ch
                 if e.name().as_ref() == b"required-key"
                     && stack_ends_with(&stack, &[b"output-contract", b"format"])
                 {
-                    if let Some(value) = attr_value(&e, b"name") {
-                        keys.insert(value);
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        required.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
+                    }
+                }
+                if e.name().as_ref() == b"sub-key"
+                    && stack_ends_with(&stack, &[b"output-contract", b"format", b"required-key"])
+                {
+                    if let Some(parent) = current_required.as_mut() {
+                        if let (Some(sub_name), Some(sub_ty)) =
+                            (attr_value(&e, b"name"), parse_sub_key_type(&e))
+                        {
+                            parent.sub_keys.push(PromptPayloadKey {
+                                name: sub_name,
+                                ty: sub_ty,
+                                sub_keys: Vec::new(),
+                            });
+                        }
+                    }
+                }
+                if e.name().as_ref() == b"optional-key"
+                    && stack_ends_with(&stack, &[b"output-contract", b"format"])
+                {
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        optional.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
                     }
                 }
             }
-            Event::End(_) => {
+            Event::End(e) => {
+                if e.name().as_ref() == b"required-key" {
+                    if let Some(key) = current_required.take() {
+                        required.push(key);
+                    }
+                }
                 stack.pop();
             }
             Event::Eof => break,
@@ -626,7 +799,7 @@ fn parse_output_contract_required_keys(xml: &str) -> Result<BTreeSet<String>, Ch
         buf.clear();
     }
 
-    Ok(keys)
+    Ok(PromptPayloadSchema { required, optional })
 }
 
 fn parse_input_source_contracts(xml: &str) -> Result<Vec<InputSourceContract>, CheckError> {
@@ -704,10 +877,10 @@ fn parse_input_source_contracts(xml: &str) -> Result<Vec<InputSourceContract>, C
     Ok(contracts)
 }
 
-fn parse_surface_required_keys_for_channel(
+fn parse_surface_payload_schema_for_channel(
     xml: &str,
     channel: &str,
-) -> Result<Option<BTreeSet<String>>, CheckError> {
+) -> Result<Option<PromptPayloadSchema>, CheckError> {
     let Some(surfaces_fragment) = extract_tag_block(xml, "output-surfaces") else {
         return Ok(None);
     };
@@ -718,7 +891,8 @@ fn parse_surface_required_keys_for_channel(
     let mut buf = Vec::new();
     let mut stack: Vec<Vec<u8>> = Vec::new();
     let mut inside_target_surface = false;
-    let mut keys = BTreeSet::new();
+    let mut required = Vec::new();
+    let mut optional = Vec::new();
 
     loop {
         match reader.read_event_into(&mut buf)? {
@@ -738,8 +912,33 @@ fn parse_surface_required_keys_for_channel(
                         &[b"output-surfaces", b"surface", b"required-payload-keys"],
                     )
                 {
-                    if let Some(value) = attr_value(&e, b"name") {
-                        keys.insert(value);
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        required.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
+                    }
+                }
+                if inside_target_surface
+                    && name == b"key"
+                    && stack_ends_with(
+                        &stack,
+                        &[b"output-surfaces", b"surface", b"optional-payload-keys"],
+                    )
+                {
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        optional.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
                     }
                 }
                 stack.push(name);
@@ -752,8 +951,33 @@ fn parse_surface_required_keys_for_channel(
                         &[b"output-surfaces", b"surface", b"required-payload-keys"],
                     )
                 {
-                    if let Some(value) = attr_value(&e, b"name") {
-                        keys.insert(value);
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        required.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
+                    }
+                }
+                if inside_target_surface
+                    && e.name().as_ref() == b"key"
+                    && stack_ends_with(
+                        &stack,
+                        &[b"output-surfaces", b"surface", b"optional-payload-keys"],
+                    )
+                {
+                    if let (Some(key_name), Some(ty)) = (
+                        attr_value(&e, b"name"),
+                        attr_value(&e, b"type").and_then(parse_payload_type),
+                    ) {
+                        optional.push(PromptPayloadKey {
+                            name: key_name,
+                            ty,
+                            sub_keys: Vec::new(),
+                        });
                     }
                 }
             }
@@ -769,10 +993,185 @@ fn parse_surface_required_keys_for_channel(
         buf.clear();
     }
 
-    if keys.is_empty() {
+    if required.is_empty() && optional.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(keys))
+        Ok(Some(PromptPayloadSchema { required, optional }))
+    }
+}
+
+fn parse_payload_type(raw: String) -> Option<PayloadType> {
+    match raw.as_str() {
+        "string" => Some(PayloadType::String),
+        "integer" => Some(PayloadType::Integer),
+        "number" => Some(PayloadType::Number),
+        "boolean" => Some(PayloadType::Boolean),
+        "array" => Some(PayloadType::Array),
+        "object" => Some(PayloadType::Object),
+        "null" => Some(PayloadType::Null),
+        _ => None,
+    }
+}
+
+fn parse_sub_key_type(element: &BytesStart<'_>) -> Option<PayloadType> {
+    // Sub-keys are only valid under object-typed parent keys. If type is omitted in
+    // prompt XML, default to object so nested contract declarations stay parseable.
+    attr_value(element, b"type")
+        .and_then(parse_payload_type)
+        .or(Some(PayloadType::Object))
+}
+
+fn compare_payload_schema(
+    prompt_file: &str,
+    channel: &str,
+    router_schema: &PayloadSchema,
+    prompt_schema: &PromptPayloadSchema,
+) -> Vec<Mismatch> {
+    let mut mismatches = Vec::new();
+    let router_required_map: HashMap<String, &PayloadKey> = router_schema
+        .required
+        .iter()
+        .map(|k| (k.name.clone(), k))
+        .collect();
+    let prompt_required_map: HashMap<String, &PromptPayloadKey> = prompt_schema
+        .required
+        .iter()
+        .map(|k| (k.name.clone(), k))
+        .collect();
+    let router_required_keys: BTreeSet<String> = router_required_map.keys().cloned().collect();
+    let prompt_required_keys: BTreeSet<String> = prompt_required_map.keys().cloned().collect();
+    let key_delta = compare_keys(&router_required_keys, &prompt_required_keys);
+    if !key_delta.extra_in_prompt.is_empty() || !key_delta.missing_in_prompt.is_empty() {
+        mismatches.push(Mismatch {
+            prompt_file: prompt_file.to_string(),
+            channel: channel.to_string(),
+            kind: mismatch_kind_from_delta(&key_delta),
+            channel_router_keys: set_to_vec(&router_required_keys),
+            prompt_keys: set_to_vec(&prompt_required_keys),
+            delta: key_delta,
+            details: None,
+        });
+    }
+
+    for key_name in router_required_keys.intersection(&prompt_required_keys) {
+        let router_key = router_required_map
+            .get(key_name)
+            .expect("router key exists for intersection");
+        let prompt_key = prompt_required_map
+            .get(key_name)
+            .expect("prompt key exists for intersection");
+        if router_key.ty != prompt_key.ty {
+            mismatches.push(Mismatch {
+                prompt_file: prompt_file.to_string(),
+                channel: channel.to_string(),
+                kind: MismatchKind::TypeMismatch,
+                channel_router_keys: set_to_vec(&router_required_keys),
+                prompt_keys: set_to_vec(&prompt_required_keys),
+                delta: KeyDelta {
+                    extra_in_prompt: Vec::new(),
+                    missing_in_prompt: Vec::new(),
+                },
+                details: Some(format!(
+                    "key '{}' type mismatch: router='{}', prompt='{}'",
+                    key_name,
+                    payload_type_name(router_key.ty),
+                    payload_type_name(prompt_key.ty)
+                )),
+            });
+        }
+        if router_key.ty == PayloadType::Object || prompt_key.ty == PayloadType::Object {
+            let router_sub_keys: BTreeSet<String> =
+                router_key.sub_keys.iter().map(|k| k.name.clone()).collect();
+            let prompt_sub_keys: BTreeSet<String> =
+                prompt_key.sub_keys.iter().map(|k| k.name.clone()).collect();
+            for missing in router_sub_keys.difference(&prompt_sub_keys) {
+                mismatches.push(Mismatch {
+                    prompt_file: prompt_file.to_string(),
+                    channel: channel.to_string(),
+                    kind: MismatchKind::SubKeyMissingInPrompt,
+                    channel_router_keys: set_to_vec(&router_sub_keys),
+                    prompt_keys: set_to_vec(&prompt_sub_keys),
+                    delta: KeyDelta {
+                        extra_in_prompt: Vec::new(),
+                        missing_in_prompt: vec![missing.clone()],
+                    },
+                    details: Some(format!(
+                        "key '{}' missing sub-key '{}' in prompt declaration",
+                        key_name, missing
+                    )),
+                });
+            }
+            for missing in prompt_sub_keys.difference(&router_sub_keys) {
+                mismatches.push(Mismatch {
+                    prompt_file: prompt_file.to_string(),
+                    channel: channel.to_string(),
+                    kind: MismatchKind::SubKeyMissingInRouter,
+                    channel_router_keys: set_to_vec(&router_sub_keys),
+                    prompt_keys: set_to_vec(&prompt_sub_keys),
+                    delta: KeyDelta {
+                        extra_in_prompt: vec![missing.clone()],
+                        missing_in_prompt: Vec::new(),
+                    },
+                    details: Some(format!(
+                        "key '{}' missing sub-key '{}' in router schema",
+                        key_name, missing
+                    )),
+                });
+            }
+
+            let router_sub_map: HashMap<String, &PayloadKey> = router_key
+                .sub_keys
+                .iter()
+                .map(|k| (k.name.clone(), k))
+                .collect();
+            let prompt_sub_map: HashMap<String, &PromptPayloadKey> = prompt_key
+                .sub_keys
+                .iter()
+                .map(|k| (k.name.clone(), k))
+                .collect();
+            for sub_name in router_sub_keys.intersection(&prompt_sub_keys) {
+                let router_sub = router_sub_map
+                    .get(sub_name)
+                    .expect("router sub-key exists for intersection");
+                let prompt_sub = prompt_sub_map
+                    .get(sub_name)
+                    .expect("prompt sub-key exists for intersection");
+                if router_sub.ty != prompt_sub.ty {
+                    mismatches.push(Mismatch {
+                        prompt_file: prompt_file.to_string(),
+                        channel: channel.to_string(),
+                        kind: MismatchKind::SubKeyTypeMismatch,
+                        channel_router_keys: set_to_vec(&router_sub_keys),
+                        prompt_keys: set_to_vec(&prompt_sub_keys),
+                        delta: KeyDelta {
+                            extra_in_prompt: Vec::new(),
+                            missing_in_prompt: Vec::new(),
+                        },
+                        details: Some(format!(
+                            "key '{}.{}' type mismatch: router='{}', prompt='{}'",
+                            key_name,
+                            sub_name,
+                            payload_type_name(router_sub.ty),
+                            payload_type_name(prompt_sub.ty)
+                        )),
+                    });
+                }
+            }
+        }
+    }
+
+    mismatches
+}
+
+fn payload_type_name(ty: PayloadType) -> &'static str {
+    match ty {
+        PayloadType::String => "string",
+        PayloadType::Integer => "integer",
+        PayloadType::Number => "number",
+        PayloadType::Boolean => "boolean",
+        PayloadType::Array => "array",
+        PayloadType::Object => "object",
+        PayloadType::Null => "null",
     }
 }
 
@@ -812,58 +1211,19 @@ fn attr_value(element: &BytesStart<'_>, key_name: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn parse_set(input: &[&str]) -> BTreeSet<String> {
-        input.iter().map(|s| (*s).to_string()).collect()
-    }
-
     fn sample_schema() -> Vec<ChannelSchema> {
-        vec![
-            ChannelSchema {
-                channel: "plan-channel".to_string(),
-                allowed_writer: "planner".to_string(),
-                required_payload_keys: vec![
-                    "substantive-focal".to_string(),
-                    "per-role-tasks".to_string(),
-                ],
+        vec![ChannelSchema {
+            name: "plan-channel".to_string(),
+            allowed_writer: "planner".to_string(),
+            payload_schema: PayloadSchema {
+                required: vec![PayloadKey {
+                    name: "substantive-focal".to_string(),
+                    ty: PayloadType::String,
+                    sub_keys: Vec::new(),
+                }],
+                optional: Vec::new(),
             },
-            ChannelSchema {
-                channel: "inbound-channel".to_string(),
-                allowed_writer: "reconciler".to_string(),
-                required_payload_keys: vec![
-                    "eva-responses".to_string(),
-                    "audit-posts".to_string(),
-                    "dispatch-returns".to_string(),
-                ],
-            },
-            ChannelSchema {
-                channel: "work-channel".to_string(),
-                allowed_writer: "executor".to_string(),
-                required_payload_keys: vec!["artifacts-written".to_string()],
-            },
-            ChannelSchema {
-                channel: "memory-channel".to_string(),
-                allowed_writer: "curator".to_string(),
-                required_payload_keys: vec!["consolidated-insights".to_string()],
-            },
-        ]
-    }
-
-    #[test]
-    fn parse_output_contract_required_keys_from_planner_prompt() {
-        let xml = r#"
-        <role-prompt>
-          <output-contract>
-            <format>
-              <required-key name="substantive-focal" type="string" />
-              <required-key name="per-role-tasks" type="object" />
-            </format>
-          </output-contract>
-        </role-prompt>
-        "#;
-
-        let keys = parse_output_contract_required_keys(xml).unwrap();
-        assert_eq!(keys, parse_set(&["per-role-tasks", "substantive-focal"]));
+        }]
     }
 
     #[test]
@@ -873,8 +1233,8 @@ mod tests {
           <output-contract>
             <format>
               <required-key name="per-role-tasks" type="object">
-                <sub-key name="executor" />
-                <sub-key name="curator" />
+                <sub-key name="executor" type="object" />
+                <sub-key name="curator" type="object" />
               </required-key>
               <required-key name="substantive-focal" type="string" />
             </format>
@@ -882,52 +1242,126 @@ mod tests {
         </role-prompt>
         "#;
 
-        let keys = parse_output_contract_required_keys(xml).unwrap();
-        assert_eq!(keys, parse_set(&["per-role-tasks", "substantive-focal"]));
+        let schema = parse_output_contract_payload_schema(xml).unwrap();
+        assert_eq!(schema.required.len(), 2);
+        let per_role = schema
+            .required
+            .iter()
+            .find(|k| k.name == "per-role-tasks")
+            .unwrap();
+        assert_eq!(per_role.ty, PayloadType::Object);
+        assert_eq!(per_role.sub_keys.len(), 2);
     }
 
     #[test]
-    fn compare_keys_match_case() {
-        let router = parse_set(&["substantive-focal", "per-role-tasks"]);
-        let prompt = parse_set(&["per-role-tasks", "substantive-focal"]);
-        let delta = compare_keys(&router, &prompt);
-        assert!(delta.extra_in_prompt.is_empty());
-        assert!(delta.missing_in_prompt.is_empty());
+    fn comparison_detects_type_mismatch() {
+        let router_schema = PayloadSchema {
+            required: vec![PayloadKey {
+                name: "k".to_string(),
+                ty: PayloadType::String,
+                sub_keys: Vec::new(),
+            }],
+            optional: Vec::new(),
+        };
+        let prompt_schema = PromptPayloadSchema {
+            required: vec![PromptPayloadKey {
+                name: "k".to_string(),
+                ty: PayloadType::Object,
+                sub_keys: Vec::new(),
+            }],
+            optional: Vec::new(),
+        };
+        let mismatches =
+            compare_payload_schema("p.xml", "plan-channel", &router_schema, &prompt_schema);
+        assert!(mismatches
+            .iter()
+            .any(|m| m.kind == MismatchKind::TypeMismatch));
     }
 
     #[test]
-    fn compare_keys_extra_in_prompt() {
-        let router = parse_set(&["artifacts-written"]);
-        let prompt = parse_set(&["artifacts-written", "files-changed"]);
-        let delta = compare_keys(&router, &prompt);
-
-        assert_eq!(delta.extra_in_prompt, vec!["files-changed"]);
-        assert!(delta.missing_in_prompt.is_empty());
-        assert_eq!(mismatch_kind_from_delta(&delta), MismatchKind::ExtraInPrompt);
+    fn comparison_detects_sub_key_set_drift() {
+        let router_schema = PayloadSchema {
+            required: vec![PayloadKey {
+                name: "obj".to_string(),
+                ty: PayloadType::Object,
+                sub_keys: vec![
+                    PayloadKey {
+                        name: "a".to_string(),
+                        ty: PayloadType::String,
+                        sub_keys: Vec::new(),
+                    },
+                    PayloadKey {
+                        name: "b".to_string(),
+                        ty: PayloadType::String,
+                        sub_keys: Vec::new(),
+                    },
+                ],
+            }],
+            optional: Vec::new(),
+        };
+        let prompt_schema = PromptPayloadSchema {
+            required: vec![PromptPayloadKey {
+                name: "obj".to_string(),
+                ty: PayloadType::Object,
+                sub_keys: vec![
+                    PromptPayloadKey {
+                        name: "a".to_string(),
+                        ty: PayloadType::String,
+                        sub_keys: Vec::new(),
+                    },
+                    PromptPayloadKey {
+                        name: "c".to_string(),
+                        ty: PayloadType::String,
+                        sub_keys: Vec::new(),
+                    },
+                ],
+            }],
+            optional: Vec::new(),
+        };
+        let mismatches =
+            compare_payload_schema("p.xml", "plan-channel", &router_schema, &prompt_schema);
+        assert!(mismatches
+            .iter()
+            .any(|m| m.kind == MismatchKind::SubKeyMissingInPrompt));
+        assert!(mismatches
+            .iter()
+            .any(|m| m.kind == MismatchKind::SubKeyMissingInRouter));
     }
 
     #[test]
-    fn compare_keys_missing_in_prompt() {
-        let router = parse_set(&["eva-responses", "audit-posts", "dispatch-returns"]);
-        let prompt = parse_set(&["eva-responses", "audit-posts"]);
-        let delta = compare_keys(&router, &prompt);
+    fn comparison_handles_schema_format_version_2() {
+        let parsed: RouterSchemaOutput = serde_json::from_str(
+            r#"{
+                "schema_format_version": 2,
+                "channels": [
+                    {
+                        "name":"plan-channel",
+                        "allowed_writer":"planner",
+                        "payload_schema":{"required":[],"optional":[]}
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(parsed.schema_format_version, 2);
+        assert_eq!(parsed.channels.len(), 1);
+    }
 
-        assert!(delta.extra_in_prompt.is_empty());
-        assert_eq!(delta.missing_in_prompt, vec!["dispatch-returns"]);
-        assert_eq!(mismatch_kind_from_delta(&delta), MismatchKind::MissingInPrompt);
+    #[test]
+    fn comparison_rejects_schema_format_version_1() {
+        let json = r#"{
+            "schema_format_version": 1,
+            "channels": [{"name":"plan-channel","allowed_writer":"planner","payload_schema":{"required":[],"optional":[]}}]
+        }"#;
+        let parsed: RouterSchemaOutput = serde_json::from_str(json).unwrap();
+        assert_ne!(parsed.schema_format_version, EXPECTED_SCHEMA_FORMAT_VERSION);
     }
 
     #[test]
     fn infer_channel_from_role_name() {
         let schema = sample_schema();
         let by_writer = map_channel_by_writer(&schema);
-        assert_eq!(by_writer.get("planner").unwrap().channel, "plan-channel");
-        assert_eq!(
-            by_writer.get("reconciler").unwrap().channel,
-            "inbound-channel"
-        );
-        assert_eq!(by_writer.get("executor").unwrap().channel, "work-channel");
-        assert_eq!(by_writer.get("curator").unwrap().channel, "memory-channel");
+        assert_eq!(by_writer.get("planner").unwrap().name, "plan-channel");
     }
 
     #[test]
@@ -948,7 +1382,10 @@ mod tests {
         assert_eq!(contracts[0].channel, "plan-channel");
         assert_eq!(
             contracts[0].required_keys,
-            parse_set(&["substantive-focal", "per-role-tasks"])
+            ["substantive-focal", "per-role-tasks"]
+                .iter()
+                .map(|k| k.to_string())
+                .collect()
         );
     }
 
@@ -973,8 +1410,14 @@ mod tests {
 
     #[test]
     fn infer_role_from_prompt_filename_only_allows_known_roles() {
-        assert_eq!(infer_role_from_prompt_filename("planner-prompt.xml"), Some("planner"));
-        assert_eq!(infer_role_from_prompt_filename("curator-prompt.xml"), Some("curator"));
+        assert_eq!(
+            infer_role_from_prompt_filename("planner-prompt.xml"),
+            Some("planner")
+        );
+        assert_eq!(
+            infer_role_from_prompt_filename("curator-prompt.xml"),
+            Some("curator")
+        );
         assert_eq!(infer_role_from_prompt_filename("unknown-prompt.xml"), None);
         assert_eq!(infer_role_from_prompt_filename("planner.xml"), None);
     }
@@ -1004,7 +1447,7 @@ mod tests {
         let p = default_channel_router_bin();
         assert_eq!(p, PathBuf::from("./target/debug/v2-channel-router"));
         if let Some(v) = prev {
-            std::env::set_var("CARGO_TARGET_DIR", std::ffi::OsString::from(v));
+            std::env::set_var("CARGO_TARGET_DIR", v);
         }
     }
 }

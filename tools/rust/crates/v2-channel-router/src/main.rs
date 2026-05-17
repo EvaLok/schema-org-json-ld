@@ -19,6 +19,10 @@ struct Args {
     #[arg(long, value_enum, default_value_t = Format::Text, global = true)]
     format: Format,
 
+    /// Payload validation mode.
+    #[arg(long, value_enum, default_value_t = Mode::Strict, global = true)]
+    mode: Mode,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -82,7 +86,168 @@ enum Format {
     Json,
 }
 
+#[derive(Copy, Clone, Debug, ValueEnum, PartialEq, Eq)]
+enum Mode {
+    Strict,
+    Lenient,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum PayloadType {
+    String,
+    Integer,
+    Number,
+    Boolean,
+    Array,
+    Object,
+    Null,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PayloadKey {
+    name: &'static str,
+    ty: PayloadType,
+    sub_keys: &'static [PayloadKey],
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PayloadSchema {
+    required: &'static [PayloadKey],
+    optional: &'static [PayloadKey],
+}
+
+static PLAN_PER_ROLE_TASKS_SUB_KEYS: &[PayloadKey] = &[
+    PayloadKey {
+        name: "executor",
+        ty: PayloadType::Object,
+        sub_keys: &[],
+    },
+    PayloadKey {
+        name: "curator",
+        ty: PayloadType::Object,
+        sub_keys: &[],
+    },
+    PayloadKey {
+        name: "reconciler",
+        ty: PayloadType::Object,
+        sub_keys: &[],
+    },
+];
+
+static PLAN_CHANNEL_SCHEMA: PayloadSchema = PayloadSchema {
+    required: &[
+        PayloadKey {
+            name: "substantive-focal",
+            ty: PayloadType::String,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "per-role-tasks",
+            ty: PayloadType::Object,
+            sub_keys: PLAN_PER_ROLE_TASKS_SUB_KEYS,
+        },
+    ],
+    optional: &[
+        PayloadKey {
+            name: "rationale",
+            ty: PayloadType::String,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "forward-notes",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+    ],
+};
+
+static WORK_CHANNEL_SCHEMA: PayloadSchema = PayloadSchema {
+    required: &[PayloadKey {
+        name: "artifacts-written",
+        ty: PayloadType::Array,
+        sub_keys: &[],
+    }],
+    optional: &[
+        PayloadKey {
+            name: "decisions-recorded",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "dispatches-fired",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+    ],
+};
+
+static MEMORY_CHANNEL_SCHEMA: PayloadSchema = PayloadSchema {
+    required: &[PayloadKey {
+        name: "consolidated-insights",
+        ty: PayloadType::Array,
+        sub_keys: &[],
+    }],
+    optional: &[
+        PayloadKey {
+            name: "anti-patterns-noted",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "pattern-updates",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+    ],
+};
+
+static INBOUND_CHANNEL_SCHEMA: PayloadSchema = PayloadSchema {
+    required: &[
+        PayloadKey {
+            name: "eva-responses",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "audit-posts",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "dispatch-returns",
+            ty: PayloadType::Array,
+            sub_keys: &[],
+        },
+        PayloadKey {
+            name: "inbound-completeness-marker",
+            ty: PayloadType::String,
+            sub_keys: &[],
+        },
+    ],
+    optional: &[],
+};
+
+static REQUIRED_NAMES_PLAN_CHANNEL: &[&str] = &["substantive-focal", "per-role-tasks"];
+static REQUIRED_NAMES_WORK_CHANNEL: &[&str] = &["artifacts-written"];
+static REQUIRED_NAMES_MEMORY_CHANNEL: &[&str] = &["consolidated-insights"];
+static REQUIRED_NAMES_INBOUND_CHANNEL: &[&str] = &[
+    "eva-responses",
+    "audit-posts",
+    "dispatch-returns",
+    "inbound-completeness-marker",
+];
+
 impl Channel {
+    fn payload_schema(self) -> &'static PayloadSchema {
+        match self {
+            Channel::PlanChannel => &PLAN_CHANNEL_SCHEMA,
+            Channel::WorkChannel => &WORK_CHANNEL_SCHEMA,
+            Channel::MemoryChannel => &MEMORY_CHANNEL_SCHEMA,
+            Channel::InboundChannel => &INBOUND_CHANNEL_SCHEMA,
+        }
+    }
+
     fn name(self) -> &'static str {
         match self {
             Channel::PlanChannel => "plan-channel",
@@ -116,15 +281,10 @@ impl Channel {
     /// Returns the list of required payload-object keys; minimal-viable per cycle 139 scoping.
     fn required_payload_keys(self) -> &'static [&'static str] {
         match self {
-            Channel::PlanChannel => &["substantive-focal", "per-role-tasks"],
-            Channel::WorkChannel => &["artifacts-written"],
-            Channel::MemoryChannel => &["consolidated-insights"],
-            Channel::InboundChannel => &[
-                "eva-responses",
-                "audit-posts",
-                "dispatch-returns",
-                "inbound-completeness-marker",
-            ],
+            Channel::PlanChannel => REQUIRED_NAMES_PLAN_CHANNEL,
+            Channel::WorkChannel => REQUIRED_NAMES_WORK_CHANNEL,
+            Channel::MemoryChannel => REQUIRED_NAMES_MEMORY_CHANNEL,
+            Channel::InboundChannel => REQUIRED_NAMES_INBOUND_CHANNEL,
         }
     }
 }
@@ -342,7 +502,8 @@ fn apply_reducer(
     cycle: u32,
     timestamp: String,
     payload: serde_json::Value,
-) -> Result<ChannelState, RouterError> {
+    mode: Mode,
+) -> Result<(ChannelState, Vec<String>), RouterError> {
     let allowed_writer = channel.allowed_writer();
     if writer != allowed_writer {
         return Err(RouterError::ReducerViolation {
@@ -351,20 +512,29 @@ fn apply_reducer(
             allowed_writer,
         });
     }
-    validate_payload(channel, &payload)?;
-    Ok(ChannelState {
-        channel,
-        writer,
-        cycle,
-        timestamp,
-        payload,
-    })
+    let mut warnings = Vec::new();
+    validate_payload(channel, &payload, mode, &mut warnings)?;
+    Ok((
+        ChannelState {
+            channel,
+            writer,
+            cycle,
+            timestamp,
+            payload,
+        },
+        warnings,
+    ))
 }
 
 /// Minimal-viable schema validation per cycle 139 scoping. Checks that the payload is a
 /// JSON object and contains the required keys for the channel. Does not type-check
 /// nested fields; that work is deferred to v2-channel-router COMPLETE arc.
-fn validate_payload(channel: Channel, payload: &serde_json::Value) -> Result<(), RouterError> {
+fn validate_payload(
+    channel: Channel,
+    payload: &serde_json::Value,
+    mode: Mode,
+    warnings: &mut Vec<String>,
+) -> Result<(), RouterError> {
     let obj = payload.as_object().ok_or_else(|| {
         RouterError::InvalidPayload(format!(
             "channel '{}' payload must be a JSON object, got {}",
@@ -381,7 +551,122 @@ fn validate_payload(channel: Channel, payload: &serde_json::Value) -> Result<(),
             )));
         }
     }
+
+    for key in channel.payload_schema().required {
+        validate_key_value(
+            key.name,
+            obj.get(key.name).expect("required key exists"),
+            *key,
+            true,
+            mode,
+            warnings,
+        )?;
+    }
+
+    for key in channel.payload_schema().optional {
+        if let Some(value) = obj.get(key.name) {
+            validate_key_value(key.name, value, *key, false, mode, warnings)?;
+        }
+    }
     Ok(())
+}
+
+fn validate_key_value(
+    key_name: &str,
+    value: &serde_json::Value,
+    key_schema: PayloadKey,
+    // Optional top-level keys are type-checked only when present; their sub-key shape is
+    // not required in this scope, so callers pass false for optional entries.
+    enforce_sub_keys: bool,
+    mode: Mode,
+    warnings: &mut Vec<String>,
+) -> Result<(), RouterError> {
+    let observed = describe_json_type(value);
+    if !matches_payload_type(value, key_schema.ty) {
+        return validation_failure(
+            format!(
+                "payload key '{}': expected type {}, observed {}",
+                key_name,
+                payload_type_name(key_schema.ty),
+                observed
+            ),
+            mode,
+            warnings,
+        );
+    }
+
+    if enforce_sub_keys && key_schema.ty == PayloadType::Object && !key_schema.sub_keys.is_empty() {
+        let value_obj = value
+            .as_object()
+            .expect("object type already validated before sub-key validation");
+        for sub_key in key_schema.sub_keys {
+            if let Some(sub_value) = value_obj.get(sub_key.name) {
+                let sub_observed = describe_json_type(sub_value);
+                if !matches_payload_type(sub_value, sub_key.ty) {
+                    validation_failure(
+                        format!(
+                            "payload key '{}.{}': expected type {}, observed {}",
+                            key_name,
+                            sub_key.name,
+                            payload_type_name(sub_key.ty),
+                            sub_observed
+                        ),
+                        mode,
+                        warnings,
+                    )?;
+                }
+            } else {
+                validation_failure(
+                    format!(
+                        "payload key '{}' (type=object): missing required sub-key '{}'",
+                        key_name, sub_key.name
+                    ),
+                    mode,
+                    warnings,
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validation_failure(
+    message: String,
+    mode: Mode,
+    warnings: &mut Vec<String>,
+) -> Result<(), RouterError> {
+    match mode {
+        Mode::Strict => Err(RouterError::InvalidPayload(message)),
+        Mode::Lenient => {
+            warnings.push(message);
+            Ok(())
+        }
+    }
+}
+
+fn matches_payload_type(value: &serde_json::Value, expected: PayloadType) -> bool {
+    match expected {
+        PayloadType::String => value.is_string(),
+        PayloadType::Integer => value.as_i64().is_some() || value.as_u64().is_some(),
+        PayloadType::Number => value.is_number(),
+        PayloadType::Boolean => value.is_boolean(),
+        PayloadType::Array => value.is_array(),
+        PayloadType::Object => value.is_object(),
+        PayloadType::Null => value.is_null(),
+    }
+}
+
+fn payload_type_name(ty: PayloadType) -> &'static str {
+    match ty {
+        PayloadType::String => "string",
+        PayloadType::Integer => "integer",
+        PayloadType::Number => "number",
+        PayloadType::Boolean => "boolean",
+        PayloadType::Array => "array",
+        PayloadType::Object => "object",
+        PayloadType::Null => "null",
+    }
 }
 
 fn describe_json_type(v: &serde_json::Value) -> &'static str {
@@ -429,18 +714,34 @@ struct InitOutput {
 
 #[derive(Serialize)]
 struct SchemaOutput {
-    channel: Channel,
+    schema_format_version: u32,
+    channels: Vec<ChannelSchemaOutput>,
+}
+
+#[derive(Serialize)]
+struct ChannelSchemaOutput {
+    name: String,
     allowed_writer: Role,
-    required_payload_keys: Vec<&'static str>,
+    payload_schema: PayloadSchemaJson,
     state_path_template: String,
     history_path_template: String,
 }
 
-fn run_init<W: Write>(
-    repo_root: &Path,
-    format: Format,
-    out: &mut W,
-) -> Result<(), RouterError> {
+#[derive(Serialize)]
+struct PayloadSchemaJson {
+    required: Vec<PayloadKeyJson>,
+    optional: Vec<PayloadKeyJson>,
+}
+
+#[derive(Serialize)]
+struct PayloadKeyJson {
+    name: String,
+    #[serde(rename = "type")]
+    ty: PayloadType,
+    sub_keys: Vec<PayloadKeyJson>,
+}
+
+fn run_init<W: Write>(repo_root: &Path, format: Format, out: &mut W) -> Result<(), RouterError> {
     let dir = channels_dir(repo_root);
     fs::create_dir_all(&dir)?;
     let mut created = Vec::new();
@@ -528,6 +829,7 @@ fn run_write<W: Write>(
     channel: Channel,
     writer: Role,
     payload_file: &Path,
+    mode: Mode,
     format: Format,
     out: &mut W,
 ) -> Result<(), RouterError> {
@@ -535,16 +837,19 @@ fn run_write<W: Write>(
         return Err(RouterError::MissingPayloadFile(payload_file.to_path_buf()));
     }
     let raw = fs::read_to_string(payload_file)?;
-    let payload: WritePayload = serde_json::from_str(&raw).map_err(|e| {
-        RouterError::Json(format!("decoding {}: {e}", payload_file.display()))
-    })?;
-    let new_state = apply_reducer(
+    let payload: WritePayload = serde_json::from_str(&raw)
+        .map_err(|e| RouterError::Json(format!("decoding {}: {e}", payload_file.display())))?;
+    let (new_state, validation_warnings) = apply_reducer(
         channel,
         writer,
         payload.cycle,
         payload.timestamp.clone(),
         payload.payload.clone(),
+        mode,
     )?;
+    for warning in validation_warnings {
+        eprintln!("[router-lenient] {warning}");
+    }
     write_state(repo_root, &new_state)?;
     let entry = ChannelHistoryEntry {
         writer,
@@ -575,11 +880,7 @@ fn run_write<W: Write>(
             writeln!(out, "  cycle:         {}", result.cycle)?;
             writeln!(out, "  state_path:    {}", result.state_path)?;
             writeln!(out, "  history_path:  {}", result.history_path)?;
-            writeln!(
-                out,
-                "  history_count: {} entries",
-                result.history_entries
-            )?;
+            writeln!(out, "  history_count: {} entries", result.history_entries)?;
         }
     }
     Ok(())
@@ -640,28 +941,37 @@ fn run_schema<W: Write>(
         Some(c) => vec![c],
         None => Channel::all().to_vec(),
     };
-    let results: Vec<SchemaOutput> = channels
+    let results: Vec<ChannelSchemaOutput> = channels
         .into_iter()
-        .map(|c| SchemaOutput {
-            channel: c,
+        .map(|c| ChannelSchemaOutput {
+            name: c.name().to_string(),
             allowed_writer: c.allowed_writer(),
-            required_payload_keys: c.required_payload_keys().to_vec(),
+            payload_schema: payload_schema_json(c.payload_schema()),
             state_path_template: format!("state/channels/{}.json", c.name()),
             history_path_template: format!("state/channels/{}-history.json", c.name()),
         })
         .collect();
+    let schema_output = SchemaOutput {
+        schema_format_version: 2,
+        channels: results,
+    };
     match format {
         Format::Json => {
-            serde_json::to_writer_pretty(&mut *out, &results)?;
+            serde_json::to_writer_pretty(&mut *out, &schema_output)?;
             writeln!(out)?;
         }
         Format::Text => {
-            for s in &results {
-                writeln!(out, "channel: {}", s.channel.name())?;
+            writeln!(
+                out,
+                "schema_format_version: {}",
+                schema_output.schema_format_version
+            )?;
+            for s in &schema_output.channels {
+                writeln!(out, "channel: {}", s.name)?;
                 writeln!(out, "  allowed_writer: {}", s.allowed_writer.name())?;
-                writeln!(out, "  required_payload_keys:")?;
-                for k in &s.required_payload_keys {
-                    writeln!(out, "    - {k}")?;
+                writeln!(out, "  payload_schema.required:")?;
+                for k in &s.payload_schema.required {
+                    writeln!(out, "    - {} ({})", k.name, payload_type_name(k.ty))?;
                 }
                 writeln!(out, "  state_path:   {}", s.state_path_template)?;
                 writeln!(out, "  history_path: {}", s.history_path_template)?;
@@ -670,6 +980,23 @@ fn run_schema<W: Write>(
         }
     }
     Ok(())
+}
+
+fn payload_schema_json(schema: &PayloadSchema) -> PayloadSchemaJson {
+    PayloadSchemaJson {
+        required: payload_keys_json(schema.required),
+        optional: payload_keys_json(schema.optional),
+    }
+}
+
+fn payload_keys_json(keys: &'static [PayloadKey]) -> Vec<PayloadKeyJson> {
+    keys.iter()
+        .map(|key| PayloadKeyJson {
+            name: key.name.to_string(),
+            ty: key.ty,
+            sub_keys: payload_keys_json(key.sub_keys),
+        })
+        .collect()
 }
 
 fn main() -> ExitCode {
@@ -687,6 +1014,7 @@ fn main() -> ExitCode {
             channel,
             writer,
             &payload_file,
+            args.mode,
             args.format,
             &mut out,
         ),
@@ -712,10 +1040,25 @@ fn main() -> ExitCode {
 mod tests {
     use super::*;
 
+    static TEST_DEEP_SUB_KEYS: &[PayloadKey] = &[PayloadKey {
+        name: "deep",
+        ty: PayloadType::String,
+        sub_keys: &[],
+    }];
+    static TEST_INNER_SUB_KEYS: &[PayloadKey] = &[PayloadKey {
+        name: "inner",
+        ty: PayloadType::Object,
+        sub_keys: TEST_DEEP_SUB_KEYS,
+    }];
+
     fn sample_plan_payload() -> serde_json::Value {
         serde_json::json!({
             "substantive-focal": "test focal",
-            "per-role-tasks": { "executor": "do thing" }
+            "per-role-tasks": {
+                "executor": {"action": "do thing"},
+                "curator": {"action": "do thing"},
+                "reconciler": {"action": "do thing"}
+            }
         })
     }
 
@@ -744,6 +1087,7 @@ mod tests {
             1,
             "2026-05-14T00:00:00Z".into(),
             sample_plan_payload(),
+            Mode::Strict,
         )
         .unwrap_err();
         match err {
@@ -768,17 +1112,25 @@ mod tests {
             42,
             "2026-05-14T01:00:00Z".into(),
             sample_plan_payload(),
+            Mode::Strict,
         )
         .unwrap();
-        assert_eq!(state.channel, Channel::PlanChannel);
-        assert_eq!(state.writer, Role::Planner);
-        assert_eq!(state.cycle, 42);
+        assert_eq!(state.0.channel, Channel::PlanChannel);
+        assert_eq!(state.0.writer, Role::Planner);
+        assert_eq!(state.0.cycle, 42);
+        assert!(state.1.is_empty());
     }
 
     #[test]
     fn validate_payload_rejects_non_object() {
-        let err = validate_payload(Channel::PlanChannel, &serde_json::json!("string"))
-            .unwrap_err();
+        let mut warnings = Vec::new();
+        let err = validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!("string"),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap_err();
         match err {
             RouterError::InvalidPayload(_) => {}
             other => panic!("expected InvalidPayload, got {other:?}"),
@@ -787,8 +1139,14 @@ mod tests {
 
     #[test]
     fn validate_payload_rejects_missing_required_keys() {
-        let err = validate_payload(Channel::PlanChannel, &serde_json::json!({"substantive-focal": "x"}))
-            .unwrap_err();
+        let mut warnings = Vec::new();
+        let err = validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!({"substantive-focal": "x"}),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap_err();
         match err {
             RouterError::InvalidPayload(s) => {
                 assert!(s.contains("per-role-tasks"), "unexpected error: {s}");
@@ -799,15 +1157,26 @@ mod tests {
 
     #[test]
     fn validate_payload_passes_with_all_keys() {
-        validate_payload(Channel::PlanChannel, &sample_plan_payload()).unwrap();
+        let mut warnings = Vec::new();
+        validate_payload(
+            Channel::PlanChannel,
+            &sample_plan_payload(),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap();
         validate_payload(
             Channel::WorkChannel,
             &serde_json::json!({"artifacts-written": []}),
+            Mode::Strict,
+            &mut warnings,
         )
         .unwrap();
         validate_payload(
             Channel::MemoryChannel,
             &serde_json::json!({"consolidated-insights": []}),
+            Mode::Strict,
+            &mut warnings,
         )
         .unwrap();
         validate_payload(
@@ -818,12 +1187,16 @@ mod tests {
                 "dispatch-returns": [],
                 "inbound-completeness-marker": "quiet"
             }),
+            Mode::Strict,
+            &mut warnings,
         )
         .unwrap();
+        assert!(warnings.is_empty());
     }
 
     #[test]
     fn validate_payload_rejects_inbound_missing_completeness_marker() {
+        let mut warnings = Vec::new();
         let err = validate_payload(
             Channel::InboundChannel,
             &serde_json::json!({
@@ -831,6 +1204,8 @@ mod tests {
                 "audit-posts": [],
                 "dispatch-returns": []
             }),
+            Mode::Strict,
+            &mut warnings,
         )
         .unwrap_err();
         match err {
@@ -865,5 +1240,185 @@ mod tests {
             all_keys.len(),
             "required-key namespaces overlap across channels: {all_keys:?}"
         );
+    }
+
+    #[test]
+    fn payload_schema_required_names_agree_with_required_payload_keys() {
+        for channel in Channel::all() {
+            let required_names: Vec<&str> = channel
+                .payload_schema()
+                .required
+                .iter()
+                .map(|k| k.name)
+                .collect();
+            assert_eq!(
+                required_names,
+                channel.required_payload_keys(),
+                "required names drift for {}",
+                channel.name()
+            );
+        }
+    }
+
+    #[test]
+    fn validate_payload_rejects_string_when_object_expected() {
+        let mut warnings = Vec::new();
+        let err = validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!({
+                "substantive-focal": "test focal",
+                "per-role-tasks": "wrong"
+            }),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap_err();
+        match err {
+            RouterError::InvalidPayload(msg) => {
+                assert!(msg.contains("expected type object"), "{msg}");
+            }
+            other => panic!("expected InvalidPayload, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_payload_rejects_missing_sub_key() {
+        let mut warnings = Vec::new();
+        let err = validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!({
+                "substantive-focal": "test focal",
+                "per-role-tasks": {
+                    "executor": {},
+                    "curator": {}
+                }
+            }),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap_err();
+        match err {
+            RouterError::InvalidPayload(msg) => {
+                assert!(
+                    msg.contains("missing required sub-key 'reconciler'"),
+                    "{msg}"
+                );
+            }
+            other => panic!("expected InvalidPayload, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_payload_accepts_present_optional_with_correct_type() {
+        let mut warnings = Vec::new();
+        validate_payload(
+            Channel::WorkChannel,
+            &serde_json::json!({
+                "artifacts-written": [],
+                "decisions-recorded": [],
+                "dispatches-fired": []
+            }),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap();
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn validate_payload_ignores_absent_optional() {
+        let mut warnings = Vec::new();
+        validate_payload(
+            Channel::WorkChannel,
+            &serde_json::json!({
+                "artifacts-written": []
+            }),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap();
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn validate_payload_lenient_mode_logs_but_accepts() {
+        let mut warnings = Vec::new();
+        validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!({
+                "substantive-focal": "test focal",
+                "per-role-tasks": "wrong"
+            }),
+            Mode::Lenient,
+            &mut warnings,
+        )
+        .unwrap();
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("expected type object"));
+    }
+
+    #[test]
+    fn validate_payload_null_does_not_satisfy_string() {
+        let mut warnings = Vec::new();
+        let err = validate_payload(
+            Channel::PlanChannel,
+            &serde_json::json!({
+                "substantive-focal": null,
+                "per-role-tasks": {
+                    "executor": {},
+                    "curator": {},
+                    "reconciler": {}
+                }
+            }),
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap_err();
+        match err {
+            RouterError::InvalidPayload(msg) => {
+                assert!(msg.contains("expected type string, observed null"), "{msg}");
+            }
+            other => panic!("expected InvalidPayload, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_payload_one_level_recursion_only() {
+        let key = PayloadKey {
+            name: "outer",
+            ty: PayloadType::Object,
+            sub_keys: TEST_INNER_SUB_KEYS,
+        };
+        let value = serde_json::json!({
+            "outer": {
+                "inner": {}
+            }
+        });
+        let mut warnings = Vec::new();
+        validate_key_value(
+            "outer",
+            &value["outer"],
+            key,
+            true,
+            Mode::Strict,
+            &mut warnings,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn schema_output_serializes_format_version_2() {
+        let schema = SchemaOutput {
+            schema_format_version: 2,
+            channels: vec![ChannelSchemaOutput {
+                name: "plan-channel".to_string(),
+                allowed_writer: Role::Planner,
+                payload_schema: payload_schema_json(&PLAN_CHANNEL_SCHEMA),
+                state_path_template: "state/channels/plan-channel.json".to_string(),
+                history_path_template: "state/channels/plan-channel-history.json".to_string(),
+            }],
+        };
+        let json = serde_json::to_value(schema).unwrap();
+        assert_eq!(json["schema_format_version"], 2);
     }
 }
