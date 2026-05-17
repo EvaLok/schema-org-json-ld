@@ -42,11 +42,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
     name = "v2-cycle-runner",
     about = "Conductor for the v2 multi-agent orchestrator: composes the 4 role-prompt sessions \
              and the 4 v2-* primitives (channel-router, super-step-boundary, role-driver, \
-             reconciler-event-processor) into a single per-cycle execution. \
-             SCAFFOLD scope cycles 150-151: init / schema / run (--dry-run path + execute path \
-             against pre-provided session-output files). DEFERRED to cycles 152+: status / \
-             verify subcommands, integration test against real primitives, first end-to-end \
-             smoke (first measurement opportunity for the v2 architecture)."
+             reconciler-event-processor) into a single per-cycle execution. Subcommands: \
+             init / schema (cycle 150), run with --dry-run + execute paths against \
+             pre-provided session-output files (cycle 151; cycle 162 added pre-flight \
+             v2-state-audit), status + verify read-only inspection (cycle 169)."
 )]
 struct Args {
     /// Repository root (path containing state/, prompts/, tools/).
@@ -97,6 +96,36 @@ enum Subcmd {
     /// Print the v2-cycle-runner schema: per-cycle super-step sequence, per-primitive composition,
     /// state ownership map. Read-only.
     Schema,
+    /// Report the runner's most recent (or `--cycle N`) cycle execution state.
+    /// Reads `state/v2-cycle-runner/last-cycle.json` by default; with `--cycle N`
+    /// linearly scans `state/v2-cycle-runner/cycle-history.json`. With
+    /// `--include-primitives` additionally reads the 4 primitive state surfaces
+    /// for richer context. Read-only; cycle 169 implementation per
+    /// `docs/redesign/_notes/v2-cycle-runner-status-verify-design.md` §2.1.
+    Status {
+        /// Read history entry for cycle N. If omitted, reads `last-cycle.json`.
+        #[arg(long)]
+        cycle: Option<u32>,
+        /// Additionally read the 4 primitive state surfaces (super-step.json,
+        /// roles/*.json, reconciler/poll-history.json) for richer context.
+        /// Slower; default off.
+        #[arg(long)]
+        include_primitives: bool,
+    },
+    /// Post-cycle self-check: did cycle N complete cleanly per the runner's
+    /// expectations? Runs the 9-assertion verify algorithm against the runner's
+    /// own state files + super-step-history + per-role histories. Read-only.
+    /// `--cycle N` is REQUIRED (no accidental "verify latest"). Cycle 169
+    /// implementation per design doc §2.2.
+    Verify {
+        /// Cycle to verify (required).
+        #[arg(long)]
+        cycle: u32,
+        /// Exit non-zero on any assertion failure (default exits 0 with
+        /// failure-reported JSON).
+        #[arg(long)]
+        strict: bool,
+    },
     /// Drive one cycle through the 10-step super-step sequence: super-step-init,
     /// reconciler-pre-poll, reconciler-session, advance, planner-session, advance,
     /// executor-session, advance, curator-session, super-step-settle.
@@ -179,6 +208,13 @@ enum RunnerError {
     MissingSessionOutput { role: Role },
     CycleHalted { step: &'static str, class: FailureClass, stderr: String },
     SuperStepOutOfOrder { step: &'static str, stderr: String },
+    /// status subcommand could not locate `last-cycle.json` or the requested
+    /// `--cycle N` in cycle-history. Cycle 169.
+    StatusStateNotFound { detail: String },
+    /// verify --strict was passed and at least one assertion failed. The
+    /// dirty-verdict report has already been written to stdout; this variant
+    /// only signals the exit-1 to `main`. Cycle 169.
+    VerifyDirtyStrict { failed_assertions: usize, total_assertions: usize },
 }
 
 impl std::fmt::Display for RunnerError {
@@ -208,6 +244,11 @@ impl std::fmt::Display for RunnerError {
             RunnerError::SuperStepOutOfOrder { step, stderr } => write!(
                 f,
                 "super-step out of order at {step}: {stderr}"
+            ),
+            RunnerError::StatusStateNotFound { detail } => write!(f, "{detail}"),
+            RunnerError::VerifyDirtyStrict { failed_assertions, total_assertions } => write!(
+                f,
+                "verify --strict: {failed_assertions} of {total_assertions} assertions failed (see verdict above)"
             ),
         }
     }
@@ -274,6 +315,10 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
     match &args.command {
         Subcmd::Init => run_init(args, out),
         Subcmd::Schema => run_schema(args, out),
+        Subcmd::Status { cycle, include_primitives } => {
+            run_status(args, *cycle, *include_primitives, out)
+        }
+        Subcmd::Verify { cycle, strict } => run_verify(args, *cycle, *strict, out),
         Subcmd::Run {
             cycle,
             issue,
@@ -406,14 +451,14 @@ fn run_schema<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
             writeln!(out, "  state/reconciler/        ← v2-reconciler-event-processor")?;
             writeln!(out, "  state/v2-cycle-runner/   ← v2-cycle-runner (self)")?;
             writeln!(out)?;
-            writeln!(out, "Subcommands implemented (cycle 150):")?;
-            writeln!(out, "  init     ← composes primitive inits + initializes runner-self state")?;
-            writeln!(out, "  schema   ← prints this")?;
-            writeln!(out)?;
-            writeln!(out, "Subcommands DEFERRED to cycle 151-153+:")?;
-            writeln!(out, "  run      (the main entrypoint: drives the 10-step sequence)")?;
-            writeln!(out, "  status   (current super-step + per-role timestamps)")?;
-            writeln!(out, "  verify   (post-cycle: all transitions present + clean)")?;
+            writeln!(out, "Subcommands implemented:")?;
+            writeln!(out, "  init     ← composes primitive inits + initializes runner-self state (cycle 150)")?;
+            writeln!(out, "  schema   ← prints this (cycle 150)")?;
+            writeln!(out, "  run      ← drives the 10-step super-step sequence (cycle 151;")?;
+            writeln!(out, "             cycle 162 added pre-flight state-audit; cycle 163 added")?;
+            writeln!(out, "             super-step-out-of-order live test coverage)")?;
+            writeln!(out, "  status   ← read runner's last-cycle or --cycle N execution state (cycle 169)")?;
+            writeln!(out, "  verify   ← post-cycle 9-assertion self-check on --cycle N (cycle 169)")?;
         }
         Format::Json => {
             let payload = serde_json::json!({
@@ -437,9 +482,9 @@ fn run_schema<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
                     "state/reconciler/": "v2-reconciler-event-processor",
                     "state/v2-cycle-runner/": "v2-cycle-runner"
                 },
-                "subcommands_implemented": ["init", "schema"],
-                "subcommands_deferred": ["run", "status", "verify"],
-                "cycle_scope": "150 scaffold entry"
+                "subcommands_implemented": ["init", "schema", "run", "status", "verify"],
+                "subcommands_deferred": [],
+                "cycle_scope": "169: run/status/verify all live; init+schema cycle 150"
             });
             writeln!(out, "{}", serde_json::to_string_pretty(&payload)?)?;
         }
@@ -1135,6 +1180,35 @@ fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), Runn
     let runner_dir = repo_root.join("state").join("v2-cycle-runner");
     fs::create_dir_all(&runner_dir)?;
 
+    // Trimmed per-step trace persisted to disk. The in-memory `StepTrace`
+    // carries `args` (Vec<String>) and `bin_path` (PathBuf) which can be
+    // re-derived from `args.{primitive}_bin` + `build_step_invocation`.
+    // We persist only what `verify` needs (index, name, executed, phase)
+    // to keep cycle-history.json bounded. Cycle 169 additive extension
+    // for the verify subcommand's all-10-substeps-traced assertion;
+    // backwards-compatible (older entries lack the field; verify treats
+    // missing-traces as the assertion failing per cycle 169 _notes).
+    let traces_persisted: Vec<serde_json::Value> = report
+        .traces
+        .iter()
+        .map(|t| serde_json::json!({
+            "index": t.index,
+            "name": t.name,
+            "executed": t.executed,
+            "phase": t.phase,
+        }))
+        .collect();
+
+    // Trimmed state-audit persisted to disk: just severity + exit_code.
+    // Audit's full JSON stdout is large and re-readable from the audit
+    // binary at any time. Cycle 169 additive extension for verify's
+    // state-audit-not-hard assertion.
+    let state_audit_persisted: Option<serde_json::Value> =
+        report.state_audit.as_ref().map(|sa| serde_json::json!({
+            "severity": sa.severity.as_kebab(),
+            "exit_code": sa.exit_code,
+        }));
+
     let last_cycle_payload = serde_json::json!({
         "cycle": report.cycle,
         "issue": report.issue,
@@ -1145,6 +1219,8 @@ fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), Runn
         "halt_step": report.halt_step,
         "halted_after_role": report.halted_after_role.map(|r| r.as_kebab()),
         "steps_attempted": report.steps_attempted,
+        "traces": traces_persisted,
+        "state_audit": state_audit_persisted,
     });
     let last_cycle_path = runner_dir.join("last-cycle.json");
     fs::write(&last_cycle_path, format!("{}\n", serde_json::to_string_pretty(&last_cycle_payload)?))?;
@@ -1156,17 +1232,7 @@ fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), Runn
     } else {
         serde_json::json!({ "cycles": [] })
     };
-    let entry = serde_json::json!({
-        "cycle": report.cycle,
-        "issue": report.issue,
-        "status": report.status,
-        "started_at": report.started_at,
-        "ended_at": report.ended_at,
-        "halt_reason": report.halt_class.map(|c| c.as_kebab()),
-        "halt_step": report.halt_step,
-        "halted_after_role": report.halted_after_role.map(|r| r.as_kebab()),
-        "steps_attempted": report.steps_attempted,
-    });
+    let entry = last_cycle_payload.clone();
     if let Some(arr) = history.get_mut("cycles").and_then(|v| v.as_array_mut()) {
         arr.push(entry);
     }
@@ -1203,6 +1269,519 @@ fn emit_cycle_report<W: Write>(report: &CycleReport, format: Format, out: &mut W
         }
         Format::Json => {
             writeln!(out, "{}", serde_json::to_string_pretty(report)?)?;
+        }
+    }
+    Ok(())
+}
+
+// =====================================================================
+// status subcommand — cycle 169 implementation
+//
+// Reads `state/v2-cycle-runner/last-cycle.json` by default; with `--cycle N`
+// linearly scans `state/v2-cycle-runner/cycle-history.json` for the entry
+// matching cycle == N. With `--include-primitives` additionally reads the
+// 4 primitive state surfaces for richer context.
+//
+// Per design doc §2.1; resolves cycle 149 §4 high-level naming.
+// =====================================================================
+
+fn run_status<W: Write>(
+    args: &Args,
+    cycle: Option<u32>,
+    include_primitives: bool,
+    out: &mut W,
+) -> Result<(), RunnerError> {
+    let runner_dir = args.repo_root.join("state").join("v2-cycle-runner");
+
+    let cycle_entry = match cycle {
+        None => read_last_cycle_json(&runner_dir)?,
+        Some(n) => find_cycle_in_history(&runner_dir, n)?,
+    };
+
+    let primitives = if include_primitives {
+        Some(read_primitive_state_surfaces(&args.repo_root))
+    } else {
+        None
+    };
+
+    emit_status(&cycle_entry, primitives.as_ref(), include_primitives, args.format, out)
+}
+
+fn read_last_cycle_json(runner_dir: &Path) -> Result<serde_json::Value, RunnerError> {
+    let path = runner_dir.join("last-cycle.json");
+    if !path.exists() {
+        return Err(RunnerError::StatusStateNotFound {
+            detail: format!(
+                "state file {} does not exist (run `v2-cycle-runner init` first)",
+                path.display()
+            ),
+        });
+    }
+    let raw = fs::read_to_string(&path)?;
+    let value: serde_json::Value = serde_json::from_str(&raw)?;
+    Ok(value)
+}
+
+fn find_cycle_in_history(runner_dir: &Path, n: u32) -> Result<serde_json::Value, RunnerError> {
+    let path = runner_dir.join("cycle-history.json");
+    if !path.exists() {
+        return Err(RunnerError::StatusStateNotFound {
+            detail: format!(
+                "state file {} does not exist (run `v2-cycle-runner init` first)",
+                path.display()
+            ),
+        });
+    }
+    let raw = fs::read_to_string(&path)?;
+    let history: serde_json::Value = serde_json::from_str(&raw)?;
+    let cycles = history
+        .get("cycles")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| RunnerError::StatusStateNotFound {
+            detail: format!("{} is missing the `cycles` array", path.display()),
+        })?;
+    for entry in cycles {
+        if entry.get("cycle").and_then(|v| v.as_u64()) == Some(u64::from(n)) {
+            return Ok(entry.clone());
+        }
+    }
+    Err(RunnerError::StatusStateNotFound {
+        detail: format!("cycle {n} not found in {}", path.display()),
+    })
+}
+
+/// Read the 4 primitive state surfaces for `status --include-primitives`.
+/// Each surface is reported as a JSON value (`null` if the file is missing
+/// or unreadable — degraded reporting, not a hard error, so an
+/// incompletely-initialized state does not crash status).
+fn read_primitive_state_surfaces(repo_root: &Path) -> serde_json::Value {
+    let read_or_null = |p: PathBuf| -> serde_json::Value {
+        match fs::read_to_string(&p) {
+            Ok(s) => serde_json::from_str(&s).unwrap_or(serde_json::Value::Null),
+            Err(_) => serde_json::Value::Null,
+        }
+    };
+    serde_json::json!({
+        "super_step": read_or_null(repo_root.join("state").join("super-step.json")),
+        "super_step_history": read_or_null(repo_root.join("state").join("super-step-history.json")),
+        "roles": {
+            "reconciler": read_or_null(repo_root.join("state").join("roles").join("reconciler-history.json")),
+            "planner":    read_or_null(repo_root.join("state").join("roles").join("planner-history.json")),
+            "executor":   read_or_null(repo_root.join("state").join("roles").join("executor-history.json")),
+            "curator":    read_or_null(repo_root.join("state").join("roles").join("curator-history.json")),
+        },
+        "reconciler_poll_history": read_or_null(repo_root.join("state").join("reconciler").join("poll-history.json")),
+    })
+}
+
+fn emit_status<W: Write>(
+    cycle_entry: &serde_json::Value,
+    primitives: Option<&serde_json::Value>,
+    include_primitives: bool,
+    format: Format,
+    out: &mut W,
+) -> Result<(), RunnerError> {
+    let cycle_num = cycle_entry.get("cycle").cloned().unwrap_or(serde_json::Value::Null);
+    let issue = cycle_entry.get("issue").cloned().unwrap_or(serde_json::Value::Null);
+    let status = cycle_entry.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let started_at = cycle_entry.get("started_at").and_then(|v| v.as_str()).unwrap_or("(none)");
+    let ended_at = cycle_entry.get("ended_at").and_then(|v| v.as_str()).unwrap_or("(none)");
+    let steps_attempted = cycle_entry
+        .get("steps_attempted")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let traces_len = cycle_entry
+        .get("traces")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+    let halt_step = cycle_entry.get("halt_step").and_then(|v| v.as_str());
+    let halt_class = cycle_entry.get("halt_reason").and_then(|v| v.as_str());
+    let halted_after_role = cycle_entry.get("halted_after_role").and_then(|v| v.as_str());
+    let state_audit_severity = cycle_entry
+        .get("state_audit")
+        .and_then(|sa| sa.get("severity"))
+        .and_then(|v| v.as_str());
+
+    match format {
+        Format::Text => {
+            writeln!(
+                out,
+                "v2-cycle-runner status: cycle={cycle_num} issue={issue} status={status}"
+            )?;
+            writeln!(out, "  started:  {started_at}")?;
+            writeln!(out, "  ended:    {ended_at}")?;
+            writeln!(out, "  steps:    {steps_attempted} attempted, {traces_len} traced")?;
+            match (halt_step, halt_class, halted_after_role) {
+                (None, None, None) => writeln!(out, "  halt:     (none)")?,
+                _ => {
+                    let s = halt_step.unwrap_or("(none)");
+                    let c = halt_class.unwrap_or("(none)");
+                    let r = halted_after_role.unwrap_or("(none)");
+                    writeln!(out, "  halt:     step={s} class={c} after_role={r}")?;
+                }
+            }
+            writeln!(out, "  audit:    {}", state_audit_severity.unwrap_or("(none)"))?;
+            if include_primitives {
+                writeln!(out)?;
+                writeln!(out, "  primitives: included (see JSON for full surfaces)")?;
+            }
+        }
+        Format::Json => {
+            let mut payload = serde_json::json!({
+                "schema_version": "v1",
+                "subcommand": "status",
+                "cycle": cycle_num,
+                "issue": issue,
+                "status": status,
+                "started_at": cycle_entry.get("started_at").cloned().unwrap_or(serde_json::Value::Null),
+                "ended_at": cycle_entry.get("ended_at").cloned().unwrap_or(serde_json::Value::Null),
+                "steps_attempted": steps_attempted,
+                "traces_count": traces_len,
+                "halt_step": cycle_entry.get("halt_step").cloned().unwrap_or(serde_json::Value::Null),
+                "halt_class": cycle_entry.get("halt_reason").cloned().unwrap_or(serde_json::Value::Null),
+                "halted_after_role": cycle_entry.get("halted_after_role").cloned().unwrap_or(serde_json::Value::Null),
+                "state_audit": state_audit_severity.map(serde_json::Value::from).unwrap_or(serde_json::Value::Null),
+                "include_primitives": include_primitives,
+            });
+            if let Some(p) = primitives {
+                payload["primitives"] = p.clone();
+            }
+            writeln!(out, "{}", serde_json::to_string_pretty(&payload)?)?;
+        }
+    }
+    Ok(())
+}
+
+// =====================================================================
+// verify subcommand — cycle 169 implementation
+//
+// 9-assertion verify algorithm per design doc §2.2. Reads:
+//   - state/v2-cycle-runner/cycle-history.json (assertions 1-7)
+//   - state/super-step-history.json            (assertion 8)
+//   - state/roles/{reconciler,planner,executor,curator}-history.json (assertion 9)
+//
+// On any failure with --strict, exits 1 (via RunnerError::VerifyDirtyStrict
+// after the dirty-verdict report has been written to stdout).
+// Without --strict, always exits 0 with the verdict in JSON.
+// =====================================================================
+
+const VERIFY_ASSERTION_NAMES: &[&str] = &[
+    "cycle-N-in-history",
+    "status-completed",
+    "no-halt-step",
+    "no-halt-class",
+    "no-halted-after-role",
+    "all-10-substeps-traced",
+    "state-audit-not-hard",
+    "super-step-history-has-cycle-N",
+    "per-role-history-has-cycle-N",
+];
+
+#[derive(Debug, Clone, Serialize)]
+struct AssertionResult {
+    name: &'static str,
+    passed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details: Option<String>,
+}
+
+impl AssertionResult {
+    fn pass(name: &'static str) -> Self {
+        Self { name, passed: true, details: None }
+    }
+    fn fail(name: &'static str, details: impl Into<String>) -> Self {
+        Self { name, passed: false, details: Some(details.into()) }
+    }
+}
+
+fn run_verify<W: Write>(
+    args: &Args,
+    cycle: u32,
+    strict: bool,
+    out: &mut W,
+) -> Result<(), RunnerError> {
+    let runner_dir = args.repo_root.join("state").join("v2-cycle-runner");
+    let assertions = run_verify_assertions(&args.repo_root, &runner_dir, cycle);
+    let failed_count = assertions.iter().filter(|a| !a.passed).count();
+    let total = assertions.len();
+    let verdict = if failed_count == 0 { "clean" } else { "dirty" };
+    emit_verify(cycle, verdict, &assertions, args.format, out)?;
+
+    if strict && failed_count > 0 {
+        Err(RunnerError::VerifyDirtyStrict {
+            failed_assertions: failed_count,
+            total_assertions: total,
+        })
+    } else {
+        Ok(())
+    }
+}
+
+/// Run the 9-assertion verify algorithm. Returns the results in
+/// declaration order. Short-circuit: assertion 1 failing returns ONLY
+/// the first assertion (no downstream short-circuit results recorded
+/// because the entry isn't present — assertions 2-7 require the entry).
+/// Assertions 8 and 9 always run regardless of 1's outcome (they read
+/// different state surfaces).
+fn run_verify_assertions(repo_root: &Path, runner_dir: &Path, cycle: u32) -> Vec<AssertionResult> {
+    let mut results: Vec<AssertionResult> = Vec::with_capacity(9);
+
+    // Assertion 1: cycle-N-in-history
+    let history_path = runner_dir.join("cycle-history.json");
+    let cycle_entry = match read_cycle_entry(&history_path, cycle) {
+        Ok(Some(e)) => {
+            results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[0]));
+            Some(e)
+        }
+        Ok(None) => {
+            results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[0],
+                format!("no entry with cycle == {cycle} in {}", history_path.display()),
+            ));
+            None
+        }
+        Err(e) => {
+            results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[0],
+                format!("failed to read {}: {e}", history_path.display()),
+            ));
+            None
+        }
+    };
+
+    if let Some(entry) = cycle_entry.as_ref() {
+        // Assertion 2: status-completed
+        let status = entry.get("status").and_then(|v| v.as_str()).unwrap_or("(missing)");
+        if status == "completed" {
+            results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[1]));
+        } else {
+            results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[1],
+                format!("status is '{status}', expected 'completed'"),
+            ));
+        }
+
+        // Assertion 3: no-halt-step
+        match entry.get("halt_step") {
+            Some(v) if v.is_null() => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[2])),
+            Some(v) if v.as_str().is_some() => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[2],
+                format!("halt_step is {:?}", v.as_str().unwrap()),
+            )),
+            _ => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[2])),
+        }
+
+        // Assertion 4: no-halt-class (persisted as `halt_reason`)
+        match entry.get("halt_reason") {
+            Some(v) if v.is_null() => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[3])),
+            Some(v) if v.as_str().is_some() => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[3],
+                format!("halt_class is {:?}", v.as_str().unwrap()),
+            )),
+            _ => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[3])),
+        }
+
+        // Assertion 5: no-halted-after-role
+        match entry.get("halted_after_role") {
+            Some(v) if v.is_null() => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[4])),
+            Some(v) if v.as_str().is_some() => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[4],
+                format!("halted_after_role is {:?}", v.as_str().unwrap()),
+            )),
+            _ => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[4])),
+        }
+
+        // Assertion 6: all-10-substeps-traced
+        let traces = entry.get("traces").and_then(|v| v.as_array());
+        match traces {
+            None => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[5],
+                "entry has no `traces` array (older entry written before cycle 169 schema extension)".to_string(),
+            )),
+            Some(arr) if arr.len() != 10 => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[5],
+                format!("traces.len()={} expected 10", arr.len()),
+            )),
+            Some(arr) => {
+                let all_executed = arr.iter().all(|t| {
+                    t.get("executed").and_then(|v| v.as_bool()).unwrap_or(false)
+                });
+                if all_executed {
+                    results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[5]));
+                } else {
+                    let unexecuted: Vec<String> = arr
+                        .iter()
+                        .filter(|t| !t.get("executed").and_then(|v| v.as_bool()).unwrap_or(false))
+                        .filter_map(|t| t.get("name").and_then(|v| v.as_str()).map(String::from))
+                        .collect();
+                    results.push(AssertionResult::fail(
+                        VERIFY_ASSERTION_NAMES[5],
+                        format!("traces with executed=false: {}", unexecuted.join(",")),
+                    ));
+                }
+            }
+        }
+
+        // Assertion 7: state-audit-not-hard
+        let audit_severity = entry
+            .get("state_audit")
+            .and_then(|sa| if sa.is_null() { None } else { Some(sa) })
+            .and_then(|sa| sa.get("severity"))
+            .and_then(|v| v.as_str());
+        match audit_severity {
+            None => {
+                // Audit absent (dry-run cycle, or pre-cycle-162 entry, or
+                // pre-cycle-169 schema). Per design §2.2 assertion 7
+                // ("severity != Hard"), absence is not `Hard` and so passes.
+                results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[6]));
+            }
+            Some("hard") => results.push(AssertionResult::fail(
+                VERIFY_ASSERTION_NAMES[6],
+                "state_audit severity is 'hard'".to_string(),
+            )),
+            Some(_) => results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[6])),
+        }
+    }
+
+    // Assertion 8: super-step-history-has-cycle-N
+    let ssh_path = repo_root.join("state").join("super-step-history.json");
+    results.push(check_history_has_cycle(
+        &ssh_path,
+        cycle,
+        "cycles",
+        VERIFY_ASSERTION_NAMES[7],
+    ));
+
+    // Assertion 9: per-role-history-has-cycle-N (4 files, all must contain)
+    let mut role_failures: Vec<String> = Vec::new();
+    for role in ["reconciler", "planner", "executor", "curator"] {
+        let path = repo_root
+            .join("state")
+            .join("roles")
+            .join(format!("{role}-history.json"));
+        let check = check_history_has_cycle(&path, cycle, "runs", VERIFY_ASSERTION_NAMES[8]);
+        if !check.passed {
+            role_failures.push(role.to_string());
+        }
+    }
+    if role_failures.is_empty() {
+        results.push(AssertionResult::pass(VERIFY_ASSERTION_NAMES[8]));
+    } else {
+        results.push(AssertionResult::fail(
+            VERIFY_ASSERTION_NAMES[8],
+            format!("no cycle-{cycle} entry in role history files for: {}", role_failures.join(",")),
+        ));
+    }
+
+    results
+}
+
+/// Read `path` as JSON, look for the array under `array_key`, and check
+/// any entry has `cycle == n`. Missing file / parse error / missing key
+/// all map to fail (with the appropriate detail).
+fn check_history_has_cycle(
+    path: &Path,
+    n: u32,
+    array_key: &str,
+    assertion_name: &'static str,
+) -> AssertionResult {
+    if !path.exists() {
+        return AssertionResult::fail(
+            assertion_name,
+            format!("state file {} does not exist", path.display()),
+        );
+    }
+    let raw = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => return AssertionResult::fail(
+            assertion_name,
+            format!("failed to read {}: {e}", path.display()),
+        ),
+    };
+    let parsed: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(e) => return AssertionResult::fail(
+            assertion_name,
+            format!("failed to parse {}: {e}", path.display()),
+        ),
+    };
+    let arr = match parsed.get(array_key).and_then(|v| v.as_array()) {
+        Some(a) => a,
+        None => return AssertionResult::fail(
+            assertion_name,
+            format!("{} is missing `{array_key}` array", path.display()),
+        ),
+    };
+    let found = arr.iter().any(|entry| {
+        entry.get("cycle").and_then(|v| v.as_u64()) == Some(u64::from(n))
+    });
+    if found {
+        AssertionResult::pass(assertion_name)
+    } else {
+        AssertionResult::fail(
+            assertion_name,
+            format!("no entry with cycle == {n} in {}", path.display()),
+        )
+    }
+}
+
+fn read_cycle_entry(
+    history_path: &Path,
+    cycle: u32,
+) -> Result<Option<serde_json::Value>, RunnerError> {
+    if !history_path.exists() {
+        return Ok(None);
+    }
+    let raw = fs::read_to_string(history_path)?;
+    let history: serde_json::Value = serde_json::from_str(&raw)?;
+    let cycles = match history.get("cycles").and_then(|v| v.as_array()) {
+        Some(a) => a,
+        None => return Ok(None),
+    };
+    for entry in cycles {
+        if entry.get("cycle").and_then(|v| v.as_u64()) == Some(u64::from(cycle)) {
+            return Ok(Some(entry.clone()));
+        }
+    }
+    Ok(None)
+}
+
+fn emit_verify<W: Write>(
+    cycle: u32,
+    verdict: &str,
+    assertions: &[AssertionResult],
+    format: Format,
+    out: &mut W,
+) -> Result<(), RunnerError> {
+    let passed_count = assertions.iter().filter(|a| a.passed).count();
+    let total = assertions.len();
+    match format {
+        Format::Text => {
+            writeln!(
+                out,
+                "v2-cycle-runner verify --cycle {cycle}: verdict={verdict} ({passed_count}/{total} assertions passed)"
+            )?;
+            for a in assertions {
+                let mark = if a.passed { "ok" } else { "FAIL" };
+                if let Some(d) = &a.details {
+                    writeln!(out, "  [{mark}] {} — {d}", a.name)?;
+                } else {
+                    writeln!(out, "  [{mark}] {}", a.name)?;
+                }
+            }
+        }
+        Format::Json => {
+            let exit_code = if verdict == "clean" { 0 } else { 1 };
+            let payload = serde_json::json!({
+                "schema_version": "v1",
+                "subcommand": "verify",
+                "cycle": cycle,
+                "verdict": verdict,
+                "assertions": assertions,
+                "exit_code": exit_code,
+            });
+            writeln!(out, "{}", serde_json::to_string_pretty(&payload)?)?;
         }
     }
     Ok(())
@@ -2140,5 +2719,422 @@ mod tests {
             other => panic!("expected PrimitiveMissing(v2-state-audit), got {other:?}"),
         }
         assert_eq!(mock.invoke_count(), 0, "no invocation when audit bin missing");
+    }
+
+    // ========================================================
+    // status + verify subcommand tests — cycle 169
+    // ========================================================
+
+    /// Build a synthetic completed-cycle entry per the cycle 169 state
+    /// schema extension: includes `traces` (10 steps, all executed=true)
+    /// and `state_audit` (severity=ok). Per-field shape matches what
+    /// `write_runner_state` produces.
+    fn completed_entry(cycle: u32) -> serde_json::Value {
+        let traces: Vec<serde_json::Value> = (1..=10u8)
+            .map(|i| serde_json::json!({
+                "index": i,
+                "name": format!("step-{i}"),
+                "executed": true,
+                "phase": "boundary",
+            }))
+            .collect();
+        serde_json::json!({
+            "cycle": cycle,
+            "issue": 99000 + cycle,
+            "status": "completed",
+            "started_at": "2026-05-17T20:00:00Z",
+            "ended_at":   "2026-05-17T20:01:00Z",
+            "halt_reason": serde_json::Value::Null,
+            "halt_step":   serde_json::Value::Null,
+            "halted_after_role": serde_json::Value::Null,
+            "steps_attempted": 10,
+            "traces": traces,
+            "state_audit": {"severity": "ok", "exit_code": 0},
+        })
+    }
+
+    fn halted_entry(cycle: u32) -> serde_json::Value {
+        let mut e = completed_entry(cycle);
+        e["status"] = "halted".into();
+        e["halt_reason"] = "role-session-empty".into();
+        e["halt_step"] = "executor-session".into();
+        e["steps_attempted"] = 7.into();
+        // Halted cycles have fewer trace entries; reflect that.
+        let traces: Vec<serde_json::Value> = (1..=7u8)
+            .map(|i| serde_json::json!({
+                "index": i,
+                "name": format!("step-{i}"),
+                "executed": true,
+                "phase": "boundary",
+            }))
+            .collect();
+        e["traces"] = serde_json::Value::Array(traces);
+        e
+    }
+
+    fn write_runner_state_fixture(
+        tmp: &Path,
+        last_cycle: Option<&serde_json::Value>,
+        history_cycles: &[serde_json::Value],
+    ) {
+        let dir = tmp.join("state").join("v2-cycle-runner");
+        fs::create_dir_all(&dir).unwrap();
+        if let Some(v) = last_cycle {
+            fs::write(
+                dir.join("last-cycle.json"),
+                format!("{}\n", serde_json::to_string_pretty(v).unwrap()),
+            ).unwrap();
+        }
+        let history = serde_json::json!({ "cycles": history_cycles });
+        fs::write(
+            dir.join("cycle-history.json"),
+            format!("{}\n", serde_json::to_string_pretty(&history).unwrap()),
+        ).unwrap();
+    }
+
+    fn write_super_step_history_fixture(tmp: &Path, cycles: &[u32]) {
+        let entries: Vec<serde_json::Value> = cycles
+            .iter()
+            .map(|&c| serde_json::json!({
+                "cycle": c,
+                "started_at": "2026-05-17T20:00:00Z",
+                "ended_at":   "2026-05-17T20:01:00Z",
+                "transitions": [],
+            }))
+            .collect();
+        let payload = serde_json::json!({ "cycles": entries });
+        let dir = tmp.join("state");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("super-step-history.json"),
+            format!("{}\n", serde_json::to_string_pretty(&payload).unwrap()),
+        ).unwrap();
+    }
+
+    fn write_role_history_fixture(tmp: &Path, role: &str, cycles: &[u32]) {
+        let runs: Vec<serde_json::Value> = cycles
+            .iter()
+            .map(|&c| serde_json::json!({
+                "cycle": c,
+                "role": role,
+                "at": "2026-05-17T20:00:00Z",
+                "outcome": "success",
+                "notes": "",
+            }))
+            .collect();
+        let payload = serde_json::json!({ "role": role, "runs": runs });
+        let dir = tmp.join("state").join("roles");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join(format!("{role}-history.json")),
+            format!("{}\n", serde_json::to_string_pretty(&payload).unwrap()),
+        ).unwrap();
+    }
+
+    fn write_all_role_histories(tmp: &Path, cycles: &[u32]) {
+        for role in ["reconciler", "planner", "executor", "curator"] {
+            write_role_history_fixture(tmp, role, cycles);
+        }
+    }
+
+    /// Synthetic Args usable for status/verify tests. Doesn't need binaries
+    /// since status+verify never shell to primitives.
+    fn synthetic_args_for_readonly(tmp: &Path) -> Args {
+        let mut a = synthetic_args(tmp);
+        a.command = Subcmd::Schema;
+        a
+    }
+
+    // -------- status tests --------
+
+    #[test]
+    fn status_default_reads_last_cycle_completed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = completed_entry(168);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_status(&args, None, false, &mut out).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        // Default Format on synthetic_args is Json (per synthetic_args
+        // setting format=Json), so we parse JSON.
+        let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(parsed["cycle"], 168);
+        assert_eq!(parsed["status"], "completed");
+        assert_eq!(parsed["traces_count"], 10);
+        assert_eq!(parsed["state_audit"], "ok");
+        assert_eq!(parsed["include_primitives"], false);
+        assert!(parsed.get("primitives").is_none());
+    }
+
+    #[test]
+    fn status_default_errors_on_missing_state_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No fixture writes — runner_dir won't exist.
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        let r = run_status(&args, None, false, &mut out);
+        match r {
+            Err(RunnerError::StatusStateNotFound { detail }) => {
+                assert!(detail.contains("last-cycle.json"), "got: {detail}");
+            }
+            other => panic!("expected StatusStateNotFound, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn status_cycle_n_reads_history() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entries = vec![completed_entry(5), completed_entry(6), completed_entry(7)];
+        write_runner_state_fixture(tmp.path(), Some(&entries[0]), &entries);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_status(&args, Some(6), false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["cycle"], 6);
+        assert_eq!(parsed["status"], "completed");
+    }
+
+    #[test]
+    fn status_cycle_n_errors_on_unknown_cycle() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entries = vec![completed_entry(1), completed_entry(2), completed_entry(3)];
+        write_runner_state_fixture(tmp.path(), Some(&entries[0]), &entries);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        let r = run_status(&args, Some(9), false, &mut out);
+        match r {
+            Err(RunnerError::StatusStateNotFound { detail }) => {
+                assert!(detail.contains("cycle 9"), "got: {detail}");
+            }
+            other => panic!("expected StatusStateNotFound, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn status_halted_cycle_reports_halt_step() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = halted_entry(50);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_status(&args, None, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["status"], "halted");
+        assert_eq!(parsed["halt_step"], "executor-session");
+        assert_eq!(parsed["halt_class"], "role-session-empty");
+    }
+
+    #[test]
+    fn status_include_primitives_flag_no_crash_on_missing_primitives() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = completed_entry(8);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        // Do NOT write primitive state files. The flag should degrade
+        // to nulls rather than crashing.
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_status(&args, None, true, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["include_primitives"], true);
+        assert!(parsed["primitives"].is_object());
+        assert!(parsed["primitives"]["super_step"].is_null());
+        assert!(parsed["primitives"]["roles"]["reconciler"].is_null());
+    }
+
+    // -------- verify tests --------
+
+    fn write_clean_cycle_fixture(tmp: &Path, cycle: u32) {
+        let entry = completed_entry(cycle);
+        write_runner_state_fixture(tmp, Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp, &[cycle]);
+        write_all_role_histories(tmp, &[cycle]);
+    }
+
+    #[test]
+    fn verify_clean_cycle_passes_all_9_assertions() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_clean_cycle_fixture(tmp.path(), 100);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 100, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["verdict"], "clean");
+        let arr = parsed["assertions"].as_array().unwrap();
+        assert_eq!(arr.len(), 9);
+        for a in arr {
+            assert_eq!(a["passed"], true, "assertion failed: {a:?}");
+        }
+    }
+
+    #[test]
+    fn verify_halted_cycle_fails_status_no_halt() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = halted_entry(101);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[101]);
+        write_all_role_histories(tmp.path(), &[101]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 101, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["verdict"], "dirty");
+        let arr = parsed["assertions"].as_array().unwrap();
+        // Assertion 2 (status-completed), 3 (no-halt-step), 4 (no-halt-class)
+        // all should fail. Assertion 6 (all-10-substeps-traced) fails because
+        // halted entry has 7 traces, not 10.
+        assert_eq!(arr[1]["name"], "status-completed");
+        assert_eq!(arr[1]["passed"], false);
+        assert_eq!(arr[2]["name"], "no-halt-step");
+        assert_eq!(arr[2]["passed"], false);
+        assert_eq!(arr[3]["name"], "no-halt-class");
+        assert_eq!(arr[3]["passed"], false);
+    }
+
+    #[test]
+    fn verify_missing_substeps_fails_traces_assertion() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut entry = completed_entry(102);
+        // Trim traces to 7 entries (not 10).
+        let traces = entry["traces"].as_array().unwrap()[..7].to_vec();
+        entry["traces"] = serde_json::Value::Array(traces);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[102]);
+        write_all_role_histories(tmp.path(), &[102]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 102, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let arr = parsed["assertions"].as_array().unwrap();
+        let traces_assertion = arr.iter().find(|a| a["name"] == "all-10-substeps-traced").unwrap();
+        assert_eq!(traces_assertion["passed"], false);
+        assert!(traces_assertion["details"].as_str().unwrap().contains("traces.len()=7"));
+    }
+
+    #[test]
+    fn verify_unknown_cycle_errors_first_assertion() {
+        let tmp = tempfile::tempdir().unwrap();
+        // History is empty.
+        write_runner_state_fixture(tmp.path(), None, &[]);
+        write_super_step_history_fixture(tmp.path(), &[]);
+        write_all_role_histories(tmp.path(), &[]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 200, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let arr = parsed["assertions"].as_array().unwrap();
+        assert_eq!(arr[0]["name"], "cycle-N-in-history");
+        assert_eq!(arr[0]["passed"], false);
+        // Short-circuit: only assertion 1, plus 8 (super-step) + 9 (role) run.
+        // Total 3 entries because assertions 2-7 require the entry.
+        assert_eq!(arr.len(), 3);
+        assert_eq!(arr[1]["name"], "super-step-history-has-cycle-N");
+        assert_eq!(arr[2]["name"], "per-role-history-has-cycle-N");
+    }
+
+    #[test]
+    fn verify_strict_exits_1_on_any_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = halted_entry(103);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[103]);
+        write_all_role_histories(tmp.path(), &[103]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        let r = run_verify(&args, 103, true, &mut out);
+        match r {
+            Err(RunnerError::VerifyDirtyStrict { failed_assertions, total_assertions }) => {
+                assert!(failed_assertions > 0);
+                assert_eq!(total_assertions, 9);
+            }
+            other => panic!("expected VerifyDirtyStrict, got {other:?}"),
+        }
+        // The verdict JSON should still have been written to stdout.
+        let text = String::from_utf8(out).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(parsed["verdict"], "dirty");
+    }
+
+    #[test]
+    fn verify_non_strict_exits_0_with_dirty_verdict() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = halted_entry(104);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[104]);
+        write_all_role_histories(tmp.path(), &[104]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        // No --strict: returns Ok even on dirty.
+        run_verify(&args, 104, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(parsed["verdict"], "dirty");
+        // exit_code in JSON envelope reflects the verdict regardless of --strict
+        assert_eq!(parsed["exit_code"], 1);
+    }
+
+    #[test]
+    fn verify_missing_super_step_history_fails_assertion_8() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = completed_entry(105);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        // Deliberately omit super-step-history.json.
+        write_all_role_histories(tmp.path(), &[105]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 105, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let arr = parsed["assertions"].as_array().unwrap();
+        let a8 = arr.iter().find(|a| a["name"] == "super-step-history-has-cycle-N").unwrap();
+        assert_eq!(a8["passed"], false);
+        assert!(a8["details"].as_str().unwrap().contains("does not exist"));
+    }
+
+    #[test]
+    fn verify_missing_role_history_fails_assertion_9() {
+        let tmp = tempfile::tempdir().unwrap();
+        let entry = completed_entry(106);
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[106]);
+        // Only write 3 of 4 role histories — curator missing.
+        for role in ["reconciler", "planner", "executor"] {
+            write_role_history_fixture(tmp.path(), role, &[106]);
+        }
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 106, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let arr = parsed["assertions"].as_array().unwrap();
+        let a9 = arr.iter().find(|a| a["name"] == "per-role-history-has-cycle-N").unwrap();
+        assert_eq!(a9["passed"], false);
+        assert!(a9["details"].as_str().unwrap().contains("curator"));
+    }
+
+    #[test]
+    fn verify_state_audit_hard_severity_fails_assertion_7() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut entry = completed_entry(108);
+        entry["state_audit"] = serde_json::json!({"severity": "hard", "exit_code": 3});
+        write_runner_state_fixture(tmp.path(), Some(&entry), std::slice::from_ref(&entry));
+        write_super_step_history_fixture(tmp.path(), &[108]);
+        write_all_role_histories(tmp.path(), &[108]);
+        let args = synthetic_args_for_readonly(tmp.path());
+        let mut out = Vec::new();
+        run_verify(&args, 108, false, &mut out).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let arr = parsed["assertions"].as_array().unwrap();
+        let a7 = arr.iter().find(|a| a["name"] == "state-audit-not-hard").unwrap();
+        assert_eq!(a7["passed"], false);
+        assert!(a7["details"].as_str().unwrap().contains("hard"));
     }
 }

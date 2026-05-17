@@ -450,12 +450,15 @@ fn live_run_halts_with_state_bound_exceeded_when_audit_reports_hard() {
     init_state_in(repo_root);
 
     // Populate docs/state.json with enough agent_sessions entries to
-    // breach DISPATCHES_HARD (500). Each entry is a minimal placeholder
-    // — only count matters for the audit's array-length probe.
+    // breach DISPATCHES_HARD (1000 since cycle 167 recalibration; was 500).
+    // Each entry is a minimal placeholder — only count matters for the
+    // audit's array-length probe. Cycle 169: count updated from 600 to
+    // 1100 to track the cycle 167 threshold change (cycle 167 missed
+    // updating this test; surfaced by cycle 169 implementation work).
     let docs_dir = repo_root.join("docs");
     fs::create_dir_all(&docs_dir).expect("create docs/ dir");
-    let mut entries: Vec<serde_json::Value> = Vec::with_capacity(600);
-    for i in 0..600 {
+    let mut entries: Vec<serde_json::Value> = Vec::with_capacity(1100);
+    for i in 0..1100 {
         entries.push(serde_json::json!({
             "issue_number": 100_000 + i,
             "status": "merged",
@@ -691,4 +694,169 @@ fn live_run_halts_super_step_out_of_order_when_history_diverges() {
         "expected super-step.json to be byte-identical after out-of-order halt; \
          boundary mutated current super-step state despite refusing the cycle-start"
     );
+}
+
+// =====================================================================
+// status + verify integration test — cycle 169
+//
+// Per design doc §5.2 (with one deviation: we run a LIVE cycle, not
+// --dry-run. Dry-run does not persist state to disk, so the verify
+// pipeline has nothing to assert against. The design's "reuse the
+// dry-run fixture" wording is a design-doc bug surfaced in implementation
+// per the cycle 163 implementation-discovery-via-testing pattern; this
+// test mirrors the live-run fixture from
+// `live_run_against_real_primitives_writes_completed_state_with_no_halt_marker`).
+// =====================================================================
+
+fn setup_live_cycle_outputs(repo_root: &Path) -> [PathBuf; 4] {
+    let session_dir = repo_root.join("session-outputs");
+    let reconciler_out = session_dir.join("reconciler.json");
+    let planner_out = session_dir.join("planner.json");
+    let executor_out = session_dir.join("executor.json");
+    let curator_out = session_dir.join("curator.json");
+    write_json(
+        &reconciler_out,
+        &serde_json::json!({
+            "eva-responses": [],
+            "audit-posts": [],
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "quiet"
+        }),
+    );
+    write_json(
+        &planner_out,
+        &serde_json::json!({
+            "substantive-focal": "integration-test-status-verify",
+            "per-role-tasks": {"executor": "noop"}
+        }),
+    );
+    write_json(
+        &executor_out,
+        &serde_json::json!({"artifacts-written": []}),
+    );
+    write_json(
+        &curator_out,
+        &serde_json::json!({"consolidated-insights": "integration test"}),
+    );
+    [reconciler_out, planner_out, executor_out, curator_out]
+}
+
+#[test]
+fn status_and_verify_after_live_cycle_report_clean_then_dirty_after_corruption() {
+    build_primitives_once();
+
+    let temp = TempDir::new().expect("create temp dir");
+    let repo_root = temp.path();
+    init_state_in(repo_root);
+
+    let [reconciler_out, planner_out, executor_out, curator_out] =
+        setup_live_cycle_outputs(repo_root);
+
+    // 1. Run a live cycle (cycle=1, issue=99999) — produces state files.
+    let mut args = primitive_bin_args(repo_root);
+    args.extend([
+        "run".into(),
+        "--cycle".into(),
+        "1".into(),
+        "--issue".into(),
+        "99999".into(),
+        "--reconciler-output-file".into(),
+        reconciler_out.to_string_lossy().into_owned(),
+        "--planner-output-file".into(),
+        planner_out.to_string_lossy().into_owned(),
+        "--executor-output-file".into(),
+        executor_out.to_string_lossy().into_owned(),
+        "--curator-output-file".into(),
+        curator_out.to_string_lossy().into_owned(),
+    ]);
+    let run_output = run_cycle_runner(&args);
+    assert!(
+        run_output.status.success(),
+        "live run failed: stderr={}, stdout={}",
+        String::from_utf8_lossy(&run_output.stderr),
+        String::from_utf8_lossy(&run_output.stdout),
+    );
+
+    // 2. Invoke `status` (JSON) — expect completed report with traces+audit.
+    let mut status_args = primitive_bin_args(repo_root);
+    status_args.extend(["--format".into(), "json".into(), "status".into()]);
+    let status_output = run_cycle_runner(&status_args);
+    assert!(
+        status_output.status.success(),
+        "status failed: stderr={}, stdout={}",
+        String::from_utf8_lossy(&status_output.stderr),
+        String::from_utf8_lossy(&status_output.stdout),
+    );
+    let status_json: serde_json::Value =
+        serde_json::from_slice(&status_output.stdout).expect("status stdout is JSON");
+    assert_eq!(status_json["cycle"], 1);
+    assert_eq!(status_json["status"], "completed");
+    assert_eq!(status_json["traces_count"], 10);
+    // state_audit may be "ok" (audit ran clean) on empty tempdir.
+    assert!(
+        status_json["state_audit"].as_str().is_some(),
+        "expected non-null state_audit severity, got {:?}",
+        status_json["state_audit"]
+    );
+
+    // 3. Invoke `verify --cycle 1` — expect verdict=clean (9/9).
+    let mut verify_args = primitive_bin_args(repo_root);
+    verify_args.extend([
+        "--format".into(), "json".into(),
+        "verify".into(),
+        "--cycle".into(), "1".into(),
+    ]);
+    let verify_output = run_cycle_runner(&verify_args);
+    assert!(
+        verify_output.status.success(),
+        "verify (non-strict, clean) should exit 0; stderr={}, stdout={}",
+        String::from_utf8_lossy(&verify_output.stderr),
+        String::from_utf8_lossy(&verify_output.stdout),
+    );
+    let verify_json: serde_json::Value =
+        serde_json::from_slice(&verify_output.stdout).expect("verify stdout is JSON");
+    assert_eq!(verify_json["verdict"], "clean", "full: {verify_json}");
+    let assertions = verify_json["assertions"].as_array().unwrap();
+    assert_eq!(assertions.len(), 9);
+    for a in assertions {
+        assert_eq!(a["passed"], true, "assertion failed: {a:?}");
+    }
+
+    // 4. Inject a deliberate corruption: rewrite cycle-history.json so cycle 1's
+    //    entry has status=halted + halt_step set. Re-invoke verify --strict —
+    //    expect dirty + exit code 1.
+    let history_path = repo_root.join("state/v2-cycle-runner/cycle-history.json");
+    let mut history: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&history_path).unwrap()).unwrap();
+    history["cycles"][0]["status"] = "halted".into();
+    history["cycles"][0]["halt_step"] = "executor-session".into();
+    history["cycles"][0]["halt_reason"] = "role-session-empty".into();
+    fs::write(
+        &history_path,
+        format!("{}\n", serde_json::to_string_pretty(&history).unwrap()),
+    ).unwrap();
+
+    let mut verify_strict_args = primitive_bin_args(repo_root);
+    verify_strict_args.extend([
+        "--format".into(), "json".into(),
+        "verify".into(),
+        "--cycle".into(), "1".into(),
+        "--strict".into(),
+    ]);
+    let verify_strict_output = run_cycle_runner(&verify_strict_args);
+    assert!(
+        !verify_strict_output.status.success(),
+        "verify --strict on dirty cycle should exit nonzero; stdout={}",
+        String::from_utf8_lossy(&verify_strict_output.stdout),
+    );
+    let dirty_json: serde_json::Value =
+        serde_json::from_slice(&verify_strict_output.stdout).expect("strict-dirty stdout is JSON");
+    assert_eq!(dirty_json["verdict"], "dirty");
+    let dirty_assertions = dirty_json["assertions"].as_array().unwrap();
+    let status_assertion = dirty_assertions.iter()
+        .find(|a| a["name"] == "status-completed").unwrap();
+    assert_eq!(status_assertion["passed"], false);
+    let halt_step_assertion = dirty_assertions.iter()
+        .find(|a| a["name"] == "no-halt-step").unwrap();
+    assert_eq!(halt_step_assertion["passed"], false);
 }
