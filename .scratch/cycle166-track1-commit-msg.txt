@@ -1,0 +1,26 @@
+redesign(phase-3): cycle 166 Track 1 — v2-state-dispatch-archive backlog run (862 entries archived → state.json 931→69)
+
+First live invocation of v2-state-dispatch-archive (cycle 165 PR #2975
+merge cleared the gate). One-time backlog sweep:
+
+- Archived 862 terminal entries (age > 30 days) from docs/state.json
+  agent_sessions[] to new docs/state-archive/dispatches-2026-05-17.json
+  (archive_version 1, 290633 bytes).
+- Retained 65 below-30-day-threshold terminal entries + 4 live entries
+  (2 in_flight + 2 reviewed_awaiting_eva). state.json agent_sessions[]
+  is now 69 entries (down from 931 ; ~93% reduction).
+- 0 missing-timestamp anomalies, 0 unknown-status anomalies.
+
+Dry-run preceded real run; both reported identical counts. Atomic
+commit-and-push per cycle 524 git-safety discipline (state.json
+mutation + new archive file in same commit).
+
+Forward priority #2 (v2-state-retention-policy.md §4 Axis 6
+recalibration patch) is now actionable — the 50/200/500 thresholds
+were sized against a steady-state stream; the post-archival 69-entry
+floor + new ~30-day-window growth pattern needs threshold review.
+Cycle 167+ candidate.
+
+Closes cycle 165+ forward priority #1 (was cycle 164+ priority #2,
+cycle 163 design-scope conclusion §5.1 invocation contract first
+operational exercise).
