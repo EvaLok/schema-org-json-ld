@@ -97,12 +97,7 @@ impl Role {
     /// decides substantive-focal → executor does the work → curator reflects
     /// and writes memory + appends cycle history.
     fn ordering() -> &'static [Role] {
-        &[
-            Role::Reconciler,
-            Role::Planner,
-            Role::Executor,
-            Role::Curator,
-        ]
+        &[Role::Reconciler, Role::Planner, Role::Executor, Role::Curator]
     }
 
     /// The next super-step after `self`, or None if `self` is the final super-step.
@@ -171,29 +166,15 @@ enum BoundaryError {
     Json(String),
     NotInitialized(PathBuf),
     /// Tried to advance past the final super-step without cycle-end.
-    AlreadyAtFinalSuperStep {
-        current: Role,
-    },
+    AlreadyAtFinalSuperStep { current: Role },
     /// Tried cycle-start on a cycle that is already in progress (and not the same N).
-    CycleAlreadyInProgress {
-        in_progress: u32,
-        requested: u32,
-    },
+    CycleAlreadyInProgress { in_progress: u32, requested: u32 },
     /// Tried cycle-start with N != current_cycle + 1 (cycles must be sequential).
-    OutOfOrderCycleStart {
-        last_complete: Option<u32>,
-        requested: u32,
-    },
+    OutOfOrderCycleStart { last_complete: Option<u32>, requested: u32 },
     /// Tried cycle-end on a cycle that isn't the current in-progress cycle.
-    CycleMismatch {
-        in_progress: u32,
-        requested: u32,
-    },
+    CycleMismatch { in_progress: u32, requested: u32 },
     /// Tried cycle-end before reaching curator super-step.
-    CycleNotComplete {
-        current: Role,
-        required: Role,
-    },
+    CycleNotComplete { current: Role, required: Role },
     /// channel-router state file for the current role's output channel is missing or
     /// doesn't match the expected writer + cycle.
     ChannelOutputMissing {
@@ -354,10 +335,7 @@ fn read_history(repo_root: &Path) -> Result<SuperStepHistory, BoundaryError> {
     Ok(history)
 }
 
-fn append_history(
-    repo_root: &Path,
-    record: CycleRecord,
-) -> Result<SuperStepHistory, BoundaryError> {
+fn append_history(repo_root: &Path, record: CycleRecord) -> Result<SuperStepHistory, BoundaryError> {
     let mut history = read_history(repo_root)?;
     history.cycles.push(record);
     let path = super_step_history_path(repo_root);
@@ -370,7 +348,11 @@ fn append_history(
 /// expected writer + cycle. Returns Ok on success, Err with a structured
 /// reason on failure. DEFERRED: replace direct file read with subprocess
 /// invocation of `v2-channel-router read --channel <channel>` (cycle 147+).
-fn verify_channel_output(repo_root: &Path, role: Role, cycle: u32) -> Result<(), BoundaryError> {
+fn verify_channel_output(
+    repo_root: &Path,
+    role: Role,
+    cycle: u32,
+) -> Result<(), BoundaryError> {
     let channel = role.output_channel();
     let path = channel_state_path(repo_root, channel);
     if !path.exists() {
@@ -389,10 +371,7 @@ fn verify_channel_output(repo_root: &Path, role: Role, cycle: u32) -> Result<(),
         return Err(BoundaryError::ChannelOutputMissing {
             role,
             channel: channel.to_string(),
-            reason: format!(
-                "state file {} is empty (channel never written)",
-                path.display()
-            ),
+            reason: format!("state file {} is empty (channel never written)", path.display()),
         });
     }
     let state: ChannelStateLite =

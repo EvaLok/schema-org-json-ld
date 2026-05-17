@@ -174,26 +174,11 @@ enum Format {
 enum RunnerError {
     Io(io::Error),
     Json(serde_json::Error),
-    PrimitiveMissing {
-        name: &'static str,
-        path: PathBuf,
-    },
-    PrimitiveFailed {
-        name: &'static str,
-        stderr: String,
-    },
-    MissingSessionOutput {
-        role: Role,
-    },
-    CycleHalted {
-        step: &'static str,
-        class: FailureClass,
-        stderr: String,
-    },
-    SuperStepOutOfOrder {
-        step: &'static str,
-        stderr: String,
-    },
+    PrimitiveMissing { name: &'static str, path: PathBuf },
+    PrimitiveFailed { name: &'static str, stderr: String },
+    MissingSessionOutput { role: Role },
+    CycleHalted { step: &'static str, class: FailureClass, stderr: String },
+    SuperStepOutOfOrder { step: &'static str, stderr: String },
 }
 
 impl std::fmt::Display for RunnerError {
@@ -215,14 +200,15 @@ impl std::fmt::Display for RunnerError {
                  v2-role-driver invoke needs a session-output file per role)",
                 role.as_kebab()
             ),
-            RunnerError::CycleHalted {
-                step,
-                class,
-                stderr,
-            } => write!(f, "cycle halted at {step} ({}): {stderr}", class.as_kebab()),
-            RunnerError::SuperStepOutOfOrder { step, stderr } => {
-                write!(f, "super-step out of order at {step}: {stderr}")
-            }
+            RunnerError::CycleHalted { step, class, stderr } => write!(
+                f,
+                "cycle halted at {step} ({}): {stderr}",
+                class.as_kebab()
+            ),
+            RunnerError::SuperStepOutOfOrder { step, stderr } => write!(
+                f,
+                "super-step out of order at {step}: {stderr}"
+            ),
         }
     }
 }
@@ -258,13 +244,9 @@ type PrimitivePathFn = fn(&Args) -> &Path;
 
 const PRIMITIVES_TO_INIT: &[(&str, PrimitivePathFn)] = &[
     ("v2-channel-router", |a| a.channel_router_bin.as_path()),
-    ("v2-super-step-boundary", |a| {
-        a.super_step_boundary_bin.as_path()
-    }),
+    ("v2-super-step-boundary", |a| a.super_step_boundary_bin.as_path()),
     ("v2-role-driver", |a| a.role_driver_bin.as_path()),
-    ("v2-reconciler-event-processor", |a| {
-        a.reconciler_event_processor_bin.as_path()
-    }),
+    ("v2-reconciler-event-processor", |a| a.reconciler_event_processor_bin.as_path()),
 ];
 
 fn default_primitive_bin(name: &str) -> PathBuf {
@@ -389,19 +371,13 @@ fn write_initial_last_cycle(path: &Path) -> Result<(), RunnerError> {
         "ended_at": null,
         "halt_reason": null
     });
-    fs::write(
-        path,
-        format!("{}\n", serde_json::to_string_pretty(&payload)?),
-    )?;
+    fs::write(path, format!("{}\n", serde_json::to_string_pretty(&payload)?))?;
     Ok(())
 }
 
 fn write_initial_cycle_history(path: &Path) -> Result<(), RunnerError> {
     let payload = serde_json::json!({ "cycles": [] });
-    fs::write(
-        path,
-        format!("{}\n", serde_json::to_string_pretty(&payload)?),
-    )?;
+    fs::write(path, format!("{}\n", serde_json::to_string_pretty(&payload)?))?;
     Ok(())
 }
 
@@ -411,78 +387,33 @@ fn run_schema<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
             writeln!(out, "v2-cycle-runner schema (cycle 150 scaffold):")?;
             writeln!(out)?;
             writeln!(out, "Per-cycle super-step sequence (10 steps):")?;
-            writeln!(
-                out,
-                "  1. super-step-init        (v2-super-step-boundary cycle-start)"
-            )?;
-            writeln!(
-                out,
-                "  2. reconciler-pre-poll    (v2-reconciler-event-processor poll)"
-            )?;
-            writeln!(
-                out,
-                "  3. reconciler-session     (v2-role-driver invoke --role reconciler)"
-            )?;
-            writeln!(
-                out,
-                "  4. super-step-advance-1   (v2-super-step-boundary advance) [to planner]"
-            )?;
-            writeln!(
-                out,
-                "  5. planner-session        (v2-role-driver invoke --role planner)"
-            )?;
-            writeln!(
-                out,
-                "  6. super-step-advance-2   (v2-super-step-boundary advance) [to executor]"
-            )?;
-            writeln!(
-                out,
-                "  7. executor-session       (v2-role-driver invoke --role executor)"
-            )?;
-            writeln!(
-                out,
-                "  8. super-step-advance-3   (v2-super-step-boundary advance) [to curator]"
-            )?;
-            writeln!(
-                out,
-                "  9. curator-session        (v2-role-driver invoke --role curator)"
-            )?;
-            writeln!(
-                out,
-                "  10. super-step-settle     (v2-super-step-boundary cycle-end)"
-            )?;
+            writeln!(out, "  1. super-step-init        (v2-super-step-boundary cycle-start)")?;
+            writeln!(out, "  2. reconciler-pre-poll    (v2-reconciler-event-processor poll)")?;
+            writeln!(out, "  3. reconciler-session     (v2-role-driver invoke --role reconciler)")?;
+            writeln!(out, "  4. super-step-advance-1   (v2-super-step-boundary advance) [to planner]")?;
+            writeln!(out, "  5. planner-session        (v2-role-driver invoke --role planner)")?;
+            writeln!(out, "  6. super-step-advance-2   (v2-super-step-boundary advance) [to executor]")?;
+            writeln!(out, "  7. executor-session       (v2-role-driver invoke --role executor)")?;
+            writeln!(out, "  8. super-step-advance-3   (v2-super-step-boundary advance) [to curator]")?;
+            writeln!(out, "  9. curator-session        (v2-role-driver invoke --role curator)")?;
+            writeln!(out, "  10. super-step-settle     (v2-super-step-boundary cycle-end)")?;
             writeln!(out)?;
             writeln!(out, "State ownership:")?;
             writeln!(out, "  state/channels/          ← v2-channel-router")?;
             writeln!(out, "  state/super-step.json    ← v2-super-step-boundary")?;
-            writeln!(
-                out,
-                "  state/super-step-history.json ← v2-super-step-boundary"
-            )?;
+            writeln!(out, "  state/super-step-history.json ← v2-super-step-boundary")?;
             writeln!(out, "  state/roles/             ← v2-role-driver")?;
-            writeln!(
-                out,
-                "  state/reconciler/        ← v2-reconciler-event-processor"
-            )?;
+            writeln!(out, "  state/reconciler/        ← v2-reconciler-event-processor")?;
             writeln!(out, "  state/v2-cycle-runner/   ← v2-cycle-runner (self)")?;
             writeln!(out)?;
             writeln!(out, "Subcommands implemented (cycle 150):")?;
-            writeln!(
-                out,
-                "  init     ← composes primitive inits + initializes runner-self state"
-            )?;
+            writeln!(out, "  init     ← composes primitive inits + initializes runner-self state")?;
             writeln!(out, "  schema   ← prints this")?;
             writeln!(out)?;
             writeln!(out, "Subcommands DEFERRED to cycle 151-153+:")?;
-            writeln!(
-                out,
-                "  run      (the main entrypoint: drives the 10-step sequence)"
-            )?;
+            writeln!(out, "  run      (the main entrypoint: drives the 10-step sequence)")?;
             writeln!(out, "  status   (current super-step + per-role timestamps)")?;
-            writeln!(
-                out,
-                "  verify   (post-cycle: all transitions present + clean)"
-            )?;
+            writeln!(out, "  verify   (post-cycle: all transitions present + clean)")?;
         }
         Format::Json => {
             let payload = serde_json::json!({
@@ -523,11 +454,7 @@ fn emit_report<W: Write>(
 ) -> Result<(), RunnerError> {
     match format {
         Format::Text => {
-            writeln!(
-                out,
-                "v2-cycle-runner init: composed {} primitive inits",
-                report.primitive_inits.len()
-            )?;
+            writeln!(out, "v2-cycle-runner init: composed {} primitive inits", report.primitive_inits.len())?;
             for primitive in &report.primitive_inits {
                 writeln!(
                     out,
@@ -537,11 +464,7 @@ fn emit_report<W: Write>(
                     primitive.bin_path.display()
                 )?;
             }
-            writeln!(
-                out,
-                "  v2-cycle-runner: ok (state at {})",
-                report.runner_state_path.display()
-            )?;
+            writeln!(out, "  v2-cycle-runner: ok (state at {})", report.runner_state_path.display())?;
         }
         Format::Json => {
             writeln!(out, "{}", serde_json::to_string_pretty(report)?)?;
@@ -624,56 +547,16 @@ struct Step {
 
 fn super_step_sequence() -> [Step; 10] {
     [
-        Step {
-            index: 1,
-            name: "super-step-init",
-            kind: StepKind::SuperStepCycleStart,
-        },
-        Step {
-            index: 2,
-            name: "reconciler-pre-poll",
-            kind: StepKind::ReconcilerPoll,
-        },
-        Step {
-            index: 3,
-            name: "reconciler-session",
-            kind: StepKind::RoleInvoke(Role::Reconciler),
-        },
-        Step {
-            index: 4,
-            name: "super-step-advance-1",
-            kind: StepKind::SuperStepAdvance,
-        },
-        Step {
-            index: 5,
-            name: "planner-session",
-            kind: StepKind::RoleInvoke(Role::Planner),
-        },
-        Step {
-            index: 6,
-            name: "super-step-advance-2",
-            kind: StepKind::SuperStepAdvance,
-        },
-        Step {
-            index: 7,
-            name: "executor-session",
-            kind: StepKind::RoleInvoke(Role::Executor),
-        },
-        Step {
-            index: 8,
-            name: "super-step-advance-3",
-            kind: StepKind::SuperStepAdvance,
-        },
-        Step {
-            index: 9,
-            name: "curator-session",
-            kind: StepKind::RoleInvoke(Role::Curator),
-        },
-        Step {
-            index: 10,
-            name: "super-step-settle",
-            kind: StepKind::SuperStepCycleEnd,
-        },
+        Step { index: 1,  name: "super-step-init",       kind: StepKind::SuperStepCycleStart },
+        Step { index: 2,  name: "reconciler-pre-poll",   kind: StepKind::ReconcilerPoll },
+        Step { index: 3,  name: "reconciler-session",    kind: StepKind::RoleInvoke(Role::Reconciler) },
+        Step { index: 4,  name: "super-step-advance-1",  kind: StepKind::SuperStepAdvance },
+        Step { index: 5,  name: "planner-session",       kind: StepKind::RoleInvoke(Role::Planner) },
+        Step { index: 6,  name: "super-step-advance-2",  kind: StepKind::SuperStepAdvance },
+        Step { index: 7,  name: "executor-session",      kind: StepKind::RoleInvoke(Role::Executor) },
+        Step { index: 8,  name: "super-step-advance-3",  kind: StepKind::SuperStepAdvance },
+        Step { index: 9,  name: "curator-session",       kind: StepKind::RoleInvoke(Role::Curator) },
+        Step { index: 10, name: "super-step-settle",     kind: StepKind::SuperStepCycleEnd },
     ]
 }
 
@@ -716,21 +599,15 @@ impl FailureClass {
 
 fn classify_failure(_exit_code: i32, stderr: &str) -> FailureClass {
     let lower = stderr.to_lowercase();
-    if lower.contains("super-step")
-        && (lower.contains("out of order")
-            || lower.contains("ordering")
-            || lower.contains("wrong super-step")
-            || lower.contains("not at expected"))
+    if lower.contains("super-step") && (lower.contains("out of order")
+        || lower.contains("ordering")
+        || lower.contains("wrong super-step")
+        || lower.contains("not at expected"))
     {
         FailureClass::SuperStepOutOfOrder
-    } else if lower.contains("rejected")
-        || lower.contains("required key")
-        || lower.contains("schema mismatch")
-    {
+    } else if lower.contains("rejected") || lower.contains("required key") || lower.contains("schema mismatch") {
         FailureClass::ChannelWriteRejected
-    } else if lower.contains("empty")
-        && (lower.contains("output") || lower.contains("payload") || lower.contains("session"))
-    {
+    } else if lower.contains("empty") && (lower.contains("output") || lower.contains("payload") || lower.contains("session")) {
         FailureClass::RoleSessionEmpty
     } else {
         FailureClass::Transient
@@ -883,7 +760,7 @@ struct CycleReport {
     started_at: String,
     ended_at: String,
     dry_run: bool,
-    status: &'static str, // "completed" | "halted" | "dry-run-traced" | "out-of-order"
+    status: &'static str,        // "completed" | "halted" | "dry-run-traced" | "out-of-order"
     halt_step: Option<&'static str>,
     halt_class: Option<FailureClass>,
     halted_after_role: Option<Role>,
@@ -965,8 +842,7 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
     let mut halted_after_role: Option<Role> = None;
 
     for step in sequence.iter() {
-        let (bin_path, primitive_name, step_args) =
-            build_step_invocation(args, run_args, step, &timestamp);
+        let (bin_path, primitive_name, step_args) = build_step_invocation(args, run_args, step, &timestamp);
         let trace = StepTrace {
             index: step.index,
             name: step.name,
@@ -983,14 +859,7 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
         };
 
         if run_args.dry_run {
-            writeln!(
-                out,
-                "step {} {}: {} {}",
-                step.index,
-                step.name,
-                primitive_name,
-                step_args.join(" ")
-            )?;
+            writeln!(out, "step {} {}: {} {}", step.index, step.name, primitive_name, step_args.join(" "))?;
             traces.push(trace);
             steps_attempted += 1;
             if let StepKind::RoleInvoke(role) = step.kind {
@@ -1076,26 +945,20 @@ fn build_step_invocation(
         StepKind::SuperStepCycleStart => {
             let bin = args.super_step_boundary_bin.clone();
             let a = vec![
-                "--repo-root".into(),
-                repo_root_str,
+                "--repo-root".into(), repo_root_str,
                 "cycle-start".into(),
-                "--cycle".into(),
-                cycle_str,
-                "--timestamp".into(),
-                timestamp.into(),
+                "--cycle".into(), cycle_str,
+                "--timestamp".into(), timestamp.into(),
             ];
             (bin, "v2-super-step-boundary", a)
         }
         StepKind::ReconcilerPoll => {
             let bin = args.reconciler_event_processor_bin.clone();
             let mut a = vec![
-                "--repo-root".into(),
-                repo_root_str,
+                "--repo-root".into(), repo_root_str,
                 "poll".into(),
-                "--cycle".into(),
-                cycle_str,
-                "--timestamp".into(),
-                timestamp.into(),
+                "--cycle".into(), cycle_str,
+                "--timestamp".into(), timestamp.into(),
             ];
             if let Some(p) = &run_args.eva_source_file {
                 a.push("--eva-source-file".into());
@@ -1114,15 +977,11 @@ fn build_step_invocation(
         StepKind::RoleInvoke(role) => {
             let bin = args.role_driver_bin.clone();
             let mut a = vec![
-                "--repo-root".into(),
-                repo_root_str,
+                "--repo-root".into(), repo_root_str,
                 "invoke".into(),
-                "--role".into(),
-                role.as_kebab().into(),
-                "--cycle".into(),
-                cycle_str,
-                "--timestamp".into(),
-                timestamp.into(),
+                "--role".into(), role.as_kebab().into(),
+                "--cycle".into(), cycle_str,
+                "--timestamp".into(), timestamp.into(),
             ];
             if let Some(p) = session_output_path_for(run_args, role) {
                 a.push("--session-output-file".into());
@@ -1133,24 +992,19 @@ fn build_step_invocation(
         StepKind::SuperStepAdvance => {
             let bin = args.super_step_boundary_bin.clone();
             let a = vec![
-                "--repo-root".into(),
-                repo_root_str,
+                "--repo-root".into(), repo_root_str,
                 "advance".into(),
-                "--timestamp".into(),
-                timestamp.into(),
+                "--timestamp".into(), timestamp.into(),
             ];
             (bin, "v2-super-step-boundary", a)
         }
         StepKind::SuperStepCycleEnd => {
             let bin = args.super_step_boundary_bin.clone();
             let a = vec![
-                "--repo-root".into(),
-                repo_root_str,
+                "--repo-root".into(), repo_root_str,
                 "cycle-end".into(),
-                "--cycle".into(),
-                cycle_str,
-                "--timestamp".into(),
-                timestamp.into(),
+                "--cycle".into(), cycle_str,
+                "--timestamp".into(), timestamp.into(),
             ];
             (bin, "v2-super-step-boundary", a)
         }
@@ -1167,12 +1021,7 @@ fn session_output_path_for(run_args: &RunArgs, role: Role) -> Option<&PathBuf> {
 }
 
 fn validate_session_output_files(run_args: &RunArgs) -> Result<(), RunnerError> {
-    for role in [
-        Role::Reconciler,
-        Role::Planner,
-        Role::Executor,
-        Role::Curator,
-    ] {
+    for role in [Role::Reconciler, Role::Planner, Role::Executor, Role::Curator] {
         if session_output_path_for(run_args, role).is_none() {
             return Err(RunnerError::MissingSessionOutput { role });
         }
@@ -1187,10 +1036,7 @@ fn invoke_with_retry_once<I: PrimitiveInvoker>(
     name: &'static str,
 ) -> Result<std::process::Output, RunnerError> {
     if !bin.exists() {
-        return Err(RunnerError::PrimitiveMissing {
-            name,
-            path: bin.to_path_buf(),
-        });
+        return Err(RunnerError::PrimitiveMissing { name, path: bin.to_path_buf() });
     }
     let first = invoker.invoke(bin, args)?;
     if first.status.success() {
@@ -1242,16 +1088,9 @@ fn halt_cycle<W: Write>(
     write_runner_state(&args.repo_root, &report)?;
     emit_cycle_report(&report, args.format, out)?;
     if class == FailureClass::SuperStepOutOfOrder {
-        Err(RunnerError::SuperStepOutOfOrder {
-            step: step_name,
-            stderr,
-        })
+        Err(RunnerError::SuperStepOutOfOrder { step: step_name, stderr })
     } else {
-        Err(RunnerError::CycleHalted {
-            step: step_name,
-            class,
-            stderr,
-        })
+        Err(RunnerError::CycleHalted { step: step_name, class, stderr })
     }
 }
 
@@ -1308,10 +1147,7 @@ fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), Runn
         "steps_attempted": report.steps_attempted,
     });
     let last_cycle_path = runner_dir.join("last-cycle.json");
-    fs::write(
-        &last_cycle_path,
-        format!("{}\n", serde_json::to_string_pretty(&last_cycle_payload)?),
-    )?;
+    fs::write(&last_cycle_path, format!("{}\n", serde_json::to_string_pretty(&last_cycle_payload)?))?;
 
     let history_path = runner_dir.join("cycle-history.json");
     let mut history: serde_json::Value = if history_path.exists() {
@@ -1334,26 +1170,15 @@ fn write_runner_state(repo_root: &Path, report: &CycleReport) -> Result<(), Runn
     if let Some(arr) = history.get_mut("cycles").and_then(|v| v.as_array_mut()) {
         arr.push(entry);
     }
-    fs::write(
-        &history_path,
-        format!("{}\n", serde_json::to_string_pretty(&history)?),
-    )?;
+    fs::write(&history_path, format!("{}\n", serde_json::to_string_pretty(&history)?))?;
 
     Ok(())
 }
 
-fn emit_cycle_report<W: Write>(
-    report: &CycleReport,
-    format: Format,
-    out: &mut W,
-) -> Result<(), RunnerError> {
+fn emit_cycle_report<W: Write>(report: &CycleReport, format: Format, out: &mut W) -> Result<(), RunnerError> {
     match format {
         Format::Text => {
-            writeln!(
-                out,
-                "v2-cycle-runner run: cycle={} issue={} status={}",
-                report.cycle, report.issue, report.status
-            )?;
+            writeln!(out, "v2-cycle-runner run: cycle={} issue={} status={}", report.cycle, report.issue, report.status)?;
             writeln!(out, "  started:        {}", report.started_at)?;
             writeln!(out, "  ended:          {}", report.ended_at)?;
             writeln!(out, "  dry_run:        {}", report.dry_run)?;
@@ -1494,9 +1319,7 @@ mod tests {
 
     impl PrimitiveInvoker for MockInvoker {
         fn invoke(&self, bin: &Path, args: &[String]) -> io::Result<Output> {
-            self.calls
-                .borrow_mut()
-                .push((bin.to_path_buf(), args.to_vec()));
+            self.calls.borrow_mut().push((bin.to_path_buf(), args.to_vec()));
             let mut canned = self.canned.borrow_mut();
             if canned.is_empty() {
                 Ok(ok_output())
@@ -1595,23 +1418,12 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(
-            roles,
-            vec![
-                Role::Reconciler,
-                Role::Planner,
-                Role::Executor,
-                Role::Curator
-            ]
-        );
+        assert_eq!(roles, vec![Role::Reconciler, Role::Planner, Role::Executor, Role::Curator]);
     }
 
     #[test]
     fn classify_failure_super_step_out_of_order() {
-        let c = classify_failure(
-            1,
-            "super-step out of order: expected reconciler got executor",
-        );
+        let c = classify_failure(1, "super-step out of order: expected reconciler got executor");
         assert_eq!(c, FailureClass::SuperStepOutOfOrder);
         let c = classify_failure(1, "super-step boundary refused: not at expected position");
         assert_eq!(c, FailureClass::SuperStepOutOfOrder);
@@ -1619,10 +1431,7 @@ mod tests {
 
     #[test]
     fn classify_failure_channel_write_rejected() {
-        let c = classify_failure(
-            1,
-            "channel-router: payload rejected; missing required key 'cycle'",
-        );
+        let c = classify_failure(1, "channel-router: payload rejected; missing required key 'cycle'");
         assert_eq!(c, FailureClass::ChannelWriteRejected);
         let c = classify_failure(1, "schema mismatch on plan-channel write");
         assert_eq!(c, FailureClass::ChannelWriteRejected);
@@ -1670,12 +1479,7 @@ mod tests {
         let mut ra = run_args_with_outputs(tmp.path(), 1);
         ra.planner_output_file = None;
         let r = validate_session_output_files(&ra);
-        assert!(matches!(
-            r,
-            Err(RunnerError::MissingSessionOutput {
-                role: Role::Planner
-            })
-        ));
+        assert!(matches!(r, Err(RunnerError::MissingSessionOutput { role: Role::Planner })));
     }
 
     #[test]
@@ -1756,10 +1560,7 @@ mod tests {
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 0, "dry-run must not invoke primitives");
         let runner_dir = tmp.path().join("state").join("v2-cycle-runner");
-        assert!(
-            !runner_dir.join("last-cycle.json").exists(),
-            "dry-run must not write runner state"
-        );
+        assert!(!runner_dir.join("last-cycle.json").exists(), "dry-run must not write runner state");
     }
 
     #[test]
@@ -1774,16 +1575,14 @@ mod tests {
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 11);
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "completed");
         assert_eq!(parsed["cycle"], 1);
         assert_eq!(parsed["issue"], 999);
         assert_eq!(parsed["steps_attempted"], 10);
 
         let history_path = tmp.path().join("state/v2-cycle-runner/cycle-history.json");
-        let history: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&history_path).unwrap()).unwrap();
+        let history: serde_json::Value = serde_json::from_str(&fs::read_to_string(&history_path).unwrap()).unwrap();
         let arr = history["cycles"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["status"], "completed");
@@ -1813,8 +1612,7 @@ mod tests {
         }
         // Halt-state written.
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "halted");
         assert_eq!(parsed["halt_step"], "reconciler-session");
         assert_eq!(parsed["halt_reason"], "role-session-empty");
@@ -1829,10 +1627,7 @@ mod tests {
         // Invocation 0 = state-audit (ok); then step 1 fails with
         // super-step-out-of-order.
         mock.queue(ok_output()); // state-audit
-        mock.queue(fail_output(
-            1,
-            "super-step out of order: not at expected position",
-        ));
+        mock.queue(fail_output(1, "super-step out of order: not at expected position"));
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
         match r {
@@ -1842,8 +1637,7 @@ mod tests {
             other => panic!("expected out-of-order error, got {other:?}"),
         }
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "out-of-order");
         assert_eq!(parsed["halt_reason"], "super-step-out-of-order");
     }
@@ -1859,7 +1653,7 @@ mod tests {
         mock.queue(ok_output()); // state-audit
         mock.queue(fail_output(1, "connection reset"));
         mock.queue(ok_output()); // retry
-                                 // steps 2-10 default-ok.
+        // steps 2-10 default-ok.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 12);
@@ -1878,8 +1672,7 @@ mod tests {
         // advance-1, planner-session) = 6.
         assert_eq!(mock.invoke_count(), 6);
         let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
         assert_eq!(parsed["status"], "halted-after-role");
         assert_eq!(parsed["halted_after_role"], "planner");
         assert_eq!(parsed["steps_attempted"], 5);
@@ -1894,17 +1687,8 @@ mod tests {
         let mock = MockInvoker::new();
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
-        assert!(matches!(
-            r,
-            Err(RunnerError::MissingSessionOutput {
-                role: Role::Executor
-            })
-        ));
-        assert_eq!(
-            mock.invoke_count(),
-            0,
-            "must not invoke primitives if validation fails"
-        );
+        assert!(matches!(r, Err(RunnerError::MissingSessionOutput { role: Role::Executor })));
+        assert_eq!(mock.invoke_count(), 0, "must not invoke primitives if validation fails");
     }
 
     #[test]
@@ -1981,12 +1765,7 @@ mod tests {
         let s = String::from_utf8_lossy(&out).into_owned();
         let parsed: serde_json::Value = serde_json::from_str(&s).unwrap();
         let traces = parsed["traces"].as_array().unwrap();
-        assert_eq!(
-            traces.len(),
-            3,
-            "expected 3 traces (2 ok + 1 fail), got {}",
-            traces.len()
-        );
+        assert_eq!(traces.len(), 3, "expected 3 traces (2 ok + 1 fail), got {}", traces.len());
         for (i, t) in traces.iter().enumerate() {
             assert_eq!(
                 t["executed"].as_bool(),
@@ -2005,22 +1784,10 @@ mod tests {
         assert_eq!(phase_for(StepKind::SuperStepCycleStart), Phase::Boundary);
         assert_eq!(phase_for(StepKind::SuperStepCycleEnd), Phase::Boundary);
         assert_eq!(phase_for(StepKind::ReconcilerPoll), Phase::Reconciler);
-        assert_eq!(
-            phase_for(StepKind::RoleInvoke(Role::Reconciler)),
-            Phase::Reconciler
-        );
-        assert_eq!(
-            phase_for(StepKind::RoleInvoke(Role::Planner)),
-            Phase::Planner
-        );
-        assert_eq!(
-            phase_for(StepKind::RoleInvoke(Role::Executor)),
-            Phase::Executor
-        );
-        assert_eq!(
-            phase_for(StepKind::RoleInvoke(Role::Curator)),
-            Phase::Curator
-        );
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Reconciler)), Phase::Reconciler);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Planner)), Phase::Planner);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Executor)), Phase::Executor);
+        assert_eq!(phase_for(StepKind::RoleInvoke(Role::Curator)), Phase::Curator);
         assert_eq!(phase_for(StepKind::SuperStepAdvance), Phase::Transition);
     }
 
@@ -2097,9 +1864,9 @@ mod tests {
             "boundary",
         ];
         for (i, t) in traces.iter().enumerate() {
-            let p = t["phase"]
-                .as_str()
-                .unwrap_or_else(|| panic!("trace {i} missing phase field: {t:?}"));
+            let p = t["phase"].as_str().unwrap_or_else(|| panic!(
+                "trace {i} missing phase field: {t:?}"
+            ));
             assert_eq!(p, expected_phases[i], "trace {i} phase mismatch");
         }
     }
@@ -2119,23 +1886,12 @@ mod tests {
         // Same phase order as dry-run — phase derives from StepKind, not
         // execution mode.
         let expected = [
-            "boundary",
-            "reconciler",
-            "reconciler",
-            "transition",
-            "planner",
-            "transition",
-            "executor",
-            "transition",
-            "curator",
-            "boundary",
+            "boundary", "reconciler", "reconciler", "transition",
+            "planner", "transition", "executor", "transition",
+            "curator", "boundary",
         ];
         for (i, t) in traces.iter().enumerate() {
-            assert_eq!(
-                t["phase"].as_str(),
-                Some(expected[i]),
-                "live trace {i} phase"
-            );
+            assert_eq!(t["phase"].as_str(), Some(expected[i]), "live trace {i} phase");
         }
     }
 
@@ -2185,34 +1941,13 @@ mod tests {
 
     #[test]
     fn state_audit_severity_from_exit_code_covers_all_audit_codes() {
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(0),
-            StateAuditSeverity::Ok
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(1),
-            StateAuditSeverity::Advisory
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(2),
-            StateAuditSeverity::Mandatory
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(3),
-            StateAuditSeverity::Hard
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(4),
-            StateAuditSeverity::SerializationFailure
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(-1),
-            StateAuditSeverity::Unknown
-        );
-        assert_eq!(
-            StateAuditSeverity::from_exit_code(99),
-            StateAuditSeverity::Unknown
-        );
+        assert_eq!(StateAuditSeverity::from_exit_code(0), StateAuditSeverity::Ok);
+        assert_eq!(StateAuditSeverity::from_exit_code(1), StateAuditSeverity::Advisory);
+        assert_eq!(StateAuditSeverity::from_exit_code(2), StateAuditSeverity::Mandatory);
+        assert_eq!(StateAuditSeverity::from_exit_code(3), StateAuditSeverity::Hard);
+        assert_eq!(StateAuditSeverity::from_exit_code(4), StateAuditSeverity::SerializationFailure);
+        assert_eq!(StateAuditSeverity::from_exit_code(-1), StateAuditSeverity::Unknown);
+        assert_eq!(StateAuditSeverity::from_exit_code(99), StateAuditSeverity::Unknown);
     }
 
     #[test]
@@ -2233,10 +1968,7 @@ mod tests {
             (StateAuditSeverity::Advisory, "advisory"),
             (StateAuditSeverity::Mandatory, "mandatory"),
             (StateAuditSeverity::Hard, "hard"),
-            (
-                StateAuditSeverity::SerializationFailure,
-                "serialization-failure",
-            ),
+            (StateAuditSeverity::SerializationFailure, "serialization-failure"),
             (StateAuditSeverity::Unknown, "unknown"),
         ];
         for (s, expected) in pairs {
@@ -2248,10 +1980,7 @@ mod tests {
 
     #[test]
     fn failure_class_state_bound_exceeded_kebab() {
-        assert_eq!(
-            FailureClass::StateBoundExceeded.as_kebab(),
-            "state-bound-exceeded"
-        );
+        assert_eq!(FailureClass::StateBoundExceeded.as_kebab(), "state-bound-exceeded");
     }
 
     #[test]
@@ -2297,7 +2026,7 @@ mod tests {
         let ra = run_args_with_outputs(tmp.path(), 101);
         let mock = MockInvoker::new();
         mock.queue(fail_output(1, "")); // state-audit Advisory
-                                        // 10 super-step invocations default-ok.
+        // 10 super-step invocations default-ok.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 11);
@@ -2344,9 +2073,7 @@ mod tests {
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         let report: serde_json::Value =
             serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
-        let sa = report
-            .get("state_audit")
-            .expect("state_audit field present");
+        let sa = report.get("state_audit").expect("state_audit field present");
         assert!(!sa.is_null(), "state_audit must be Some on live run");
         assert_eq!(sa["severity"], "ok");
         assert_eq!(sa["exit_code"], 0);
@@ -2367,9 +2094,7 @@ mod tests {
         let _ = run_cycle(&args, &ra, &mut out, &mock);
         let report: serde_json::Value =
             serde_json::from_str(&String::from_utf8_lossy(&out)).unwrap();
-        let sa = report
-            .get("state_audit")
-            .expect("state_audit field present");
+        let sa = report.get("state_audit").expect("state_audit field present");
         assert_eq!(sa["severity"], "hard");
         assert_eq!(sa["exit_code"], 3);
         assert_eq!(report["halt_step"], "state-audit-on-start");
@@ -2386,11 +2111,7 @@ mod tests {
         let mock = MockInvoker::new();
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
-        assert_eq!(
-            mock.invoke_count(),
-            0,
-            "dry-run must not invoke any primitive"
-        );
+        assert_eq!(mock.invoke_count(), 0, "dry-run must not invoke any primitive");
         let s = String::from_utf8_lossy(&out).into_owned();
         let json_start = s.find('{').expect("expected JSON report in stdout");
         let report: serde_json::Value = serde_json::from_str(&s[json_start..]).unwrap();
@@ -2418,10 +2139,6 @@ mod tests {
             }
             other => panic!("expected PrimitiveMissing(v2-state-audit), got {other:?}"),
         }
-        assert_eq!(
-            mock.invoke_count(),
-            0,
-            "no invocation when audit bin missing"
-        );
+        assert_eq!(mock.invoke_count(), 0, "no invocation when audit bin missing");
     }
 }

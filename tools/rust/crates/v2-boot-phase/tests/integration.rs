@@ -8,8 +8,9 @@ fn bin() -> &'static str {
 
 fn write_cycle(state_dir: &Path, n: u64, model: &str, started_at: &str) {
     let path = state_dir.join(format!("{n}.json"));
-    let content =
-        format!(r#"{{"cycle_number": {n}, "model": "{model}", "started_at": "{started_at}"}}"#);
+    let content = format!(
+        r#"{{"cycle_number": {n}, "model": "{model}", "started_at": "{started_at}"}}"#
+    );
     fs::write(path, content).unwrap();
 }
 
@@ -499,7 +500,10 @@ fn summary_counts_stages_by_status() {
     let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
     let sm = parsed.get("summary").unwrap();
     // load=done compute=done detect=done directives=done(empty fixture) gardening=done(empty fixture) assemble=done -> 6 done
-    assert_eq!(sm.get("done"), Some(&serde_json::Value::Number(6.into())));
+    assert_eq!(
+        sm.get("done"),
+        Some(&serde_json::Value::Number(6.into()))
+    );
     assert_eq!(
         sm.get("deferred"),
         Some(&serde_json::Value::Number(0.into()))

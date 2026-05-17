@@ -412,10 +412,7 @@ mod tests {
         })
         .expect_err("missing disposition should fail");
 
-        assert_eq!(
-            error,
-            "recording an audit disposition requires --disposition"
-        );
+        assert_eq!(error, "recording an audit disposition requires --disposition");
     }
 
     #[test]

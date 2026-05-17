@@ -161,10 +161,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn process_merge_wrapper_path() -> String {
-    repo_root()
-        .join("tools/process-merge")
-        .display()
-        .to_string()
+    repo_root().join("tools/process-merge").display().to_string()
 }
 
 fn make_executable(path: &Path) {

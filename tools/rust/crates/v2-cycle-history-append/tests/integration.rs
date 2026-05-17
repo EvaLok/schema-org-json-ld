@@ -51,10 +51,7 @@ fn writes_entry_with_field_args() {
     let contents = fs::read_to_string(&target).unwrap();
     let value: serde_json::Value = serde_json::from_str(&contents).unwrap();
     assert_eq!(value["cycle_number"], serde_json::Value::from(94));
-    assert_eq!(
-        value["model"],
-        serde_json::Value::String("claude-opus-4-7".to_string())
-    );
+    assert_eq!(value["model"], serde_json::Value::String("claude-opus-4-7".to_string()));
 }
 
 #[test]
@@ -153,7 +150,10 @@ fn dry_run_does_not_write() {
 #[test]
 fn rejects_missing_required_field() {
     let dir = tempfile::tempdir().unwrap();
-    let out = run_with_args(dir.path(), &["--cycle-n", "94", "--field", "model=x"]);
+    let out = run_with_args(
+        dir.path(),
+        &["--cycle-n", "94", "--field", "model=x"],
+    );
     assert!(!out.status.success(), "should fail on missing started_at");
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("started_at"), "stderr = {stderr}");
@@ -296,10 +296,7 @@ fn output_quiet_suppresses_stdout() {
         ],
     );
     assert!(out.status.success());
-    assert!(
-        out.stdout.is_empty(),
-        "stdout should be empty under --output quiet"
-    );
+    assert!(out.stdout.is_empty(), "stdout should be empty under --output quiet");
 }
 
 #[test]
@@ -321,10 +318,7 @@ fn output_json_prints_full_content() {
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
     let parsed: serde_json::Value = serde_json::from_str(&stdout).unwrap();
-    assert_eq!(
-        parsed["model"],
-        serde_json::Value::String("test".to_string())
-    );
+    assert_eq!(parsed["model"], serde_json::Value::String("test".to_string()));
 }
 
 #[test]
@@ -345,8 +339,5 @@ fn rejects_invalid_field_format() {
     );
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        stderr.contains("KEY=VALUE") || stderr.contains("invalid"),
-        "stderr = {stderr}"
-    );
+    assert!(stderr.contains("KEY=VALUE") || stderr.contains("invalid"), "stderr = {stderr}");
 }

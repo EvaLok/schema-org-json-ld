@@ -133,9 +133,7 @@ fn nonexistent_corpus_emits_warn_but_succeeds() {
     assert_eq!(code, 0);
     let v: Value = serde_json::from_str(&stdout).unwrap();
     let notes = v["notes"].as_array().unwrap();
-    assert!(notes
-        .iter()
-        .any(|n| n.as_str().unwrap().starts_with("warn[")));
+    assert!(notes.iter().any(|n| n.as_str().unwrap().starts_with("warn[")));
     assert!(v["warnings_by_kind"]
         .as_object()
         .unwrap()
@@ -359,7 +357,11 @@ fn case_insensitive_query_matches_mixed_case_content() {
 #[test]
 fn punctuation_in_query_is_tokenized_clean() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "# orchestration-hub\n\nthe hub.\n").unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "# orchestration-hub\n\nthe hub.\n",
+    )
+    .unwrap();
     let (code, stdout, _) = run_bin(&[
         "--corpus",
         dir.path().to_str().unwrap(),
@@ -369,9 +371,7 @@ fn punctuation_in_query_is_tokenized_clean() {
     assert_eq!(code, 0);
     let v: Value = serde_json::from_str(&stdout).unwrap();
     let terms = v["query_terms"].as_array().unwrap();
-    assert!(terms
-        .iter()
-        .any(|t| t.as_str().unwrap() == "orchestration-hub"));
+    assert!(terms.iter().any(|t| t.as_str().unwrap() == "orchestration-hub"));
 }
 
 #[test]
@@ -498,7 +498,11 @@ fn rebuild_index_flag_forces_fresh_build() {
 fn rare_term_outranks_common_term_in_real_corpus() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
-    fs::write(root.join("a.md"), "# the rare\n\nthe rare body content\n").unwrap();
+    fs::write(
+        root.join("a.md"),
+        "# the rare\n\nthe rare body content\n",
+    )
+    .unwrap();
     for i in 0..10 {
         fs::write(
             root.join(format!("common-{i}.md")),
@@ -506,8 +510,18 @@ fn rare_term_outranks_common_term_in_real_corpus() {
         )
         .unwrap();
     }
-    let (_, stdout_rare, _) = run_bin(&["--corpus", root.to_str().unwrap(), "--query", "rare"]);
-    let (_, stdout_common, _) = run_bin(&["--corpus", root.to_str().unwrap(), "--query", "the"]);
+    let (_, stdout_rare, _) = run_bin(&[
+        "--corpus",
+        root.to_str().unwrap(),
+        "--query",
+        "rare",
+    ]);
+    let (_, stdout_common, _) = run_bin(&[
+        "--corpus",
+        root.to_str().unwrap(),
+        "--query",
+        "the",
+    ]);
     let v_rare: Value = serde_json::from_str(&stdout_rare).unwrap();
     let v_common: Value = serde_json::from_str(&stdout_common).unwrap();
     let rare_top_score = v_rare["results"][0]["score"].as_f64().unwrap();

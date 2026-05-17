@@ -667,11 +667,7 @@ mod tests {
     use std::io::Write;
 
     fn t(advisory: u64, mandatory: u64, hard: u64) -> Thresholds {
-        Thresholds {
-            advisory,
-            mandatory,
-            hard,
-        }
+        Thresholds { advisory, mandatory, hard }
     }
 
     // -- classify -- ------------------------------------------------------
@@ -1092,11 +1088,7 @@ mod tests {
         let body = serde_json::json!({ "agent_sessions": entries });
         std::fs::write(docs.join("state.json"), serde_json::to_vec(&body).unwrap()).unwrap();
         let r = build_report(tmp.path());
-        let axis = r
-            .axes
-            .iter()
-            .find(|a| a.name == "state-json-dispatches")
-            .unwrap();
+        let axis = r.axes.iter().find(|a| a.name == "state-json-dispatches").unwrap();
         assert!(axis.exists);
         assert_eq!(axis.value, 60);
         assert_eq!(axis.classification, Kind::Advisory);
@@ -1116,11 +1108,7 @@ mod tests {
         let body = serde_json::json!({ "agent_sessions": entries });
         std::fs::write(docs.join("state.json"), serde_json::to_vec(&body).unwrap()).unwrap();
         let r = build_report(tmp.path());
-        let axis = r
-            .axes
-            .iter()
-            .find(|a| a.name == "state-json-dispatches")
-            .unwrap();
+        let axis = r.axes.iter().find(|a| a.name == "state-json-dispatches").unwrap();
         assert_eq!(axis.value, 500);
         assert_eq!(axis.classification, Kind::Hard);
         assert_eq!(axis.recommended_action, "halt-session-start");
@@ -1137,11 +1125,7 @@ mod tests {
         let mut f = std::fs::File::create(roles.join("reconciler-history.json")).unwrap();
         f.write_all(&vec![0u8; 5 * MB as usize]).unwrap();
         let r = build_report(tmp.path());
-        let axis = r
-            .axes
-            .iter()
-            .find(|a| a.name == "reconciler-role-history")
-            .unwrap();
+        let axis = r.axes.iter().find(|a| a.name == "reconciler-role-history").unwrap();
         assert!(axis.exists);
         assert_eq!(axis.value, 5 * MB);
         assert_eq!(axis.classification, Kind::Mandatory);
@@ -1155,16 +1139,9 @@ mod tests {
         let tmp = tempdir();
         let r = build_report(tmp.path());
         let s = format_json(&r).unwrap();
-        for key in [
-            "tool",
-            "version",
-            "policy_version",
-            "repo_root",
-            "measured_at",
-            "axes",
-            "cross_axis",
-            "overall",
-        ] {
+        for key in ["tool", "version", "policy_version", "repo_root",
+                    "measured_at", "axes", "cross_axis", "overall"]
+        {
             assert!(
                 s.contains(&format!("\"{key}\"")),
                 "expected top-level key {key} in JSON output, got: {s}"
@@ -1227,16 +1204,12 @@ mod tests {
             assert!(
                 s.thresholds.advisory < s.thresholds.mandatory,
                 "axis {} advisory {} >= mandatory {}",
-                s.name,
-                s.thresholds.advisory,
-                s.thresholds.mandatory
+                s.name, s.thresholds.advisory, s.thresholds.mandatory
             );
             assert!(
                 s.thresholds.mandatory < s.thresholds.hard,
                 "axis {} mandatory {} >= hard {}",
-                s.name,
-                s.thresholds.mandatory,
-                s.thresholds.hard
+                s.name, s.thresholds.mandatory, s.thresholds.hard
             );
         }
     }

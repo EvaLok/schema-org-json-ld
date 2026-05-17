@@ -57,13 +57,7 @@ fn write_super_step_state(repo: &Path, cycle: u32, current_role: &str) {
 }
 
 /// Write a populated channel state file (simulating v2-channel-router).
-fn write_channel_state(
-    repo: &Path,
-    channel: &str,
-    writer: &str,
-    cycle: u32,
-    payload: serde_json::Value,
-) {
+fn write_channel_state(repo: &Path, channel: &str, writer: &str, cycle: u32, payload: serde_json::Value) {
     let dir = repo.join("state").join("channels");
     std::fs::create_dir_all(&dir).unwrap();
     let body = json!({
@@ -81,13 +75,7 @@ fn write_channel_state(
 }
 
 /// Write a session-output file with the full WritePayload envelope.
-fn write_session_output_full(
-    repo: &Path,
-    name: &str,
-    cycle: u32,
-    timestamp: &str,
-    payload: serde_json::Value,
-) -> PathBuf {
+fn write_session_output_full(repo: &Path, name: &str, cycle: u32, timestamp: &str, payload: serde_json::Value) -> PathBuf {
     let path = repo.join(format!("{name}.json"));
     let body = json!({
         "cycle": cycle,
@@ -100,18 +88,10 @@ fn write_session_output_full(
 
 fn payload_for(role: &str) -> serde_json::Value {
     match role {
-        "planner" => {
-            json!({"substantive-focal": "scaffold v2-role-driver", "per-role-tasks": {"executor": "wire output channel write"}})
-        }
-        "executor" => {
-            json!({"artifacts-written": ["tools/rust/crates/v2-role-driver/src/main.rs"]})
-        }
-        "curator" => {
-            json!({"consolidated-insights": ["multi-agent topology scaffold consolidation"]})
-        }
-        "reconciler" => {
-            json!({"eva-responses": [], "audit-posts": [], "dispatch-returns": [], "inbound-completeness-marker": "quiet"})
-        }
+        "planner" => json!({"substantive-focal": "scaffold v2-role-driver", "per-role-tasks": {"executor": "wire output channel write"}}),
+        "executor" => json!({"artifacts-written": ["tools/rust/crates/v2-role-driver/src/main.rs"]}),
+        "curator" => json!({"consolidated-insights": ["multi-agent topology scaffold consolidation"]}),
+        "reconciler" => json!({"eva-responses": [], "audit-posts": [], "dispatch-returns": [], "inbound-completeness-marker": "quiet"}),
         _ => panic!("unknown role: {role}"),
     }
 }
@@ -126,10 +106,7 @@ fn init_creates_state_roles_and_history_files() {
     let out = run_cmd(&repo, &["init"]);
     assert!(out.status.success(), "init failed: {}", stderr_str(&out));
     for role in ["reconciler", "planner", "executor", "curator"] {
-        let path = repo
-            .join("state")
-            .join("roles")
-            .join(format!("{role}-history.json"));
+        let path = repo.join("state").join("roles").join(format!("{role}-history.json"));
         assert!(path.exists(), "expected per-role history file for {role}");
     }
 }
@@ -139,16 +116,9 @@ fn init_is_idempotent() {
     let (_td, repo) = fresh_repo();
     assert!(run_cmd(&repo, &["init"]).status.success());
     let out2 = run_cmd(&repo, &["init"]);
-    assert!(
-        out2.status.success(),
-        "second init failed: {}",
-        stderr_str(&out2)
-    );
+    assert!(out2.status.success(), "second init failed: {}", stderr_str(&out2));
     let s = stdout_str(&out2);
-    assert!(
-        s.contains("present"),
-        "expected 'present' on second init, got: {s}"
-    );
+    assert!(s.contains("present"), "expected 'present' on second init, got: {s}");
 }
 
 #[test]
@@ -181,20 +151,13 @@ fn happy_invoke(repo: &Path, role: &str, cycle: u32) -> std::process::Output {
         payload_for(role),
     );
     let path_str = out_path.to_string_lossy().to_string();
-    run_cmd(
-        repo,
-        &[
-            "invoke",
-            "--role",
-            role,
-            "--cycle",
-            &cycle.to_string(),
-            "--session-output-file",
-            &path_str,
-            "--timestamp",
-            "2026-05-14T05:11:00Z",
-        ],
-    )
+    run_cmd(repo, &[
+        "invoke",
+        "--role", role,
+        "--cycle", &cycle.to_string(),
+        "--session-output-file", &path_str,
+        "--timestamp", "2026-05-14T05:11:00Z",
+    ])
 }
 
 #[test]
@@ -212,11 +175,7 @@ fn invoke_each_role_succeeds() {
     for role in ["reconciler", "planner", "executor", "curator"] {
         let (_td, repo) = fresh_repo();
         let out = happy_invoke(&repo, role, 7);
-        assert!(
-            out.status.success(),
-            "invoke {role} failed: {}",
-            stderr_str(&out)
-        );
+        assert!(out.status.success(), "invoke {role} failed: {}", stderr_str(&out));
     }
 }
 
@@ -224,10 +183,7 @@ fn invoke_each_role_succeeds() {
 fn invoke_writes_channel_state_envelope() {
     let (_td, repo) = fresh_repo();
     let _out = happy_invoke(&repo, "planner", 3);
-    let chan_path = repo
-        .join("state")
-        .join("channels")
-        .join("plan-channel.json");
+    let chan_path = repo.join("state").join("channels").join("plan-channel.json");
     let body: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&chan_path).unwrap()).unwrap();
     assert_eq!(body["channel"], "plan-channel");
@@ -245,7 +201,8 @@ fn invoke_appends_channel_history() {
         .join("state")
         .join("channels")
         .join("work-channel-history.json");
-    let body: serde_json::Value = serde_json::from_slice(&std::fs::read(&h_path).unwrap()).unwrap();
+    let body: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&h_path).unwrap()).unwrap();
     assert_eq!(body["channel"], "work-channel");
     let entries = body["entries"].as_array().unwrap();
     assert_eq!(entries.len(), 1);
@@ -261,7 +218,8 @@ fn invoke_appends_to_per_role_history() {
         .join("state")
         .join("roles")
         .join("curator-history.json");
-    let body: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let body: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     let runs = body["runs"].as_array().unwrap();
     assert_eq!(runs.len(), 1);
     assert_eq!(runs[0]["cycle"], 9);
@@ -276,54 +234,25 @@ fn invoke_two_cycles_same_role_accumulates() {
 
     write_super_step_state(&repo, 1, "planner");
     let p1 = write_session_output_full(&repo, "p1", 1, "t1", payload_for("planner"));
-    let o1 = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p1.to_string_lossy(),
-        ],
-    );
+    let o1 = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p1.to_string_lossy()]);
     assert!(o1.status.success());
 
     write_super_step_state(&repo, 2, "planner");
     let p2 = write_session_output_full(&repo, "p2", 2, "t2", payload_for("planner"));
-    let o2 = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "2",
-            "--session-output-file",
-            &p2.to_string_lossy(),
-        ],
-    );
-    assert!(
-        o2.status.success(),
-        "second invoke failed: {}",
-        stderr_str(&o2)
-    );
+    let o2 = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "2",
+        "--session-output-file", &p2.to_string_lossy()]);
+    assert!(o2.status.success(), "second invoke failed: {}", stderr_str(&o2));
 
-    let path = repo
-        .join("state")
-        .join("roles")
-        .join("planner-history.json");
-    let body: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let path = repo.join("state").join("roles").join("planner-history.json");
+    let body: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     let runs = body["runs"].as_array().unwrap();
     assert_eq!(runs.len(), 2);
     assert_eq!(runs[0]["cycle"], 1);
     assert_eq!(runs[1]["cycle"], 2);
 
-    let h_path = repo
-        .join("state")
-        .join("channels")
-        .join("plan-channel-history.json");
+    let h_path = repo.join("state").join("channels").join("plan-channel-history.json");
     let h_body: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&h_path).unwrap()).unwrap();
     let entries = h_body["entries"].as_array().unwrap();
@@ -336,18 +265,8 @@ fn invoke_json_output_includes_channel_and_outcome() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "executor");
     let p = write_session_output_full(&repo, "ex", 1, "t", payload_for("executor"));
-    let out = run_cmd_json(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "executor",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd_json(&repo, &["invoke", "--role", "executor", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(out.status.success(), "{}", stderr_str(&out));
     let v: serde_json::Value = serde_json::from_str(&stdout_str(&out)).unwrap();
     assert_eq!(v["role"], "executor");
@@ -367,18 +286,8 @@ fn invoke_fails_when_super_step_not_in_progress() {
     let (_td, repo) = fresh_repo();
     run_cmd(&repo, &["init"]);
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     assert!(stderr_str(&out).contains("no super-step is in progress"));
 }
@@ -389,18 +298,8 @@ fn invoke_fails_when_super_step_role_mismatch() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "executor"); // current role is executor
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     let s = stderr_str(&out);
     assert!(s.contains("super-step mismatch"), "got: {s}");
@@ -414,18 +313,8 @@ fn invoke_fails_when_super_step_cycle_mismatch() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 5, "planner");
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     let s = stderr_str(&out);
     assert!(s.contains("super-step mismatch"), "got: {s}");
@@ -438,19 +327,9 @@ fn invoke_skip_super_step_check_bypasses_verification() {
     run_cmd(&repo, &["init"]);
     // intentionally no super-step state file
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-            "--skip-super-step-check",
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy(),
+        "--skip-super-step-check"]);
     assert!(out.status.success(), "{}", stderr_str(&out));
 }
 
@@ -464,18 +343,8 @@ fn invoke_fails_when_super_step_state_is_empty_sentinel() {
     std::fs::write(dir.join("super-step.json"), "null\n").unwrap();
 
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     assert!(stderr_str(&out).contains("no super-step is in progress"));
 }
@@ -489,18 +358,8 @@ fn invoke_fails_when_session_output_file_missing() {
     let (_td, repo) = fresh_repo();
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "planner");
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            "/does/not/exist.json",
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", "/does/not/exist.json"]);
     assert!(!out.status.success());
     assert!(stderr_str(&out).contains("session-output file not found"));
 }
@@ -512,18 +371,8 @@ fn invoke_fails_when_session_output_not_json() {
     write_super_step_state(&repo, 1, "planner");
     let p = repo.join("bad.json");
     std::fs::write(&p, "definitely not json").unwrap();
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     assert!(stderr_str(&out).contains("invalid session output"));
 }
@@ -535,18 +384,8 @@ fn invoke_fails_when_payload_missing_required_keys() {
     write_super_step_state(&repo, 1, "planner");
     // missing per-role-tasks
     let p = write_session_output_full(&repo, "p", 1, "t", json!({"substantive-focal": "x"}));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     let s = stderr_str(&out);
     assert!(s.contains("per-role-tasks"), "got: {s}");
@@ -559,18 +398,8 @@ fn invoke_fails_when_payload_is_not_object() {
     write_super_step_state(&repo, 1, "planner");
     let p = repo.join("arr.json");
     std::fs::write(&p, r#"{"payload": [1, 2, 3]}"#).unwrap();
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     let s = stderr_str(&out);
     assert!(s.contains("array") || s.contains("must be a JSON object"));
@@ -583,18 +412,8 @@ fn invoke_fails_when_cycle_payload_mismatch() {
     write_super_step_state(&repo, 1, "planner");
     // payload declares cycle 99 but --cycle is 1
     let p = write_session_output_full(&repo, "p", 99, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
     assert!(stderr_str(&out).contains("cycle mismatch"));
 }
@@ -610,28 +429,12 @@ fn invoke_accepts_payload_only_shape() {
         serde_json::to_string_pretty(&json!({"payload": payload_for("planner")})).unwrap(),
     )
     .unwrap();
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-            "--timestamp",
-            "ts-cli",
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy(),
+        "--timestamp", "ts-cli"]);
     assert!(out.status.success(), "{}", stderr_str(&out));
     let chan: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(
-            repo.join("state")
-                .join("channels")
-                .join("plan-channel.json"),
-        )
-        .unwrap(),
+        &std::fs::read(repo.join("state").join("channels").join("plan-channel.json")).unwrap(),
     )
     .unwrap();
     assert_eq!(chan["timestamp"], "ts-cli");
@@ -648,18 +451,8 @@ fn invoke_accepts_bare_payload_shape() {
         serde_json::to_string_pretty(&payload_for("curator")).unwrap(),
     )
     .unwrap();
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "curator",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "curator", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(out.status.success(), "{}", stderr_str(&out));
 }
 
@@ -673,37 +466,18 @@ fn invoke_skip_channel_write_records_skipped_outcome() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "planner");
     let p = write_session_output_full(&repo, "p", 1, "t", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-            "--skip-channel-write",
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy(),
+        "--skip-channel-write"]);
     assert!(out.status.success(), "{}", stderr_str(&out));
     assert!(stdout_str(&out).contains("outcome=write-skipped"));
 
     // channel state file should NOT have been created
-    let chan = repo
-        .join("state")
-        .join("channels")
-        .join("plan-channel.json");
-    assert!(
-        !chan.exists(),
-        "channel state file should not exist when --skip-channel-write"
-    );
+    let chan = repo.join("state").join("channels").join("plan-channel.json");
+    assert!(!chan.exists(), "channel state file should not exist when --skip-channel-write");
 
     // but per-role history should still record the run
-    let hist = repo
-        .join("state")
-        .join("roles")
-        .join("planner-history.json");
+    let hist = repo.join("state").join("roles").join("planner-history.json");
     let body: serde_json::Value = serde_json::from_slice(&std::fs::read(hist).unwrap()).unwrap();
     let runs = body["runs"].as_array().unwrap();
     assert_eq!(runs.len(), 1);
@@ -716,37 +490,15 @@ fn invoke_does_not_write_history_when_validation_fails() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "planner");
     // missing required keys
-    let p = write_session_output_full(
-        &repo,
-        "p",
-        1,
-        "t",
-        json!({"substantive-focal": "only this"}),
-    );
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-        ],
-    );
+    let p = write_session_output_full(&repo, "p", 1, "t", json!({"substantive-focal": "only this"}));
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy()]);
     assert!(!out.status.success());
 
-    let hist = repo
-        .join("state")
-        .join("roles")
-        .join("planner-history.json");
+    let hist = repo.join("state").join("roles").join("planner-history.json");
     let body: serde_json::Value = serde_json::from_slice(&std::fs::read(hist).unwrap()).unwrap();
     let runs = body["runs"].as_array().unwrap();
-    assert!(
-        runs.is_empty(),
-        "no run should be appended when validation fails"
-    );
+    assert!(runs.is_empty(), "no run should be appended when validation fails");
 }
 
 // =================================================================
@@ -800,18 +552,8 @@ fn context_prompt_file_override_works() {
     let (_td, repo) = fresh_repo();
     let custom = repo.join("custom-prompt.xml");
     std::fs::write(&custom, "<custom/>").unwrap();
-    let out = run_cmd(
-        &repo,
-        &[
-            "context",
-            "--role",
-            "executor",
-            "--cycle",
-            "1",
-            "--prompt-file",
-            &custom.to_string_lossy(),
-        ],
-    );
+    let out = run_cmd(&repo, &["context", "--role", "executor", "--cycle", "1",
+        "--prompt-file", &custom.to_string_lossy()]);
     assert!(out.status.success());
     let s = stdout_str(&out);
     assert!(s.contains("prompt present: yes"));
@@ -833,13 +575,7 @@ fn context_reports_populated_channel_state() {
 #[test]
 fn context_json_output_well_formed() {
     let (_td, repo) = fresh_repo();
-    write_channel_state(
-        &repo,
-        "work-channel",
-        "executor",
-        3,
-        payload_for("executor"),
-    );
+    write_channel_state(&repo, "work-channel", "executor", 3, payload_for("executor"));
     let out = run_cmd_json(&repo, &["context", "--role", "curator", "--cycle", "3"]);
     assert!(out.status.success());
     let v: serde_json::Value = serde_json::from_str(&stdout_str(&out)).expect("json output");
@@ -857,28 +593,17 @@ fn context_json_output_well_formed() {
 #[test]
 fn inputs_each_role_lists_correct_bindings() {
     for (role, expected_in, expected_out) in [
-        (
-            "planner",
-            vec!["memory-channel", "inbound-channel"],
-            "plan-channel",
-        ),
+        ("planner", vec!["memory-channel", "inbound-channel"], "plan-channel"),
         ("executor", vec!["plan-channel"], "work-channel"),
         ("curator", vec!["work-channel"], "memory-channel"),
         ("reconciler", vec![], "inbound-channel"),
     ] {
         let (_td, repo) = fresh_repo();
         let out = run_cmd(&repo, &["inputs", "--role", role]);
-        assert!(
-            out.status.success(),
-            "inputs --role {role} failed: {}",
-            stderr_str(&out)
-        );
+        assert!(out.status.success(), "inputs --role {role} failed: {}", stderr_str(&out));
         let s = stdout_str(&out);
         for ch in expected_in {
-            assert!(
-                s.contains(ch),
-                "expected {ch} in output for {role}, got: {s}"
-            );
+            assert!(s.contains(ch), "expected {ch} in output for {role}, got: {s}");
         }
         assert!(s.contains(expected_out));
     }
@@ -950,18 +675,8 @@ fn history_limit_newest_first() {
             &format!("ts-{cycle}"),
             payload_for("planner"),
         );
-        let o = run_cmd(
-            &repo,
-            &[
-                "invoke",
-                "--role",
-                "planner",
-                "--cycle",
-                &cycle.to_string(),
-                "--session-output-file",
-                &p.to_string_lossy(),
-            ],
-        );
+        let o = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", &cycle.to_string(),
+            "--session-output-file", &p.to_string_lossy()]);
         assert!(o.status.success(), "{}", stderr_str(&o));
     }
 
@@ -979,10 +694,7 @@ fn history_limit_newest_first() {
 fn history_corrupt_file_clean_error() {
     let (_td, repo) = fresh_repo();
     run_cmd(&repo, &["init"]);
-    let path = repo
-        .join("state")
-        .join("roles")
-        .join("planner-history.json");
+    let path = repo.join("state").join("roles").join("planner-history.json");
     std::fs::write(&path, "{not: valid json").unwrap();
     let out = run_cmd(&repo, &["history", "--role", "planner"]);
     assert!(!out.status.success());
@@ -1002,12 +714,7 @@ fn schema_text_lists_all_roles() {
     for role in ["reconciler", "planner", "executor", "curator"] {
         assert!(s.contains(role), "missing role {role} from schema: {s}");
     }
-    for channel in [
-        "plan-channel",
-        "work-channel",
-        "memory-channel",
-        "inbound-channel",
-    ] {
+    for channel in ["plan-channel", "work-channel", "memory-channel", "inbound-channel"] {
         assert!(s.contains(channel), "missing channel {channel}: {s}");
     }
     assert!(s.contains("success"));
@@ -1037,28 +744,12 @@ fn invoke_cli_timestamp_overrides_payload_timestamp() {
     run_cmd(&repo, &["init"]);
     write_super_step_state(&repo, 1, "planner");
     let p = write_session_output_full(&repo, "p", 1, "payload-ts", payload_for("planner"));
-    let out = run_cmd(
-        &repo,
-        &[
-            "invoke",
-            "--role",
-            "planner",
-            "--cycle",
-            "1",
-            "--session-output-file",
-            &p.to_string_lossy(),
-            "--timestamp",
-            "cli-ts",
-        ],
-    );
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1",
+        "--session-output-file", &p.to_string_lossy(),
+        "--timestamp", "cli-ts"]);
     assert!(out.status.success(), "{}", stderr_str(&out));
     let chan: serde_json::Value = serde_json::from_slice(
-        &std::fs::read(
-            repo.join("state")
-                .join("channels")
-                .join("plan-channel.json"),
-        )
-        .unwrap(),
+        &std::fs::read(repo.join("state").join("channels").join("plan-channel.json")).unwrap(),
     )
     .unwrap();
     assert_eq!(chan["timestamp"], "cli-ts");

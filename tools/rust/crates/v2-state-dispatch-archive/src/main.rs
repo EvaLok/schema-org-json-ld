@@ -37,13 +37,8 @@ const TOOL_VERSION: &str = "0.1.0";
 
 // §3.1 Terminal-status whitelist — entries with these statuses are eligible
 // for archival (subject to the age check in §3.2).
-const TERMINAL_ARCHIVABLE: &[&str] = &[
-    "merged",
-    "failed",
-    "closed_without_pr",
-    "closed",
-    "closed_without_merge",
-];
+const TERMINAL_ARCHIVABLE: &[&str] =
+    &["merged", "failed", "closed_without_pr", "closed", "closed_without_merge"];
 
 // §3.1 Live statuses — NEVER archived, regardless of age.
 const LIVE_NEVER_ARCHIVED: &[&str] = &["in_flight", "reviewed_awaiting_eva"];
@@ -284,18 +279,15 @@ impl LockFile {
     /// Attempt to acquire an exclusive lock.  Polls every 500 ms for up to
     /// `LOCK_WAIT_SECS` seconds, then gives up and returns Err.
     fn acquire(path: &Path) -> Result<Self, String> {
-        let deadline = SystemTime::now() + Duration::from_secs(LOCK_WAIT_SECS);
+        let deadline =
+            SystemTime::now() + Duration::from_secs(LOCK_WAIT_SECS);
         loop {
             match fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
                 .open(path)
             {
-                Ok(_) => {
-                    return Ok(LockFile {
-                        path: path.to_path_buf(),
-                    })
-                }
+                Ok(_) => return Ok(LockFile { path: path.to_path_buf() }),
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
                     if SystemTime::now() >= deadline {
                         return Err(format!(
@@ -306,7 +298,10 @@ impl LockFile {
                     std::thread::sleep(Duration::from_millis(500));
                 }
                 Err(e) => {
-                    return Err(format!("lock-acquire error {}: {e}", path.display()));
+                    return Err(format!(
+                        "lock-acquire error {}: {e}",
+                        path.display()
+                    ));
                 }
             }
         }
@@ -338,7 +333,10 @@ fn classify_entry(
     age_cutoff_secs: u64,
     now_secs: u64,
 ) -> Eligibility {
-    let status = entry.get("status").and_then(|v| v.as_str()).unwrap_or("");
+    let status = entry
+        .get("status")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     // Live entries are never archived (§3.1, §9.2).
     if LIVE_NEVER_ARCHIVED.contains(&status) {
@@ -396,10 +394,16 @@ fn load_or_create_archive(
     invocation_id: &str,
 ) -> Result<ArchiveFile, String> {
     if path.exists() {
-        let text = fs::read_to_string(path)
-            .map_err(|e| format!("failed to read existing archive {}: {e}", path.display()))?;
-        let mut existing: ArchiveFile = serde_json::from_str(&text)
-            .map_err(|e| format!("failed to parse existing archive {}: {e}", path.display()))?;
+        let text = fs::read_to_string(path).map_err(|e| {
+            format!("failed to read existing archive {}: {e}", path.display())
+        })?;
+        let mut existing: ArchiveFile =
+            serde_json::from_str(&text).map_err(|e| {
+                format!(
+                    "failed to parse existing archive {}: {e}",
+                    path.display()
+                )
+            })?;
         // Update for this sweep (§4.3).
         existing.archived_at = now_iso.to_string();
         existing.criteria.invocation_id = existing
@@ -436,24 +440,33 @@ fn write_archive_atomic(path: &Path, archive: &ArchiveFile) -> Result<(), String
     }
     let tmp_path = path.with_extension("json.tmp");
     {
-        let mut f = fs::File::create(&tmp_path)
-            .map_err(|e| format!("failed to create tmp archive {}: {e}", tmp_path.display()))?;
-        serde_json::to_writer_pretty(&mut f, archive)
-            .map_err(|e| format!("failed to serialize archive: {e}"))?;
-        f.flush()
-            .map_err(|e| format!("failed to flush tmp archive: {e}"))?;
+        let mut f = fs::File::create(&tmp_path).map_err(|e| {
+            format!("failed to create tmp archive {}: {e}", tmp_path.display())
+        })?;
+        serde_json::to_writer_pretty(&mut f, archive).map_err(|e| {
+            format!("failed to serialize archive: {e}")
+        })?;
+        f.flush().map_err(|e| {
+            format!("failed to flush tmp archive: {e}")
+        })?;
     }
-    fs::rename(&tmp_path, path)
-        .map_err(|e| format!("failed to rename tmp archive to {}: {e}", path.display()))?;
+    fs::rename(&tmp_path, path).map_err(|e| {
+        format!(
+            "failed to rename tmp archive to {}: {e}",
+            path.display()
+        )
+    })?;
     Ok(())
 }
 
 /// Read docs/state.json, returning (raw Value, agent_sessions array).
 fn read_state(state_path: &Path) -> Result<(Value, Vec<Value>), String> {
-    let text = fs::read_to_string(state_path)
-        .map_err(|e| format!("failed to read {}: {e}", state_path.display()))?;
-    let mut root: Value = serde_json::from_str(&text)
-        .map_err(|e| format!("failed to parse {}: {e}", state_path.display()))?;
+    let text = fs::read_to_string(state_path).map_err(|e| {
+        format!("failed to read {}: {e}", state_path.display())
+    })?;
+    let mut root: Value = serde_json::from_str(&text).map_err(|e| {
+        format!("failed to parse {}: {e}", state_path.display())
+    })?;
     let sessions = root
         .get_mut("agent_sessions")
         .and_then(|v| v.as_array_mut())
@@ -472,10 +485,12 @@ fn write_state_atomic(state_path: &Path, state: &Value) -> Result<(), String> {
                 tmp_path.display()
             )
         })?;
-        serde_json::to_writer_pretty(&mut f, state)
-            .map_err(|e| format!("failed to serialize state.json: {e}"))?;
-        f.flush()
-            .map_err(|e| format!("failed to flush tmp state file: {e}"))?;
+        serde_json::to_writer_pretty(&mut f, state).map_err(|e| {
+            format!("failed to serialize state.json: {e}")
+        })?;
+        f.flush().map_err(|e| {
+            format!("failed to flush tmp state file: {e}")
+        })?;
     }
     fs::rename(&tmp_path, state_path).map_err(|e| {
         format!(
@@ -503,7 +518,10 @@ fn format_human(report: &SweepReport) -> String {
         "archived:              {}\n",
         report.archived_count
     ));
-    out.push_str(&format!("archive_file:          {}\n", report.archive_file));
+    out.push_str(&format!(
+        "archive_file:          {}\n",
+        report.archive_file
+    ));
     out.push_str(&format!(
         "ineligible.live_status:          {}\n",
         report.ineligible.live_status
@@ -564,7 +582,9 @@ fn run(args: Args) -> ExitCode {
     // Validate that all requested statuses are terminal (fail-safe §3.1).
     for s in &status_filter {
         if LIVE_NEVER_ARCHIVED.contains(&s.as_str()) {
-            eprintln!("{TOOL_NAME}: status '{s}' is a live status and cannot be archived");
+            eprintln!(
+                "{TOOL_NAME}: status '{s}' is a live status and cannot be archived"
+            );
             return ExitCode::from(1);
         }
     }
@@ -575,7 +595,8 @@ fn run(args: Args) -> ExitCode {
     let today = date_string_utc(now_secs);
 
     let archive_dir = repo_root.join(&args.archive_dir);
-    let archive_path = archive_dir.join(format!("dispatches-{today}.json"));
+    let archive_path =
+        archive_dir.join(format!("dispatches-{today}.json"));
     let lock_path = state_path.with_extension("json.lock");
 
     // §6.3 Acquire lock (skipped in dry-run to avoid side effects, but we
@@ -704,19 +725,20 @@ fn run(args: Args) -> ExitCode {
     // Determine invocation_id from today's date (no cycle-N suffix available
     // at this layer; the operator may pass a richer flag in the future).
     let invocation_id = today.clone();
-    let mut archive = match load_or_create_archive(
-        &archive_path,
-        &now_iso,
-        args.age_days,
-        &status_filter,
-        &invocation_id,
-    ) {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("{TOOL_NAME}: {e}");
-            return ExitCode::from(2);
-        }
-    };
+    let mut archive =
+        match load_or_create_archive(
+            &archive_path,
+            &now_iso,
+            args.age_days,
+            &status_filter,
+            &invocation_id,
+        ) {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("{TOOL_NAME}: {e}");
+                return ExitCode::from(2);
+            }
+        };
     archive.entries.extend(eligible.clone());
 
     if let Err(e) = write_archive_atomic(&archive_path, &archive) {
@@ -743,15 +765,14 @@ fn run(args: Args) -> ExitCode {
     }
 
     // §6.1 Step 6: write mutated state.json.
-    if let Some(arr) = root
-        .get_mut("agent_sessions")
-        .and_then(|v| v.as_array_mut())
-    {
+    if let Some(arr) = root.get_mut("agent_sessions").and_then(|v| v.as_array_mut()) {
         *arr = retained.clone();
     }
 
     if let Err(e) = write_state_atomic(&state_path, &root) {
-        eprintln!("{TOOL_NAME}: archive written but state.json mutation failed (exit 4): {e}");
+        eprintln!(
+            "{TOOL_NAME}: archive written but state.json mutation failed (exit 4): {e}"
+        );
         return ExitCode::from(4);
     }
 
@@ -1037,9 +1058,7 @@ mod tests {
         assert!(archive.entries.is_empty());
 
         let mut archive2 = archive;
-        archive2
-            .entries
-            .push(json!({"status": "merged", "issue": 1}));
+        archive2.entries.push(json!({"status": "merged", "issue": 1}));
         write_archive_atomic(&archive_path, &archive2).unwrap();
 
         // Reload.
@@ -1119,9 +1138,9 @@ mod tests {
     fn happy_path_archives_old_terminal_entries() {
         let dir = tmp_dir();
         let entries = vec![
-            old_entry("merged", 60),     // eligible
-            old_entry("failed", 60),     // eligible
-            old_entry("merged", 10),     // too recent
+            old_entry("merged", 60),   // eligible
+            old_entry("failed", 60),   // eligible
+            old_entry("merged", 10),   // too recent
             old_entry("in_flight", 200), // live, never archived
         ];
         make_temp_state(dir.path(), entries);

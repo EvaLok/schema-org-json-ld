@@ -41,7 +41,10 @@ fn parse_json(stdout: &str) -> Value {
 #[test]
 fn runs_on_empty_corpus_no_findings() {
     let dir = tempfile::tempdir().unwrap();
-    let (code, stdout, _stderr) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (code, stdout, _stderr) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     assert_eq!(code, 0);
     let v = parse_json(&stdout);
     assert_eq!(v["schema"], "v2-gardening-sweep/v1");
@@ -66,7 +69,10 @@ fn detects_stale_file_over_threshold() {
     let v = parse_json(&stdout);
     let stale = v["stale"].as_array().unwrap();
     assert_eq!(stale.len(), 1);
-    assert!(stale[0]["path"].as_str().unwrap().ends_with("old.md"));
+    assert!(stale[0]["path"]
+        .as_str()
+        .unwrap()
+        .ends_with("old.md"));
     let age = stale[0]["age_days"].as_u64().unwrap();
     assert!(age >= 30, "expected >= 30 days, got {age}");
 }
@@ -96,7 +102,10 @@ fn detects_dead_markdown_link() {
         "see [docs](missing-target.md) for details\n",
     )
     .unwrap();
-    let (code, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (code, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     assert_eq!(code, 0);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
@@ -109,9 +118,16 @@ fn detects_dead_markdown_link() {
 #[test]
 fn passes_alive_markdown_link() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "see [docs](b.md) for details\n").unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "see [docs](b.md) for details\n",
+    )
+    .unwrap();
     fs::write(dir.path().join("b.md"), "# target\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["dead_links"].as_array().unwrap().len(), 0);
 }
@@ -124,7 +140,10 @@ fn skips_external_links() {
         "see [ex](https://example.com) and [mail](mailto:a@b.c) and [ftp](ftp://x) and [file](file:///etc/passwd)\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["dead_links"].as_array().unwrap().len(), 0);
 }
@@ -137,7 +156,10 @@ fn skips_anchor_only_links() {
         "see [section](#section-id) for details\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["dead_links"].as_array().unwrap().len(), 0);
 }
@@ -145,9 +167,16 @@ fn skips_anchor_only_links() {
 #[test]
 fn strips_fragment_from_path_link() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "see [sec](b.md#somewhere)\n").unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "see [sec](b.md#somewhere)\n",
+    )
+    .unwrap();
     fs::write(dir.path().join("b.md"), "# target\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(
         v["dead_links"].as_array().unwrap().len(),
@@ -164,7 +193,10 @@ fn detects_dead_wiki_link() {
         "see [[missing-name]] for the index\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -180,8 +212,15 @@ fn passes_alive_wiki_link_by_stem() {
         "see [[existing-name]] for the index\n",
     )
     .unwrap();
-    fs::write(dir.path().join("existing-name.md"), "# target\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    fs::write(
+        dir.path().join("existing-name.md"),
+        "# target\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["dead_links"].as_array().unwrap().len(), 0);
 }
@@ -194,7 +233,10 @@ fn skips_inline_code_spans() {
         "`[fake](should-not-resolve.md)` plus [real](other-real.md)\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -209,7 +251,10 @@ fn skips_fenced_code_blocks() {
         "before\n```\n[fake](missing-in-fence.md)\n```\nafter [real](after-real.md)\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -219,8 +264,16 @@ fn skips_fenced_code_blocks() {
 #[test]
 fn strict_mode_returns_one_with_findings() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "[broken](missing-strict.md)\n").unwrap();
-    let (code, _, _) = run_with(&["--corpus", dir.path().to_str().unwrap(), "--strict"]);
+    fs::write(
+        dir.path().join("a.md"),
+        "[broken](missing-strict.md)\n",
+    )
+    .unwrap();
+    let (code, _, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--strict",
+    ]);
     assert_eq!(code, 1, "strict mode should exit 1 when findings present");
 }
 
@@ -228,7 +281,11 @@ fn strict_mode_returns_one_with_findings() {
 fn strict_mode_returns_zero_when_clean() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(dir.path().join("a.md"), "# clean note\n").unwrap();
-    let (code, _, _) = run_with(&["--corpus", dir.path().to_str().unwrap(), "--strict"]);
+    let (code, _, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--strict",
+    ]);
     assert_eq!(code, 0);
 }
 
@@ -236,8 +293,16 @@ fn strict_mode_returns_zero_when_clean() {
 fn multiple_corpus_roots_aggregate_findings() {
     let dir1 = tempfile::tempdir().unwrap();
     let dir2 = tempfile::tempdir().unwrap();
-    fs::write(dir1.path().join("a.md"), "[bad](missing-dir1.md)\n").unwrap();
-    fs::write(dir2.path().join("b.md"), "[bad](missing-dir2.md)\n").unwrap();
+    fs::write(
+        dir1.path().join("a.md"),
+        "[bad](missing-dir1.md)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir2.path().join("b.md"),
+        "[bad](missing-dir2.md)\n",
+    )
+    .unwrap();
     let (_, stdout, _) = run_with(&[
         "--corpus",
         dir1.path().to_str().unwrap(),
@@ -253,8 +318,17 @@ fn multiple_corpus_roots_aggregate_findings() {
 #[test]
 fn text_output_format_is_human_readable() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "[bad](missing-text.md)\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap(), "--format", "text"]);
+    fs::write(
+        dir.path().join("a.md"),
+        "[bad](missing-text.md)\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--format",
+        "text",
+    ]);
     assert!(stdout.contains("v2-gardening-sweep"));
     assert!(stdout.contains("Dead links"));
     assert!(stdout.contains("missing-text.md"));
@@ -266,7 +340,11 @@ fn no_stale_disables_stale_detection() {
     let old = dir.path().join("old.md");
     fs::write(&old, "# old\n").unwrap();
     touch_old(&old, 60);
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap(), "--no-stale"]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--no-stale",
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["stale_detection_enabled"], false);
     assert_eq!(v["stale"].as_array().unwrap().len(), 0);
@@ -275,8 +353,16 @@ fn no_stale_disables_stale_detection() {
 #[test]
 fn no_dead_links_disables_dead_link_detection() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "[broken](missing.md)\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap(), "--no-dead-links"]);
+    fs::write(
+        dir.path().join("a.md"),
+        "[broken](missing.md)\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+        "--no-dead-links",
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["dead_link_detection_enabled"], false);
     assert_eq!(v["dead_links"].as_array().unwrap().len(), 0);
@@ -301,8 +387,15 @@ fn recursive_walk_finds_nested_md() {
     fs::create_dir_all(dir.path().join("nested/deeper")).unwrap();
     fs::write(dir.path().join("top.md"), "# top\n").unwrap();
     fs::write(dir.path().join("nested/mid.md"), "# mid\n").unwrap();
-    fs::write(dir.path().join("nested/deeper/leaf.md"), "# leaf\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    fs::write(
+        dir.path().join("nested/deeper/leaf.md"),
+        "# leaf\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["files_scanned"], 3);
 }
@@ -313,7 +406,10 @@ fn ignores_non_markdown_extensions() {
     fs::write(dir.path().join("a.md"), "# md\n").unwrap();
     fs::write(dir.path().join("b.txt"), "# txt\n").unwrap();
     fs::write(dir.path().join("c.json"), "{}\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(v["files_scanned"], 1);
 }
@@ -358,7 +454,10 @@ fn skips_frontmatter_links() {
         "---\ntitle: foo\nrelated: [bad](missing-in-frontmatter.md)\n---\n# Body\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(
         v["dead_links"].as_array().unwrap().len(),
@@ -375,7 +474,10 @@ fn skips_multiline_html_comments() {
         "before\n<!--\n[bad](missing-html.md)\n-->\nafter [real](missing-after.md)\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -390,7 +492,10 @@ fn skips_indented_code_blocks() {
         "para\n    [fake](missing-indent.md)\nback [real](missing-back.md)\n",
     )
     .unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -406,7 +511,10 @@ fn resolves_reference_style_link() {
     )
     .unwrap();
     fs::write(dir.path().join("target.md"), "# target\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     assert_eq!(
         v["dead_links"].as_array().unwrap().len(),
@@ -418,8 +526,15 @@ fn resolves_reference_style_link() {
 #[test]
 fn dead_reference_style_link_when_undefined() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "see [docs][nope] for details\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    fs::write(
+        dir.path().join("a.md"),
+        "see [docs][nope] for details\n",
+    )
+    .unwrap();
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -439,7 +554,11 @@ fn exclude_pattern_filters_files() {
         "[bad](missing-archive.md)\n",
     )
     .unwrap();
-    fs::write(dir.path().join("current.md"), "[bad](missing-current.md)\n").unwrap();
+    fs::write(
+        dir.path().join("current.md"),
+        "[bad](missing-current.md)\n",
+    )
+    .unwrap();
     let (_, stdout, _) = run_with(&[
         "--corpus",
         dir.path().to_str().unwrap(),
@@ -478,9 +597,16 @@ fn exclude_pattern_with_double_star() {
 #[test]
 fn auto_fix_suggestion_for_near_match() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "[link](sibling-typo.md)\n").unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "[link](sibling-typo.md)\n",
+    )
+    .unwrap();
     fs::write(dir.path().join("sibling-type.md"), "# target\n").unwrap();
-    let (_, stdout, _) = run_with(&["--corpus", dir.path().to_str().unwrap()]);
+    let (_, stdout, _) = run_with(&[
+        "--corpus",
+        dir.path().to_str().unwrap(),
+    ]);
     let v = parse_json(&stdout);
     let dead = v["dead_links"].as_array().unwrap();
     assert_eq!(dead.len(), 1);
@@ -492,7 +618,11 @@ fn auto_fix_suggestion_for_near_match() {
 #[test]
 fn no_suggest_fixes_disables_suggestions() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("a.md"), "[link](sibling-typo.md)\n").unwrap();
+    fs::write(
+        dir.path().join("a.md"),
+        "[link](sibling-typo.md)\n",
+    )
+    .unwrap();
     fs::write(dir.path().join("sibling-type.md"), "# target\n").unwrap();
     let (_, stdout, _) = run_with(&[
         "--corpus",
@@ -635,7 +765,10 @@ fn config_file_provides_defaults() {
     );
     fs::write(&config_path, config_body).unwrap();
 
-    let (code, stdout, _) = run_with(&["--config", config_path.to_str().unwrap()]);
+    let (code, stdout, _) = run_with(&[
+        "--config",
+        config_path.to_str().unwrap(),
+    ]);
     assert_eq!(code, 0);
     let v = parse_json(&stdout);
     assert_eq!(v["stale_threshold_days"], 10);

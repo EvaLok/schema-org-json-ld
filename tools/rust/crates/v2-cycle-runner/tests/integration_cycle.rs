@@ -149,16 +149,12 @@ fn write_json(path: &Path, value: &serde_json::Value) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).expect("create parent dir");
     }
-    fs::write(
-        path,
-        serde_json::to_string_pretty(value).expect("serialize"),
-    )
-    .expect("write json");
+    fs::write(path, serde_json::to_string_pretty(value).expect("serialize")).expect("write json");
 }
 
 fn read_json(path: &Path) -> serde_json::Value {
-    let s =
-        fs::read_to_string(path).unwrap_or_else(|e| panic!("read {} failed: {e}", path.display()));
+    let s = fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("read {} failed: {e}", path.display()));
     serde_json::from_str(&s).unwrap_or_else(|e| panic!("parse {} failed: {e}", path.display()))
 }
 
@@ -273,7 +269,10 @@ fn live_run_against_real_primitives_writes_completed_state_with_no_halt_marker()
             "per-role-tasks": {"executor": "noop"}
         }),
     );
-    write_json(&executor_out, &serde_json::json!({"artifacts-written": []}));
+    write_json(
+        &executor_out,
+        &serde_json::json!({"artifacts-written": []}),
+    );
     write_json(
         &curator_out,
         &serde_json::json!({"consolidated-insights": "integration test cycle completed"}),

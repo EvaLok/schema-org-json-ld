@@ -199,7 +199,8 @@ fn run(args: &Args) -> Result<SearchReport, String> {
     }
 
     let mut notes: Vec<String> = Vec::new();
-    let (documents, documents_skipped, index_status) = load_or_build_index(args, &mut notes);
+    let (documents, documents_skipped, index_status) =
+        load_or_build_index(args, &mut notes);
 
     let total_docs = documents.len();
     let doc_frequencies = compute_doc_frequencies(&documents, &query_terms);
@@ -261,10 +262,7 @@ fn run(args: &Args) -> Result<SearchReport, String> {
 fn tokenize_query(query: &str) -> Vec<String> {
     query
         .split_whitespace()
-        .map(|t| {
-            t.trim_matches(|c: char| c.is_ascii_punctuation())
-                .to_lowercase()
-        })
+        .map(|t| t.trim_matches(|c: char| c.is_ascii_punctuation()).to_lowercase())
         .filter(|t| !t.is_empty())
         .collect()
 }
@@ -279,7 +277,9 @@ fn walk_markdown(root: &Path) -> io::Result<Vec<PathBuf>> {
             let ft = entry.file_type()?;
             if ft.is_dir() {
                 stack.push(path);
-            } else if ft.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
+            } else if ft.is_file()
+                && path.extension().and_then(|e| e.to_str()) == Some("md")
+            {
                 out.push(path);
             }
         }
@@ -289,7 +289,8 @@ fn walk_markdown(root: &Path) -> io::Result<Vec<PathBuf>> {
 }
 
 fn parse_document(path: &Path) -> Result<Document, (WarnKind, String)> {
-    let raw = fs::read_to_string(path).map_err(|e| (WarnKind::FileRead, format!("read: {e}")))?;
+    let raw = fs::read_to_string(path)
+        .map_err(|e| (WarnKind::FileRead, format!("read: {e}")))?;
     if raw.trim().is_empty() {
         return Err((WarnKind::FileEmpty, "empty file".to_string()));
     }
@@ -448,7 +449,10 @@ fn truncate_chars(s: &str, max: usize) -> String {
     format!("{}…", truncated.trim_end())
 }
 
-fn compute_doc_frequencies(documents: &[Document], terms: &[String]) -> HashMap<String, usize> {
+fn compute_doc_frequencies(
+    documents: &[Document],
+    terms: &[String],
+) -> HashMap<String, usize> {
     let mut df: HashMap<String, usize> = HashMap::new();
     for term in terms {
         df.insert(term.clone(), 0);
@@ -456,12 +460,7 @@ fn compute_doc_frequencies(documents: &[Document], terms: &[String]) -> HashMap<
     for doc in documents {
         let title_lc = doc.title.to_lowercase();
         let desc_lc = doc.description.to_lowercase();
-        let tags_lc: String = doc
-            .tags
-            .iter()
-            .map(|t| t.to_lowercase())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let tags_lc: String = doc.tags.iter().map(|t| t.to_lowercase()).collect::<Vec<_>>().join(" ");
         let body_lc = doc
             .body
             .as_ref()
@@ -588,9 +587,11 @@ fn compute_signatures(corpus_paths: &[PathBuf]) -> Result<Vec<FileSig>, String> 
         if !root.exists() || !root.is_dir() {
             continue;
         }
-        let files = walk_markdown(root).map_err(|e| format!("walk {}: {e}", root.display()))?;
+        let files = walk_markdown(root)
+            .map_err(|e| format!("walk {}: {e}", root.display()))?;
         for path in files {
-            let meta = fs::metadata(&path).map_err(|e| format!("stat {}: {e}", path.display()))?;
+            let meta = fs::metadata(&path)
+                .map_err(|e| format!("stat {}: {e}", path.display()))?;
             let mtime = meta
                 .modified()
                 .ok()
@@ -622,7 +623,8 @@ fn signatures_match(a: &[FileSig], b: &[FileSig]) -> bool {
 
 fn read_cache(path: &Path) -> Result<CorpusIndex, String> {
     let raw = fs::read_to_string(path).map_err(|e| format!("read cache: {e}"))?;
-    let idx: CorpusIndex = serde_json::from_str(&raw).map_err(|e| format!("parse cache: {e}"))?;
+    let idx: CorpusIndex =
+        serde_json::from_str(&raw).map_err(|e| format!("parse cache: {e}"))?;
     if idx.schema != INDEX_SCHEMA {
         return Err(format!(
             "cache schema mismatch (got `{}`, expected `{}`)",
@@ -635,10 +637,12 @@ fn read_cache(path: &Path) -> Result<CorpusIndex, String> {
 fn write_cache(path: &Path, index: &CorpusIndex) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent).map_err(|e| format!("create cache dir: {e}"))?;
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("create cache dir: {e}"))?;
         }
     }
-    let body = serde_json::to_string_pretty(index).map_err(|e| format!("serialize cache: {e}"))?;
+    let body = serde_json::to_string_pretty(index)
+        .map_err(|e| format!("serialize cache: {e}"))?;
     fs::write(path, body).map_err(|e| format!("write cache: {e}"))?;
     Ok(())
 }
@@ -704,7 +708,10 @@ fn build_index_fresh(
                             sigs.push(sig);
                         }
                         Err((kind, msg)) => {
-                            let n = warn_note(kind, &format!("skipped {}: {msg}", path.display()));
+                            let n = warn_note(
+                                kind,
+                                &format!("skipped {}: {msg}", path.display()),
+                            );
                             notes.push(n.clone());
                             skipped_notes.push(n);
                             skipped_sigs.push(sig);
@@ -728,7 +735,10 @@ fn build_index_fresh(
     (documents, sigs, skipped_sigs, skipped_notes)
 }
 
-fn load_or_build_index(args: &Args, notes: &mut Vec<String>) -> (Vec<Document>, usize, String) {
+fn load_or_build_index(
+    args: &Args,
+    notes: &mut Vec<String>,
+) -> (Vec<Document>, usize, String) {
     let Some(cache_path) = &args.index_cache else {
         let (documents, _sigs, skipped_sigs, _skipped_notes) =
             build_index_fresh(&args.corpus, notes);
@@ -737,7 +747,8 @@ fn load_or_build_index(args: &Args, notes: &mut Vec<String>) -> (Vec<Document>, 
     };
 
     if args.rebuild_index {
-        let (documents, sigs, skipped_sigs, skipped_notes) = build_index_fresh(&args.corpus, notes);
+        let (documents, sigs, skipped_sigs, skipped_notes) =
+            build_index_fresh(&args.corpus, notes);
         let index = CorpusIndex {
             schema: INDEX_SCHEMA.to_string(),
             generated_at: now_unix_secs(),
@@ -793,7 +804,11 @@ fn load_or_build_index(args: &Args, notes: &mut Vec<String>) -> (Vec<Document>, 
             if let Err(e) = write_cache(cache_path, &index) {
                 notes.push(warn_note(WarnKind::IndexWriteFailed, &e));
             }
-            (documents, skipped_sigs.len(), "rebuilt-stale".to_string())
+            (
+                documents,
+                skipped_sigs.len(),
+                "rebuilt-stale".to_string(),
+            )
         }
         Err(e) => {
             let preexisting = cache_path.exists();
@@ -859,7 +874,10 @@ fn render_text(report: &SearchReport) -> String {
         report.documents_skipped,
         report.index_status,
     ));
-    out.push_str(&format!("Query terms: {}\n", report.query_terms.join(", ")));
+    out.push_str(&format!(
+        "Query terms: {}\n",
+        report.query_terms.join(", ")
+    ));
     out.push_str(&format!(
         "Top-k: {} | Min-score: {:.2}\n\n",
         report.top_k, report.min_score
@@ -883,7 +901,10 @@ fn render_text(report: &SearchReport) -> String {
             if !r.tags.is_empty() {
                 out.push_str(&format!("   tags: {}\n", r.tags.join(", ")));
             }
-            out.push_str(&format!("   matched: {}\n\n", r.matched_terms.join(", ")));
+            out.push_str(&format!(
+                "   matched: {}\n\n",
+                r.matched_terms.join(", ")
+            ));
         }
     }
 
@@ -1245,7 +1266,11 @@ mod tests {
     fn parse_document_warns_on_unclosed_frontmatter() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("fm.md");
-        fs::write(&path, "---\ntitle: never closes\nno trailing marker\n").unwrap();
+        fs::write(
+            &path,
+            "---\ntitle: never closes\nno trailing marker\n",
+        )
+        .unwrap();
         let result = parse_document(&path);
         assert!(result.is_err());
         let (kind, _) = result.unwrap_err();
@@ -1446,11 +1471,7 @@ mod tests {
         let report = run(&args).unwrap();
         assert_eq!(report.results.len(), 1);
         assert!(report.results[0].body.is_some());
-        assert!(report.results[0]
-            .body
-            .as_ref()
-            .unwrap()
-            .contains("foo body"));
+        assert!(report.results[0].body.as_ref().unwrap().contains("foo body"));
     }
 
     #[test]
@@ -1507,11 +1528,8 @@ mod tests {
         run(&args).unwrap();
 
         std::thread::sleep(std::time::Duration::from_millis(1100));
-        fs::write(
-            &file,
-            "# foo\n\nfoo body has more content now to change size\n",
-        )
-        .unwrap();
+        fs::write(&file, "# foo\n\nfoo body has more content now to change size\n")
+            .unwrap();
 
         let r = run(&args).unwrap();
         assert_eq!(r.index_status, "rebuilt-stale");

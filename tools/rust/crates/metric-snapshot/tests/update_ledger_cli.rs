@@ -16,11 +16,7 @@ fn update_ledger_exits_non_zero_when_state_json_is_missing() {
     fs::create_dir_all(&repo_root).expect("repo root should be created");
 
     let output = Command::new(env!("CARGO_BIN_EXE_metric-snapshot"))
-        .args([
-            "--repo-root",
-            repo_root.to_str().unwrap(),
-            "--update-ledger",
-        ])
+        .args(["--repo-root", repo_root.to_str().unwrap(), "--update-ledger"])
         .output()
         .expect("metric-snapshot should run");
 
@@ -40,11 +36,7 @@ fn update_ledger_exits_non_zero_when_state_json_is_malformed() {
         .expect("malformed fixture should be written");
 
     let output = Command::new(env!("CARGO_BIN_EXE_metric-snapshot"))
-        .args([
-            "--repo-root",
-            repo_root.to_str().unwrap(),
-            "--update-ledger",
-        ])
+        .args(["--repo-root", repo_root.to_str().unwrap(), "--update-ledger"])
         .output()
         .expect("metric-snapshot should run");
 

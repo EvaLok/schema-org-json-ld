@@ -211,10 +211,7 @@ fn init_is_idempotent() {
     let out2 = run_cmd(repo, &["init"]);
     assert_success(&out2);
     let s = stdout_str(&out2);
-    assert!(
-        s.contains("already-present"),
-        "expected already-present line, got: {s}"
-    );
+    assert!(s.contains("already-present"), "expected already-present line, got: {s}");
 }
 
 #[test]
@@ -264,10 +261,7 @@ fn poll_with_all_empty_sources_writes_empty_inbound_payload() {
     assert_success(&out);
 
     // The inbound-channel state file should now be a populated envelope.
-    let state_path = repo
-        .join("state")
-        .join("channels")
-        .join("inbound-channel.json");
+    let state_path = repo.join("state").join("channels").join("inbound-channel.json");
     let raw = std::fs::read_to_string(&state_path).unwrap();
     let v: Value = serde_json::from_str(&raw).unwrap();
     assert_eq!(v["channel"], json!("inbound-channel"));
@@ -275,10 +269,7 @@ fn poll_with_all_empty_sources_writes_empty_inbound_payload() {
     assert_eq!(v["cycle"], json!(1));
     assert!(v["payload"]["eva-responses"].as_array().unwrap().is_empty());
     assert!(v["payload"]["audit-posts"].as_array().unwrap().is_empty());
-    assert!(v["payload"]["dispatch-returns"]
-        .as_array()
-        .unwrap()
-        .is_empty());
+    assert!(v["payload"]["dispatch-returns"].as_array().unwrap().is_empty());
     assert_eq!(v["payload"]["inbound-completeness-marker"], json!("quiet"));
 }
 
@@ -296,26 +287,16 @@ fn poll_with_events_in_all_sources_populates_inbound_payload() {
     write_source_file(&audit_path, "audit", vec![event("abc123")]);
     write_source_file(&dispatch_path, "dispatch", vec![]);
 
-    let out = poll_with_sources(
-        repo,
-        1,
-        Some(&eva_path),
-        Some(&audit_path),
-        Some(&dispatch_path),
-    );
+    let out =
+        poll_with_sources(repo, 1, Some(&eva_path), Some(&audit_path), Some(&dispatch_path));
     assert_success(&out);
 
-    let state_path = repo
-        .join("state")
-        .join("channels")
-        .join("inbound-channel.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(state_path).unwrap()).unwrap();
+    let state_path = repo.join("state").join("channels").join("inbound-channel.json");
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(state_path).unwrap()).unwrap();
     assert_eq!(v["payload"]["eva-responses"].as_array().unwrap().len(), 2);
     assert_eq!(v["payload"]["audit-posts"].as_array().unwrap().len(), 1);
-    assert_eq!(
-        v["payload"]["dispatch-returns"].as_array().unwrap().len(),
-        0
-    );
+    assert_eq!(v["payload"]["dispatch-returns"].as_array().unwrap().len(), 0);
     assert_eq!(
         v["payload"]["inbound-completeness-marker"],
         json!("complete")
@@ -339,7 +320,8 @@ fn poll_appends_inbound_channel_history() {
         .join("state")
         .join("channels")
         .join("inbound-channel-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     assert_eq!(v["channel"], json!("inbound-channel"));
     assert_eq!(v["entries"].as_array().unwrap().len(), 1);
     assert_eq!(v["entries"][0]["writer"], json!("reconciler"));
@@ -360,7 +342,8 @@ fn poll_appends_poll_history() {
         .join("state")
         .join("reconciler")
         .join("poll-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     let entries = v["entries"].as_array().unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0]["cycle"], json!(1));
@@ -375,11 +358,7 @@ fn poll_updates_cursors_after_successful_write() {
     write_super_step_state_reconciler(repo, 1);
 
     let eva_path = tmp.path().join("eva-src.json");
-    write_source_file(
-        &eva_path,
-        "eva",
-        vec![event("100"), event("105"), event("103")],
-    );
+    write_source_file(&eva_path, "eva", vec![event("100"), event("105"), event("103")]);
 
     let out = poll_with_sources(repo, 1, Some(&eva_path), None, None);
     assert_success(&out);
@@ -388,7 +367,8 @@ fn poll_updates_cursors_after_successful_write() {
         .join("state")
         .join("reconciler")
         .join("eva-cursor.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(cursor_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(cursor_path).unwrap()).unwrap();
     // Lex max over {"100","105","103"} is "105".
     assert_eq!(v["value"], json!("105"));
 }
@@ -497,7 +477,11 @@ fn poll_fails_when_super_step_state_is_null_sentinel() {
     let tmp = TempDir::new().unwrap();
     let repo = tmp.path();
     init_all(repo);
-    std::fs::write(repo.join("state").join("super-step.json"), "null").unwrap();
+    std::fs::write(
+        repo.join("state").join("super-step.json"),
+        "null",
+    )
+    .unwrap();
 
     let out = poll_with_sources(repo, 1, None, None, None);
     assert_failure(&out);
@@ -593,7 +577,8 @@ fn poll_filters_events_at_or_below_cursor() {
         .join("state")
         .join("reconciler")
         .join("eva-cursor.json");
-    let cv: Value = serde_json::from_str(&std::fs::read_to_string(&cursor_path).unwrap()).unwrap();
+    let cv: Value =
+        serde_json::from_str(&std::fs::read_to_string(&cursor_path).unwrap()).unwrap();
     assert_eq!(cv["value"], json!("200"));
 
     // Second poll with cycle 2 and the SAME events plus a new "201". Cursor filtering
@@ -680,7 +665,8 @@ fn poll_skip_channel_write_records_write_skipped_outcome() {
         .join("state")
         .join("reconciler")
         .join("poll-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     assert_eq!(v["entries"][0]["outcome"], json!("write-skipped"));
 }
 
@@ -743,7 +729,8 @@ fn poll_skip_channel_write_does_not_advance_cursors() {
         .join("state")
         .join("reconciler")
         .join("eva-cursor.json");
-    let cv: Value = serde_json::from_str(&std::fs::read_to_string(cursor_path).unwrap()).unwrap();
+    let cv: Value =
+        serde_json::from_str(&std::fs::read_to_string(cursor_path).unwrap()).unwrap();
     assert!(cv["value"].is_null());
 }
 
@@ -811,7 +798,8 @@ fn poll_omitting_timestamp_uses_sentinel() {
         .join("state")
         .join("reconciler")
         .join("poll-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     assert_eq!(v["entries"][0]["at"], json!("1970-01-01T00:00:00Z"));
 }
 
@@ -833,7 +821,8 @@ fn two_consecutive_cycles_accumulate_inbound_history() {
         .join("state")
         .join("channels")
         .join("inbound-channel-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     assert_eq!(v["entries"].as_array().unwrap().len(), 2);
     assert_eq!(v["entries"][0]["cycle"], json!(1));
     assert_eq!(v["entries"][1]["cycle"], json!(2));
@@ -855,7 +844,8 @@ fn two_consecutive_cycles_accumulate_poll_history() {
         .join("state")
         .join("reconciler")
         .join("poll-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     assert_eq!(v["entries"].as_array().unwrap().len(), 2);
 }
 
@@ -903,13 +893,7 @@ fn cursors_after_poll_reflect_advanced_values() {
     let audit_path = tmp.path().join("audit-src.json");
     write_source_file(&eva_path, "eva", vec![event("100")]);
     write_source_file(&audit_path, "audit", vec![event("abc")]);
-    assert_success(&poll_with_sources(
-        repo,
-        1,
-        Some(&eva_path),
-        Some(&audit_path),
-        None,
-    ));
+    assert_success(&poll_with_sources(repo, 1, Some(&eva_path), Some(&audit_path), None));
 
     let out = run_cmd_json(repo, &["cursors"]);
     assert_success(&out);
@@ -917,10 +901,7 @@ fn cursors_after_poll_reflect_advanced_values() {
     let cursors = v["cursors"].as_array().unwrap();
     let mut by_source = std::collections::HashMap::new();
     for c in cursors {
-        by_source.insert(
-            c["source"].as_str().unwrap().to_string(),
-            c["value"].clone(),
-        );
+        by_source.insert(c["source"].as_str().unwrap().to_string(), c["value"].clone());
     }
     assert_eq!(by_source["eva"], json!("100"));
     assert_eq!(by_source["audit"], json!("abc"));
@@ -1181,7 +1162,8 @@ fn poll_history_records_summary_correctly() {
         .join("state")
         .join("reconciler")
         .join("poll-history.json");
-    let v: Value = serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
+    let v: Value =
+        serde_json::from_str(&std::fs::read_to_string(history_path).unwrap()).unwrap();
     let entry = &v["entries"][0];
     assert_eq!(entry["eva"]["events_in"], json!(2));
     assert_eq!(entry["eva"]["events_new"], json!(2));

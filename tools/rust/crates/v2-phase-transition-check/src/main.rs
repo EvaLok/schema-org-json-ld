@@ -137,8 +137,7 @@ fn load_entries(
             }
         }
         let raw = fs::read_to_string(&path)?;
-        let payload: Value =
-            serde_json::from_str(&raw).map_err(|e| CheckError::Json(e, path.clone()))?;
+        let payload: Value = serde_json::from_str(&raw).map_err(|e| CheckError::Json(e, path.clone()))?;
         let payload = match payload {
             Value::Object(map) => map,
             other => {
@@ -283,11 +282,7 @@ fn check_filename_field_consistency(entries: &[Entry]) -> InvariantResult {
     let details = if entries.is_empty() {
         "no entries to check".to_string()
     } else {
-        format!(
-            "{}/{} entries consistent",
-            checked - violations.len(),
-            entries.len()
-        )
+        format!("{}/{} entries consistent", checked - violations.len(), entries.len())
     };
     InvariantResult {
         name: "filename-field-consistency",
@@ -339,12 +334,7 @@ fn check_no_gaps(entries: &[Entry]) -> InvariantResult {
             if e.filename_cycle > p + 1 {
                 let gap_size = e.filename_cycle - p - 1;
                 if gap_size == 1 {
-                    violations.push(format!(
-                        "missing cycle {} (between {} and {})",
-                        p + 1,
-                        p,
-                        e.filename_cycle
-                    ));
+                    violations.push(format!("missing cycle {} (between {} and {})", p + 1, p, e.filename_cycle));
                 } else {
                     violations.push(format!(
                         "missing cycles {}-{} ({} cycles, between {} and {})",
@@ -386,18 +376,11 @@ fn check_required_fields(entries: &[Entry]) -> InvariantResult {
     for e in entries {
         for field in REQUIRED_FIELDS {
             match e.payload.get(*field) {
-                None => violations.push(format!(
-                    "{}: missing required field '{}'",
-                    e.filename, field
-                )),
-                Some(Value::Null) => violations.push(format!(
-                    "{}: required field '{}' is null",
-                    e.filename, field
-                )),
-                Some(Value::String(s)) if s.is_empty() => violations.push(format!(
-                    "{}: required field '{}' is empty string",
-                    e.filename, field
-                )),
+                None => violations.push(format!("{}: missing required field '{}'", e.filename, field)),
+                Some(Value::Null) => violations.push(format!("{}: required field '{}' is null", e.filename, field)),
+                Some(Value::String(s)) if s.is_empty() => {
+                    violations.push(format!("{}: required field '{}' is empty string", e.filename, field))
+                }
                 _ => {}
             }
         }
@@ -432,10 +415,7 @@ fn check_rfc3339_started_at(entries: &[Entry]) -> InvariantResult {
             Some(s) if !s.is_empty() => {
                 checked += 1;
                 if !looks_like_rfc3339(s) {
-                    violations.push(format!(
-                        "{}: started_at '{}' does not match RFC3339 shape",
-                        e.filename, s
-                    ));
+                    violations.push(format!("{}: started_at '{}' does not match RFC3339 shape", e.filename, s));
                 }
             }
             _ => {
@@ -453,11 +433,7 @@ fn check_rfc3339_started_at(entries: &[Entry]) -> InvariantResult {
     let details = if checked == 0 {
         "no started_at fields to check".to_string()
     } else {
-        format!(
-            "{}/{} entries match RFC3339 shape",
-            checked - violations.len(),
-            checked
-        )
+        format!("{}/{} entries match RFC3339 shape", checked - violations.len(), checked)
     };
     InvariantResult {
         name: "rfc3339-started-at",
@@ -563,11 +539,7 @@ fn check_phase_field(entries: &[Entry]) -> InvariantResult {
     let details = if checked == 0 && violations.is_empty() {
         "no entries have 'phase' field".to_string()
     } else {
-        format!(
-            "{}/{} entries have valid phase",
-            checked - violations.len(),
-            checked
-        )
+        format!("{}/{} entries have valid phase", checked - violations.len(), checked)
     };
     InvariantResult {
         name: "phase-field",
@@ -577,11 +549,7 @@ fn check_phase_field(entries: &[Entry]) -> InvariantResult {
     }
 }
 
-fn emit_report<W: Write>(
-    report: &Report,
-    fmt: OutputFormat,
-    out: &mut W,
-) -> Result<(), CheckError> {
+fn emit_report<W: Write>(report: &Report, fmt: OutputFormat, out: &mut W) -> Result<(), CheckError> {
     match fmt {
         OutputFormat::Text => emit_text(report, out)?,
         OutputFormat::Json => emit_json(report, out)?,
@@ -623,27 +591,16 @@ fn emit_json<W: Write>(report: &Report, out: &mut W) -> std::io::Result<()> {
     for r in &report.invariants {
         let mut obj = Map::new();
         obj.insert("name".to_string(), Value::String(r.name.to_string()));
-        obj.insert(
-            "status".to_string(),
-            Value::String(r.status.as_str().to_lowercase()),
-        );
+        obj.insert("status".to_string(), Value::String(r.status.as_str().to_lowercase()));
         obj.insert("details".to_string(), Value::String(r.details.clone()));
         obj.insert(
             "violations".to_string(),
-            Value::Array(
-                r.violations
-                    .iter()
-                    .map(|v| Value::String(v.clone()))
-                    .collect(),
-            ),
+            Value::Array(r.violations.iter().map(|v| Value::String(v.clone())).collect()),
         );
         invariants_json.push(Value::Object(obj));
     }
     let mut root = Map::new();
-    root.insert(
-        "state_dir".to_string(),
-        Value::String(report.state_dir.clone()),
-    );
+    root.insert("state_dir".to_string(), Value::String(report.state_dir.clone()));
     root.insert(
         "entries_scanned".to_string(),
         Value::Number(serde_json::Number::from(report.entries_scanned as u64)),
@@ -651,14 +608,8 @@ fn emit_json<W: Write>(report: &Report, out: &mut W) -> std::io::Result<()> {
     match report.range {
         Some((lo, hi)) => {
             let mut range_obj = Map::new();
-            range_obj.insert(
-                "min".to_string(),
-                Value::Number(serde_json::Number::from(lo)),
-            );
-            range_obj.insert(
-                "max".to_string(),
-                Value::Number(serde_json::Number::from(hi)),
-            );
+            range_obj.insert("min".to_string(), Value::Number(serde_json::Number::from(lo)));
+            range_obj.insert("max".to_string(), Value::Number(serde_json::Number::from(hi)));
             root.insert("range".to_string(), Value::Object(range_obj));
         }
         None => {
@@ -679,7 +630,8 @@ fn emit_json<W: Write>(report: &Report, out: &mut W) -> std::io::Result<()> {
         );
     }
     root.insert("summary".to_string(), Value::Object(summary));
-    let s = serde_json::to_string_pretty(&Value::Object(root)).expect("serialize report");
+    let s = serde_json::to_string_pretty(&Value::Object(root))
+        .expect("serialize report");
     writeln!(out, "{}", s)?;
     Ok(())
 }
@@ -804,10 +756,7 @@ mod tests {
             &[
                 ("cycle_number", Value::Number(1.into())),
                 ("model", Value::String("claude-opus-4-7".to_string())),
-                (
-                    "started_at",
-                    Value::String("2026-05-11T20:31:00Z".to_string()),
-                ),
+                ("started_at", Value::String("2026-05-11T20:31:00Z".to_string())),
             ],
         )];
         let r = check_required_fields(&entries);
@@ -816,7 +765,10 @@ mod tests {
 
     #[test]
     fn required_fields_fails_on_missing() {
-        let entries = vec![entry(1, &[("cycle_number", Value::Number(1.into()))])];
+        let entries = vec![entry(
+            1,
+            &[("cycle_number", Value::Number(1.into()))],
+        )];
         let r = check_required_fields(&entries);
         assert_eq!(r.status, Status::Fail);
         assert_eq!(r.violations.len(), 2);
@@ -829,10 +781,7 @@ mod tests {
             &[
                 ("cycle_number", Value::Number(1.into())),
                 ("model", Value::String("".to_string())),
-                (
-                    "started_at",
-                    Value::String("2026-05-11T20:31:00Z".to_string()),
-                ),
+                ("started_at", Value::String("2026-05-11T20:31:00Z".to_string())),
             ],
         )];
         let r = check_required_fields(&entries);
@@ -899,9 +848,7 @@ mod tests {
             }],
         };
         let code = report.exit_code(false);
-        assert!(
-            matches!(code, c if format!("{:?}", c).contains("0") || format!("{:?}", c).contains("Success"))
-        );
+        assert!(matches!(code, c if format!("{:?}", c).contains("0") || format!("{:?}", c).contains("Success")));
     }
 
     #[test]

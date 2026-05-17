@@ -376,10 +376,7 @@ fn collect_refreshable_unchanged_fields(
     Ok(refreshable)
 }
 
-fn collect_verified_fields(
-    state: &Value,
-    checks: &[CheckResult],
-) -> Result<BTreeSet<&'static str>, String> {
+fn collect_verified_fields(state: &Value, checks: &[CheckResult]) -> Result<BTreeSet<&'static str>, String> {
     let mut verified = BTreeSet::new();
 
     for check in checks {
@@ -593,10 +590,7 @@ fn refresh_verified_field(state: &mut Value, field_name: &str, cycle: u32) -> Re
         return Ok(false);
     };
     if !current_entry.is_object() {
-        return Err(format!(
-            "field_inventory entry must be an object: {}",
-            field_name
-        ));
+        return Err(format!("field_inventory entry must be an object: {}", field_name));
     }
 
     let expected = format!("cycle {}", cycle);
@@ -1615,10 +1609,7 @@ mod tests {
         fs::create_dir_all(repo_root).expect("repo root should be created");
         run_git(repo_root, &["init", "-b", "master"]);
         run_git(repo_root, &["config", "user.name", "Metric Snapshot Test"]);
-        run_git(
-            repo_root,
-            &["config", "user.email", "metric-snapshot@example.com"],
-        );
+        run_git(repo_root, &["config", "user.email", "metric-snapshot@example.com"]);
     }
 
     fn commit_repo_state(repo_root: &Path, message: &str) {
@@ -2043,8 +2034,7 @@ it('direct test', () => {});
         .expect("state fixture should be written");
         fs::write(temp_dir.join("README.md"), "seed\n").expect("tracked file should be written");
         commit_repo_state(&temp_dir, "seed repo");
-        fs::write(temp_dir.join("README.md"), "dirty\n")
-            .expect("dirty tracked file should be written");
+        fs::write(temp_dir.join("README.md"), "dirty\n").expect("dirty tracked file should be written");
 
         let checks = vec![
             CheckResult {
@@ -2073,9 +2063,13 @@ it('direct test', () => {});
             },
         ];
 
-        let updated =
-            update_verified_ledger(&temp_dir, &temp_dir.join("docs/state.json"), &checks, 121)
-                .expect("ledger refresh should succeed");
+        let updated = update_verified_ledger(
+            &temp_dir,
+            &temp_dir.join("docs/state.json"),
+            &checks,
+            121,
+        )
+        .expect("ledger refresh should succeed");
         assert_eq!(3, updated);
 
         let refreshed = read_state_file(&temp_dir.join("docs/state.json"));
@@ -2147,8 +2141,7 @@ it('direct test', () => {});
         .expect("state fixture should be written");
         fs::write(temp_dir.join("README.md"), "seed\n").expect("tracked file should be written");
         commit_repo_state(&temp_dir, "seed repo");
-        fs::write(temp_dir.join("README.md"), "dirty\n")
-            .expect("dirty tracked file should be written");
+        fs::write(temp_dir.join("README.md"), "dirty\n").expect("dirty tracked file should be written");
 
         let before = fs::read_to_string(&state_path).expect("state fixture should be readable");
         let checks = vec![CheckResult {
@@ -2160,8 +2153,8 @@ it('direct test', () => {});
             note: None,
         }];
 
-        let updated = update_verified_ledger(&temp_dir, &state_path, &checks, 121)
-            .expect("noop should succeed");
+        let updated =
+            update_verified_ledger(&temp_dir, &state_path, &checks, 121).expect("noop should succeed");
         assert_eq!(0, updated);
         assert_eq!(
             before,
@@ -2235,8 +2228,8 @@ it('direct test', () => {});
         )
         .expect("state fixture should be written");
 
-        let cycle = super::resolve_fix_cycle(None, &temp_dir)
-            .expect("cycle should prefer cycle_phase.cycle");
+        let cycle =
+            super::resolve_fix_cycle(None, &temp_dir).expect("cycle should prefer cycle_phase.cycle");
         assert_eq!(181, cycle);
 
         fs::remove_dir_all(temp_dir).expect("temp dir should be removed");

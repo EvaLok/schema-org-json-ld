@@ -132,7 +132,8 @@ fn load_hash_state(path: &Path) -> io::Result<HashState> {
 }
 
 fn save_hash_state(path: &Path, state: &HashState) -> io::Result<()> {
-    let body = serde_json::to_string_pretty(state).map_err(io::Error::other)?;
+    let body = serde_json::to_string_pretty(state)
+        .map_err(io::Error::other)?;
     fs::write(path, body + "\n")
 }
 
@@ -290,7 +291,10 @@ fn run(args: &Args) -> io::Result<Report> {
                 }
             }
             Err(e) => {
-                warnings.push(format!("corpus[path={}]: walk failed: {e}", root.display()));
+                warnings.push(format!(
+                    "corpus[path={}]: walk failed: {e}",
+                    root.display()
+                ));
             }
         }
     }
@@ -311,7 +315,10 @@ fn run(args: &Args) -> io::Result<Report> {
                     current_hashes.insert(path.display().to_string(), fnv1a_64(&bytes));
                 }
                 Err(e) => {
-                    warnings.push(format!("hash[path={}]: read failed: {e}", path.display()));
+                    warnings.push(format!(
+                        "hash[path={}]: read failed: {e}",
+                        path.display()
+                    ));
                 }
             }
         }
@@ -320,14 +327,7 @@ fn run(args: &Args) -> io::Result<Report> {
     let stale = if no_stale {
         Vec::new()
     } else {
-        detect_stale(
-            &scanned,
-            stale_days,
-            now,
-            &current_hashes,
-            &hash_state,
-            state_file.is_some(),
-        )
+        detect_stale(&scanned, stale_days, now, &current_hashes, &hash_state, state_file.is_some())
     };
 
     let composition = if args.dead_links_only_on_stale_files {
@@ -433,10 +433,7 @@ fn detect_stale(
                 .unwrap_or(0);
             let path_str = path.display().to_string();
             let hash_unchanged = if state_file_in_use {
-                match (
-                    current_hashes.get(&path_str),
-                    hash_state.entries.get(&path_str),
-                ) {
+                match (current_hashes.get(&path_str), hash_state.entries.get(&path_str)) {
                     (Some(c), Some(p)) => Some(c == p),
                     _ => None,
                 }
@@ -935,14 +932,7 @@ fn find_double_close(bytes: &[u8], start: usize) -> Option<usize> {
 fn is_external_link(target: &str) -> bool {
     let lower = target.to_ascii_lowercase();
     [
-        "http://",
-        "https://",
-        "ftp://",
-        "mailto:",
-        "tel:",
-        "file://",
-        "data:",
-        "javascript:",
+        "http://", "https://", "ftp://", "mailto:", "tel:", "file://", "data:", "javascript:",
     ]
     .iter()
     .any(|p| lower.starts_with(p))
@@ -1010,7 +1000,10 @@ fn suggest_target(
     })
 }
 
-fn suggest_wiki_stem(stem: &str, stem_index: &HashMap<String, Vec<PathBuf>>) -> Option<String> {
+fn suggest_wiki_stem(
+    stem: &str,
+    stem_index: &HashMap<String, Vec<PathBuf>>,
+) -> Option<String> {
     let mut best: Option<(usize, &str)> = None;
     for known in stem_index.keys() {
         let d = levenshtein(stem, known);
@@ -1044,7 +1037,9 @@ fn levenshtein(a: &str, b: &str) -> usize {
         curr[0] = i + 1;
         for (j, bc) in b_chars.iter().enumerate() {
             let cost = if ac == bc { 0 } else { 1 };
-            curr[j + 1] = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+            curr[j + 1] = (prev[j + 1] + 1)
+                .min(curr[j] + 1)
+                .min(prev[j] + cost);
         }
         std::mem::swap(&mut prev, &mut curr);
     }
@@ -1056,8 +1051,7 @@ fn pathdiff(target: &Path, base: &Path) -> Option<PathBuf> {
     let target_parts: Vec<&std::ffi::OsStr> = target.iter().collect();
     let base_parts: Vec<&std::ffi::OsStr> = base.iter().collect();
     let mut common = 0;
-    while common < target_parts.len()
-        && common < base_parts.len()
+    while common < target_parts.len() && common < base_parts.len()
         && target_parts[common] == base_parts[common]
     {
         common += 1;
@@ -1155,7 +1149,8 @@ fn should_exclude(rel_path: &Path, patterns: &[String]) -> bool {
 
 fn write_output(args: &Args, report: &Report) -> io::Result<()> {
     let body = match args.format {
-        OutputFormat::Json => serde_json::to_string_pretty(report).map_err(io::Error::other)?,
+        OutputFormat::Json => serde_json::to_string_pretty(report)
+            .map_err(io::Error::other)?,
         OutputFormat::Text => format_text(report),
     };
     if args.output == "-" {
@@ -1521,10 +1516,7 @@ mod tests {
     #[test]
     fn suggest_target_finds_near_match() {
         let mut idx: HashMap<String, Vec<PathBuf>> = HashMap::new();
-        idx.insert(
-            "foo-bar".to_string(),
-            vec![PathBuf::from("docs/foo-bar.md")],
-        );
+        idx.insert("foo-bar".to_string(), vec![PathBuf::from("docs/foo-bar.md")]);
         let suggested = suggest_target("foo-baz.md", &idx, Path::new("docs/source.md"));
         assert!(suggested.is_some());
         assert!(suggested.unwrap().contains("foo-bar"));

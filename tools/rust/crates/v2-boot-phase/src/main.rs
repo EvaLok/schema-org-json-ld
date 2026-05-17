@@ -7,7 +7,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 const EVA_LOGIN: &str = "EvaLok";
-const PRIVILEGED_LABELS: &[&str] = &["input-from-eva", "question-for-eva", "orchestrator-run"];
+const PRIVILEGED_LABELS: &[&str] = &[
+    "input-from-eva",
+    "question-for-eva",
+    "orchestrator-run",
+];
 
 #[derive(Parser, Debug)]
 #[command(
@@ -241,7 +245,8 @@ fn run(args: &Args) -> Result<u8, BootError> {
     let (load_stage, entries) = load_cycle_history(&state_path);
     stages.push(load_stage);
 
-    let (cursor_stage, current_cycle, previous_cycle, previous_summary) = compute_cursor(&entries);
+    let (cursor_stage, current_cycle, previous_cycle, previous_summary) =
+        compute_cursor(&entries);
     stages.push(cursor_stage);
 
     let (gap_stage, gaps) = detect_gaps(&entries);
@@ -407,12 +412,7 @@ fn read_entry(path: &Path) -> Result<CycleEntry, String> {
 
 fn compute_cursor(
     entries: &[CycleEntry],
-) -> (
-    StageResult,
-    Option<u64>,
-    Option<u64>,
-    Option<PreviousCycleSummary>,
-) {
+) -> (StageResult, Option<u64>, Option<u64>, Option<PreviousCycleSummary>) {
     if entries.is_empty() {
         return (
             StageResult {
@@ -682,10 +682,10 @@ fn fetch_gh_json(
         if !path.exists() {
             return Ok(Value::Array(Vec::new()));
         }
-        let content = fs::read_to_string(&path)
-            .map_err(|e| format!("read fixture {}: {e}", path.display()))?;
-        let value: Value = serde_json::from_str(&content)
-            .map_err(|e| format!("parse fixture {}: {e}", path.display()))?;
+        let content =
+            fs::read_to_string(&path).map_err(|e| format!("read fixture {}: {e}", path.display()))?;
+        let value: Value =
+            serde_json::from_str(&content).map_err(|e| format!("parse fixture {}: {e}", path.display()))?;
         return Ok(value);
     }
 
@@ -720,7 +720,8 @@ fn fetch_gh_json(
         ));
     }
     let stdout = String::from_utf8_lossy(&output.stdout);
-    serde_json::from_str::<Value>(&stdout).map_err(|e| format!("parse gh stdout as json: {e}"))
+    serde_json::from_str::<Value>(&stdout)
+        .map_err(|e| format!("parse gh stdout as json: {e}"))
 }
 
 fn cmd_string(cmd: &Command) -> String {
@@ -1123,10 +1124,7 @@ mod tests {
         assert_eq!(cands.items[0].number, 4);
         assert_eq!(cands.items[0].category, "stale-issue");
         assert_eq!(cands.items[0].labels, vec!["agent-task".to_string()]);
-        assert_eq!(
-            cands.items[0].updated_at.as_deref(),
-            Some("2026-03-15T00:00:00Z")
-        );
+        assert_eq!(cands.items[0].updated_at.as_deref(), Some("2026-03-15T00:00:00Z"));
     }
 
     #[test]
