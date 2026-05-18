@@ -253,15 +253,13 @@ fn parse_prompt_file(path: &Path) -> Result<ParsedPrompt, ToolError> {
                 let depth_before = tag_stack.len();
 
                 match depth_before {
-                    0 => {
+                    0 if tag_name == "role-prompt" => {
                         // Root element: extract role attribute.
-                        if tag_name == "role-prompt" {
-                            for attr in e.attributes().flatten() {
-                                if attr.key.as_ref() == b"role" {
-                                    role = std::str::from_utf8(&attr.value)
-                                        .unwrap_or("")
-                                        .to_string();
-                                }
+                        for attr in e.attributes().flatten() {
+                            if attr.key.as_ref() == b"role" {
+                                role = std::str::from_utf8(&attr.value)
+                                    .unwrap_or("")
+                                    .to_string();
                             }
                         }
                     }
@@ -591,47 +589,41 @@ fn run_tier2(manifest: &Manifest, prompts: &[ParsedPrompt]) -> Vec<Tier2Finding>
         for tag in &prompt.top_level_tags {
             // Length plausibility.
             match tag.name.as_str() {
-                "one-line" => {
-                    if tag.content_line_count > 2 {
-                        findings.push(Tier2Finding {
-                            role: prompt.role.clone(),
-                            tag: tag.name.clone(),
-                            kind: Tier2Kind::LengthPlausibility,
-                            details: format!(
-                                "found {} non-blank lines; expected ≤2 for <one-line>",
-                                tag.content_line_count
-                            ),
-                            severity: "warning",
-                        });
-                    }
+                "one-line" if tag.content_line_count > 2 => {
+                    findings.push(Tier2Finding {
+                        role: prompt.role.clone(),
+                        tag: tag.name.clone(),
+                        kind: Tier2Kind::LengthPlausibility,
+                        details: format!(
+                            "found {} non-blank lines; expected ≤2 for <one-line>",
+                            tag.content_line_count
+                        ),
+                        severity: "warning",
+                    });
                 }
-                "role-identity" => {
-                    if tag.direct_child_element_count < 3 {
-                        findings.push(Tier2Finding {
-                            role: prompt.role.clone(),
-                            tag: tag.name.clone(),
-                            kind: Tier2Kind::LengthPlausibility,
-                            details: format!(
-                                "found {} sub-elements; expected ≥3 for <role-identity>",
-                                tag.direct_child_element_count
-                            ),
-                            severity: "warning",
-                        });
-                    }
+                "role-identity" if tag.direct_child_element_count < 3 => {
+                    findings.push(Tier2Finding {
+                        role: prompt.role.clone(),
+                        tag: tag.name.clone(),
+                        kind: Tier2Kind::LengthPlausibility,
+                        details: format!(
+                            "found {} sub-elements; expected ≥3 for <role-identity>",
+                            tag.direct_child_element_count
+                        ),
+                        severity: "warning",
+                    });
                 }
-                "output-contract" => {
-                    if tag.content_line_count < 10 {
-                        findings.push(Tier2Finding {
-                            role: prompt.role.clone(),
-                            tag: tag.name.clone(),
-                            kind: Tier2Kind::LengthPlausibility,
-                            details: format!(
-                                "found {} non-blank lines; expected ≥10 for <output-contract>",
-                                tag.content_line_count
-                            ),
-                            severity: "warning",
-                        });
-                    }
+                "output-contract" if tag.content_line_count < 10 => {
+                    findings.push(Tier2Finding {
+                        role: prompt.role.clone(),
+                        tag: tag.name.clone(),
+                        kind: Tier2Kind::LengthPlausibility,
+                        details: format!(
+                            "found {} non-blank lines; expected ≥10 for <output-contract>",
+                            tag.content_line_count
+                        ),
+                        severity: "warning",
+                    });
                 }
                 _ => {}
             }
