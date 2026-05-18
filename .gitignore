@@ -18,6 +18,7 @@ tools/rust/target/
 
 # orchestrator temp files
 docs/.tmp-*
+docs/**/.tmp-*
 tools/rust/.tmp-*
 .cycle*-tmp.md
 .cache/
