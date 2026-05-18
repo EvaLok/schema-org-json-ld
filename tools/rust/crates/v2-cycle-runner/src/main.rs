@@ -35,7 +35,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command as ProcessCommand, ExitCode};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -628,6 +628,17 @@ pub enum FailureClass {
     /// Halts BEFORE the super-step sequence begins — no super-step state
     /// mutation occurs.
     StateBoundExceeded,
+    /// Per-step timeout exhausted; the child process was signal-escalated
+    /// to termination by `RealInvoker`. 6th halt class per cycle 176
+    /// `v2-primitive-invoker-timeout-arc.md` §3.1. Set by the call site
+    /// when `InvocationResult::TimedOut` is observed — NOT by
+    /// `classify_failure`, since classification uses stderr keywords and
+    /// timeouts have no stderr (the child was killed before producing
+    /// completion-class output). No automatic retry; the
+    /// `invoke_with_retry_once` Transient-retry path is bypassed
+    /// (rationale: timeout exhaustion typically indicates budget misconfig
+    /// or genuine stall, not transience).
+    Timeout,
 }
 
 impl FailureClass {
@@ -638,8 +649,66 @@ impl FailureClass {
             FailureClass::ChannelWriteRejected => "channel-write-rejected",
             FailureClass::SuperStepOutOfOrder => "super-step-out-of-order",
             FailureClass::StateBoundExceeded => "state-bound-exceeded",
+            FailureClass::Timeout => "timeout",
         }
     }
+}
+
+/// Outcome of a single `PrimitiveInvoker::invoke` call. Distinguishes
+/// "process exited" (regardless of exit code; this is the historical
+/// shape) from "we killed it on timeout" (new in cycle 177 per
+/// `v2-primitive-invoker-timeout-arc.md` §2.1).
+///
+/// The non-timeout `Completed(Output)` case carries the same
+/// `std::process::Output` the trait returned before this cycle and is
+/// classified by the existing `classify_failure` exit-code + stderr
+/// path. `TimedOut` is set when `RealInvoker` exhausted the per-step
+/// budget and signal-escalated the child to termination; the call site
+/// maps it to `FailureClass::Timeout` directly without consulting
+/// `classify_failure` (the child's stderr at kill is best-effort
+/// diagnostic data, not classification input).
+#[derive(Debug)]
+pub enum InvocationResult {
+    /// Child exited (with any status) within the budget. The carried
+    /// `Output` is unchanged from the pre-cycle-177 trait return type.
+    Completed(std::process::Output),
+    /// Per-step budget exhausted; `RealInvoker` escalated SIGTERM →
+    /// 2s grace → SIGKILL to terminate the child. Caller maps to
+    /// `FailureClass::Timeout`. `partial_stdout` / `partial_stderr`
+    /// hold whatever the child had buffered at kill (best-effort —
+    /// may be empty if the child wrote nothing before the stall).
+    TimedOut {
+        elapsed: Duration,
+        partial_stdout: Vec<u8>,
+        partial_stderr: Vec<u8>,
+        escalation: SignalEscalation,
+    },
+}
+
+/// How `RealInvoker` terminated a child on timeout. See
+/// `v2-primitive-invoker-timeout-arc.md` §4.2 for the escalation
+/// policy: SIGTERM is sent first, then a 2-second internal grace
+/// window, then SIGKILL if the child has not yet exited.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SignalEscalation {
+    /// Child exited cleanly within the 2-second SIGTERM grace window.
+    SigtermClean,
+    /// Child did not exit within the grace; SIGKILL was applied and
+    /// the kernel reaped the process.
+    SigkillForced,
+}
+
+/// Diagnostic block attached to `StepTrace` when (and only when) a step
+/// was halted by per-step timeout. Distinguishes the budget from the
+/// observed elapsed (operators can see how far past budget the kill
+/// happened — typically `elapsed_ms` ≈ `budget_ms + small_overhead`,
+/// but signal-escalation adds up to ~2s when SIGKILL is required).
+#[derive(Debug, Clone, Serialize)]
+pub struct TimeoutDiagnostic {
+    pub budget_ms: u64,
+    pub elapsed_ms: u64,
+    pub escalation: SignalEscalation,
 }
 
 fn classify_failure(_exit_code: i32, stderr: &str) -> FailureClass {
@@ -677,6 +746,15 @@ enum StateAuditSeverity {
     Hard,
     SerializationFailure,
     Unknown,
+    /// Per-step timeout exhausted while invoking `v2-state-audit`. NOT a
+    /// reflection of an audit exit code (the child was killed before any
+    /// exit happened); set by `invoke_state_audit_on_start` when the
+    /// `STATE_AUDIT_TIMEOUT` budget is exceeded. Halts the cycle —
+    /// failing-closed on a stalled audit, since proceeding without the
+    /// audit signal could mask state-surface issues that would otherwise
+    /// halt this cycle cleanly. Cycle 177 timeout-arc extension per
+    /// `v2-primitive-invoker-timeout-arc.md` §3.1.
+    Timeout,
 }
 
 impl StateAuditSeverity {
@@ -699,18 +777,32 @@ impl StateAuditSeverity {
             Self::Hard => "hard",
             Self::SerializationFailure => "serialization-failure",
             Self::Unknown => "unknown",
+            Self::Timeout => "timeout",
         }
     }
 
     /// True iff the audit result mandates halting the cycle before the
-    /// super-step sequence begins. Only `Hard` halts (cycle 158 policy §7
-    /// `state-bound-as-halt-reason` is hard-threshold-specific).
+    /// super-step sequence begins. `Hard` halts (cycle 158 policy §7
+    /// `state-bound-as-halt-reason` is hard-threshold-specific) and
+    /// `Timeout` halts (failing-closed on stalled audit per cycle 177).
     /// `SerializationFailure` and `Unknown` are reported but do not halt —
     /// failing-open on tool-internal anomalies preserves the cycle's
     /// ability to make progress and surfaces the issue in the cycle report
     /// rather than silently halting.
     fn requires_halt(self) -> bool {
-        matches!(self, Self::Hard)
+        matches!(self, Self::Hard | Self::Timeout)
+    }
+
+    /// `FailureClass` to attribute when this severity halts the cycle.
+    /// `Hard` → `StateBoundExceeded` (the original cycle 162 mapping).
+    /// `Timeout` → `Timeout` (the cycle 177 extension).
+    /// Other severities never halt; this returns `None`.
+    fn halt_failure_class(self) -> Option<FailureClass> {
+        match self {
+            Self::Hard => Some(FailureClass::StateBoundExceeded),
+            Self::Timeout => Some(FailureClass::Timeout),
+            _ => None,
+        }
     }
 }
 
@@ -752,29 +844,265 @@ fn invoke_state_audit_on_start<I: PrimitiveInvoker>(
         args.repo_root.to_string_lossy().into_owned(),
         "--json".to_string(),
     ];
-    let output = invoker.invoke(bin, &invocation_args)?;
-    let exit_code = output.status.code().unwrap_or(-1);
-    let severity = StateAuditSeverity::from_exit_code(exit_code);
-    Ok(StateAuditOutcome {
-        bin_path: bin.to_path_buf(),
-        args: invocation_args,
-        exit_code,
-        severity,
-        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-        executed: true,
-    })
+    let result = invoker.invoke(bin, &invocation_args, STATE_AUDIT_TIMEOUT)?;
+    match result {
+        InvocationResult::Completed(output) => {
+            let exit_code = output.status.code().unwrap_or(-1);
+            let severity = StateAuditSeverity::from_exit_code(exit_code);
+            Ok(StateAuditOutcome {
+                bin_path: bin.to_path_buf(),
+                args: invocation_args,
+                exit_code,
+                severity,
+                stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+                executed: true,
+            })
+        }
+        InvocationResult::TimedOut {
+            elapsed,
+            partial_stdout,
+            partial_stderr,
+            escalation,
+        } => {
+            // Synthetic outcome carrying timeout diagnostics through to
+            // the cycle report. `exit_code = -1` is the established
+            // sentinel from `from_exit_code(-1) -> Unknown`, but we set
+            // severity to `Timeout` explicitly. The stderr names the
+            // budget, elapsed, and escalation so post-hoc inspection
+            // sees the picture even without the structured timeout
+            // diagnostic block (state-audit doesn't have a StepTrace).
+            Ok(StateAuditOutcome {
+                bin_path: bin.to_path_buf(),
+                args: invocation_args,
+                exit_code: -1,
+                severity: StateAuditSeverity::Timeout,
+                stdout: String::from_utf8_lossy(&partial_stdout).into_owned(),
+                stderr: format!(
+                    "v2-state-audit exceeded {}ms budget; elapsed={}ms; escalation={}; partial_stderr={}",
+                    STATE_AUDIT_TIMEOUT.as_millis(),
+                    elapsed.as_millis(),
+                    match escalation {
+                        SignalEscalation::SigtermClean => "sigterm-clean",
+                        SignalEscalation::SigkillForced => "sigkill-forced",
+                    },
+                    String::from_utf8_lossy(&partial_stderr),
+                ),
+                executed: true,
+            })
+        }
+    }
 }
 
 trait PrimitiveInvoker {
-    fn invoke(&self, bin: &Path, args: &[String]) -> io::Result<std::process::Output>;
+    /// Invoke `bin` with `args`, killing the child if it exceeds
+    /// `timeout`. Returns `InvocationResult` distinguishing clean
+    /// completion (regardless of exit code) from timeout-induced
+    /// signal-escalation. `io::Result` wraps OS-level failures before
+    /// the child is reaped (bin missing, fork failure, etc.); these
+    /// are NOT timeouts. See `v2-primitive-invoker-timeout-arc.md` §2.1.
+    fn invoke(
+        &self,
+        bin: &Path,
+        args: &[String],
+        timeout: Duration,
+    ) -> io::Result<InvocationResult>;
 }
 
-struct RealInvoker;
-impl PrimitiveInvoker for RealInvoker {
-    fn invoke(&self, bin: &Path, args: &[String]) -> io::Result<std::process::Output> {
-        ProcessCommand::new(bin).args(args).output()
+/// Internal grace window between SIGTERM and SIGKILL. Cycle 177 picks
+/// 2 seconds per design scope §4.2: child primitives in this repo are
+/// short-lived I/O loops with no cleanup-on-SIGTERM logic, so 2s is
+/// more than enough for graceful exit. The grace is internal to
+/// `RealInvoker`; it does not change the budget visible to the caller
+/// (the budget IS `timeout`; the grace is an internal escalation step).
+const SIGTERM_GRACE: Duration = Duration::from_secs(2);
+
+/// Default per-step timeouts per `v2-primitive-invoker-timeout-arc.md`
+/// §3.3. Only the primitives invoked by THIS crate (v2-cycle-runner)
+/// are mapped here; the §3.3 table covers a broader set used by other
+/// callers (write-entry, v2-channel-router, etc.) which is out of scope
+/// for the cycle-runner's per-step budgeting. Tuning is post-observation
+/// (cycle 177+); cycle 1 of implementation ships these as constants.
+fn default_step_timeout(kind: StepKind) -> Duration {
+    match kind {
+        StepKind::SuperStepCycleStart
+        | StepKind::SuperStepAdvance
+        | StepKind::SuperStepCycleEnd => Duration::from_secs(30),
+        StepKind::ReconcilerPoll => Duration::from_secs(60),
+        // The role-driver wraps a Claude session via the `cycle-runner`
+        // harness, whose own wall clock caps at ~75 minutes (4500s).
+        // The per-step budget here matches that ceiling.
+        StepKind::RoleInvoke(_) => Duration::from_secs(4500),
     }
+}
+
+/// Pre-flight `v2-state-audit` default timeout. Walks repo state; scales
+/// with state size; 60s comfortable through cycle ~500 per
+/// `v2-primitive-invoker-timeout-arc.md` §3.3.
+const STATE_AUDIT_TIMEOUT: Duration = Duration::from_secs(60);
+
+struct RealInvoker;
+
+impl PrimitiveInvoker for RealInvoker {
+    /// Unix-only timeout-aware spawn per `v2-primitive-invoker-timeout-arc.md`
+    /// §4. Pattern A (thread + mpsc): spawn child piped, hand the wait to a
+    /// dedicated thread, recv-with-timeout from the main thread; on timeout
+    /// send SIGTERM, wait up to `SIGTERM_GRACE`, then escalate to SIGKILL.
+    fn invoke(
+        &self,
+        bin: &Path,
+        args: &[String],
+        timeout: Duration,
+    ) -> io::Result<InvocationResult> {
+        use std::process::Stdio;
+        use std::sync::mpsc;
+        use std::thread;
+
+        let started = Instant::now();
+        let mut child = ProcessCommand::new(bin)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let pid = child.id();
+        // Take the stdout/stderr handles so `wait_with_output` can drain
+        // them in the wait-thread. On timeout we read whatever's been
+        // written so far for partial-output diagnostics.
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+
+        let (tx, rx) = mpsc::channel();
+        let wait_thread = thread::spawn(move || {
+            // Reattach the piped streams and let `wait_with_output` drain
+            // them. The thread holds the only handle to `child`; sending
+            // the result over the channel transfers ownership of the
+            // Output (Completed path) or signals exit-after-kill (Timeout
+            // path uses partial output gathered post-signal).
+            let result = WaitChild { child, stdout, stderr }.wait_with_output();
+            // Receiver may be gone (timeout path raced ahead); ignore send error.
+            let _ = tx.send(result);
+        });
+
+        match rx.recv_timeout(timeout) {
+            Ok(io_result) => {
+                // Reap the thread (already terminating).
+                let _ = wait_thread.join();
+                let output = io_result?;
+                Ok(InvocationResult::Completed(output))
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                // Budget exhausted. Send SIGTERM, wait grace, then SIGKILL.
+                let escalation = signal_escalate(pid, &rx);
+                // Drain the channel one more time to collect partial output.
+                // The wait-thread should have terminated by now (kernel
+                // reaped the child); recv() blocks until it does.
+                let final_io = rx.recv().ok().and_then(|r| r.ok());
+                let _ = wait_thread.join();
+                let elapsed = started.elapsed();
+                let (partial_stdout, partial_stderr) = match final_io {
+                    Some(out) => (out.stdout, out.stderr),
+                    None => (Vec::new(), Vec::new()),
+                };
+                Ok(InvocationResult::TimedOut {
+                    elapsed,
+                    partial_stdout,
+                    partial_stderr,
+                    escalation,
+                })
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                // wait-thread panicked or the child reaped before the
+                // first recv could complete. Treat as IO error.
+                let _ = wait_thread.join();
+                Err(io::Error::other(
+                    "v2-cycle-runner: wait-thread channel disconnected before child exit",
+                ))
+            }
+        }
+    }
+}
+
+/// Bundle the `Child` with its piped stdout/stderr so the wait-thread
+/// can drain them via `wait_with_output()`. Wrapped because
+/// `Child::wait_with_output` takes ownership AND requires the streams
+/// be attached; we have to take them off `Child` before sending the
+/// pieces across threads, then call a hand-rolled drain on this end.
+struct WaitChild {
+    child: std::process::Child,
+    stdout: Option<std::process::ChildStdout>,
+    stderr: Option<std::process::ChildStderr>,
+}
+
+impl WaitChild {
+    fn wait_with_output(mut self) -> io::Result<std::process::Output> {
+        use std::io::Read;
+        // Drain stdout/stderr in parallel threads to avoid the deadlock
+        // where the child blocks on writing to a full pipe while we
+        // block on wait().
+        let stdout_thread = self.stdout.take().map(|mut s| {
+            std::thread::spawn(move || {
+                let mut buf = Vec::new();
+                let _ = s.read_to_end(&mut buf);
+                buf
+            })
+        });
+        let stderr_thread = self.stderr.take().map(|mut s| {
+            std::thread::spawn(move || {
+                let mut buf = Vec::new();
+                let _ = s.read_to_end(&mut buf);
+                buf
+            })
+        });
+        let status = self.child.wait()?;
+        let stdout = stdout_thread
+            .and_then(|t| t.join().ok())
+            .unwrap_or_default();
+        let stderr = stderr_thread
+            .and_then(|t| t.join().ok())
+            .unwrap_or_default();
+        Ok(std::process::Output { status, stdout, stderr })
+    }
+}
+
+/// Send SIGTERM to `pid`, wait up to `SIGTERM_GRACE` for the child to
+/// exit (signaled via `rx`), then SIGKILL if still alive. Unix-only.
+/// Returns the escalation level reached.
+#[cfg(unix)]
+fn signal_escalate(
+    pid: u32,
+    rx: &std::sync::mpsc::Receiver<io::Result<std::process::Output>>,
+) -> SignalEscalation {
+    // Safety: `libc::kill` is a thin FFI wrapper; passing a valid pid
+    // and a defined signal constant. EPERM/ESRCH on a reaped child is
+    // harmless (the wait-thread will report exit via `rx` regardless).
+    unsafe {
+        libc::kill(pid as libc::pid_t, libc::SIGTERM);
+    }
+    match rx.recv_timeout(SIGTERM_GRACE) {
+        Ok(_) => SignalEscalation::SigtermClean,
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+            unsafe {
+                libc::kill(pid as libc::pid_t, libc::SIGKILL);
+            }
+            SignalEscalation::SigkillForced
+        }
+        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+            // wait-thread already terminated (rare race); treat as clean.
+            SignalEscalation::SigtermClean
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn signal_escalate(
+    _pid: u32,
+    _rx: &std::sync::mpsc::Receiver<io::Result<std::process::Output>>,
+) -> SignalEscalation {
+    // Non-Unix platforms are out of scope for cycle 1 of implementation
+    // per `v2-primitive-invoker-timeout-arc.md` §4.4. The cycle-runner
+    // is deployed only on Linux GitHub Actions runners.
+    SignalEscalation::SigkillForced
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -796,6 +1124,21 @@ struct StepTrace {
     /// (super-step-init/settle). Per cycle 152 v2-cycle-runner critique
     /// C2 (L1.2) absorbed cycle 159.
     phase: Phase,
+    /// Wall-clock elapsed for the primitive invocation, in milliseconds.
+    /// `None` for dry-run-only traces (no invocation). Always `Some` for
+    /// `executed: true` traces, including timeout halts. Operators use
+    /// trend data on per-step elapsed to predict timeouts before they
+    /// halt cycles. Cycle 177 timeout-arc extension per
+    /// `v2-primitive-invoker-timeout-arc.md` §3.2.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    elapsed_ms: Option<u64>,
+    /// Per-step timeout diagnostic block. `None` unless this step was
+    /// halted by per-step budget exhaustion (i.e. only when
+    /// `halt_class == Some(FailureClass::Timeout)`). Distinct from
+    /// `elapsed_ms` which is unconditional. Cycle 177 timeout-arc
+    /// extension.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timeout: Option<TimeoutDiagnostic>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -888,7 +1231,7 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
 
     for step in sequence.iter() {
         let (bin_path, primitive_name, step_args) = build_step_invocation(args, run_args, step, &timestamp);
-        let trace = StepTrace {
+        let mut trace = StepTrace {
             index: step.index,
             name: step.name,
             primitive: primitive_name,
@@ -901,6 +1244,8 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
             // ran the primitive, whether it succeeded or failed).
             executed: !run_args.dry_run,
             phase: phase_for(step.kind),
+            elapsed_ms: None,
+            timeout: None,
         };
 
         if run_args.dry_run {
@@ -917,24 +1262,80 @@ fn run_cycle<W: Write, I: PrimitiveInvoker>(
         }
 
         // Execute step (live mode).
-        let outcome = invoke_with_retry_once(invoker, &bin_path, &step_args, primitive_name)?;
-        if !outcome.status.success() {
-            let stderr = String::from_utf8_lossy(&outcome.stderr).into_owned();
-            let class = classify_failure(outcome.status.code().unwrap_or(-1), &stderr);
-            traces.push(trace);
-            steps_attempted += 1;
-            return halt_cycle(
-                args,
-                run_args,
-                &started_at,
-                step.name,
-                class,
-                stderr,
-                &traces,
-                steps_attempted,
-                state_audit.clone(),
-                out,
-            );
+        let budget = default_step_timeout(step.kind);
+        let budget_ms = budget.as_millis() as u64;
+        let started = Instant::now();
+        let outcome = invoke_with_retry_once(invoker, &bin_path, &step_args, primitive_name, budget)?;
+        let elapsed = started.elapsed();
+        trace.elapsed_ms = Some(elapsed.as_millis() as u64);
+        match outcome {
+            InvocationResult::TimedOut {
+                elapsed: invocation_elapsed,
+                partial_stdout,
+                partial_stderr,
+                escalation,
+            } => {
+                trace.timeout = Some(TimeoutDiagnostic {
+                    budget_ms,
+                    elapsed_ms: invocation_elapsed.as_millis() as u64,
+                    escalation,
+                });
+                // Synthetic stderr documents the timeout in the halt
+                // record. Partial output from the killed child is
+                // included for diagnostic value (operators see what the
+                // primitive said before it stalled). Classification path
+                // is bypassed: `classify_failure` uses stderr keywords
+                // that timeouts have no reason to produce.
+                let stderr = format!(
+                    "v2-cycle-runner: step '{}' ({}) exceeded {}ms budget; \
+                     elapsed={}ms; escalation={}; \
+                     partial_stdout={:?}; partial_stderr={:?}",
+                    step.name,
+                    primitive_name,
+                    budget_ms,
+                    invocation_elapsed.as_millis(),
+                    match escalation {
+                        SignalEscalation::SigtermClean => "sigterm-clean",
+                        SignalEscalation::SigkillForced => "sigkill-forced",
+                    },
+                    String::from_utf8_lossy(&partial_stdout),
+                    String::from_utf8_lossy(&partial_stderr),
+                );
+                traces.push(trace);
+                steps_attempted += 1;
+                return halt_cycle(
+                    args,
+                    run_args,
+                    &started_at,
+                    step.name,
+                    FailureClass::Timeout,
+                    stderr,
+                    &traces,
+                    steps_attempted,
+                    state_audit.clone(),
+                    out,
+                );
+            }
+            InvocationResult::Completed(output) => {
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+                    let class = classify_failure(output.status.code().unwrap_or(-1), &stderr);
+                    traces.push(trace);
+                    steps_attempted += 1;
+                    return halt_cycle(
+                        args,
+                        run_args,
+                        &started_at,
+                        step.name,
+                        class,
+                        stderr,
+                        &traces,
+                        steps_attempted,
+                        state_audit.clone(),
+                        out,
+                    );
+                }
+            }
         }
 
         traces.push(trace);
@@ -1079,19 +1480,28 @@ fn invoke_with_retry_once<I: PrimitiveInvoker>(
     bin: &Path,
     args: &[String],
     name: &'static str,
-) -> Result<std::process::Output, RunnerError> {
+    timeout: Duration,
+) -> Result<InvocationResult, RunnerError> {
     if !bin.exists() {
         return Err(RunnerError::PrimitiveMissing { name, path: bin.to_path_buf() });
     }
-    let first = invoker.invoke(bin, args)?;
-    if first.status.success() {
+    let first = invoker.invoke(bin, args, timeout)?;
+    let first_output = match &first {
+        InvocationResult::Completed(o) => o,
+        // Timeout is its own halt class — NO automatic retry per
+        // `v2-primitive-invoker-timeout-arc.md` §2.3. Retry-on-timeout
+        // is deferred until observation surfaces a class of primitives
+        // whose timeout-then-success pattern is common.
+        InvocationResult::TimedOut { .. } => return Ok(first),
+    };
+    if first_output.status.success() {
         return Ok(first);
     }
-    let stderr = String::from_utf8_lossy(&first.stderr).into_owned();
-    let class = classify_failure(first.status.code().unwrap_or(-1), &stderr);
+    let stderr = String::from_utf8_lossy(&first_output.stderr).into_owned();
+    let class = classify_failure(first_output.status.code().unwrap_or(-1), &stderr);
     if class == FailureClass::Transient {
         // retry once
-        let second = invoker.invoke(bin, args)?;
+        let second = invoker.invoke(bin, args, timeout)?;
         return Ok(second);
     }
     Ok(first)
@@ -1141,11 +1551,13 @@ fn halt_cycle<W: Write>(
 
 /// Halt routine specific to the cycle 162 session-start state-audit
 /// pre-flight check. Routes through the standard `CycleHalted` error
-/// path with `step="state-audit-on-start"` and
-/// `class=FailureClass::StateBoundExceeded`. The synthetic stderr names
-/// the audit severity and exit code; the audit's full stdout (JSON
-/// report) is preserved on the cycle report's `state_audit` field for
-/// post-hoc inspection.
+/// path with `step="state-audit-on-start"`. The `FailureClass` is
+/// derived from the audit severity: `Hard` → `StateBoundExceeded`
+/// (original cycle 162 mapping), `Timeout` → `Timeout` (cycle 177
+/// extension). Caller is responsible for only invoking this on
+/// `severity.requires_halt()` outcomes; other severities never reach
+/// this routine. The audit's full stdout (JSON report) is preserved on
+/// the cycle report's `state_audit` field for post-hoc inspection.
 fn halt_cycle_at_state_audit<W: Write>(
     args: &Args,
     run_args: &RunArgs,
@@ -1153,21 +1565,44 @@ fn halt_cycle_at_state_audit<W: Write>(
     outcome: StateAuditOutcome,
     out: &mut W,
 ) -> Result<(), RunnerError> {
-    let stderr = format!(
-        "v2-state-audit returned severity={} (exit_code={}); \
-         hard-threshold breach requires operator review before next cycle. \
-         Re-run `v2-state-audit --json` for per-axis breakdown; \
-         see docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md \
-         for the three-layer-ownership framing and archival options.",
-        outcome.severity.as_kebab(),
-        outcome.exit_code,
-    );
+    // Caller-side invariant: `requires_halt() == true` always yields
+    // `Some` from `halt_failure_class()`. Defensive fallback retains
+    // the cycle-162 mapping rather than panicking.
+    let class = outcome
+        .severity
+        .halt_failure_class()
+        .unwrap_or(FailureClass::StateBoundExceeded);
+    let stderr = match class {
+        FailureClass::StateBoundExceeded => format!(
+            "v2-state-audit returned severity={} (exit_code={}); \
+             hard-threshold breach requires operator review before next cycle. \
+             Re-run `v2-state-audit --json` for per-axis breakdown; \
+             see docs/redesign/_notes/v2-state-dispatch-policy-enforcement.md \
+             for the three-layer-ownership framing and archival options.",
+            outcome.severity.as_kebab(),
+            outcome.exit_code,
+        ),
+        FailureClass::Timeout => format!(
+            "v2-state-audit exceeded its per-step budget; severity={} (exit_code={}); \
+             see `state_audit.stderr` on the cycle report for budget / elapsed / escalation \
+             diagnostics. A stalled audit halts the cycle (failing-closed) per cycle 177 \
+             `v2-primitive-invoker-timeout-arc.md` §3.1 — proceeding past a stalled audit \
+             could mask state-surface issues that would otherwise halt this cycle cleanly.",
+            outcome.severity.as_kebab(),
+            outcome.exit_code,
+        ),
+        _ => format!(
+            "v2-state-audit halt: severity={} (exit_code={})",
+            outcome.severity.as_kebab(),
+            outcome.exit_code,
+        ),
+    };
     halt_cycle(
         args,
         run_args,
         started_at,
         "state-audit-on-start",
-        FailureClass::StateBoundExceeded,
+        class,
         stderr,
         &[],
         0,
@@ -1875,21 +2310,61 @@ mod tests {
         }
     }
 
+    /// Test-only canned outcome: the test queues one per expected
+    /// invocation; the mock pops front-to-back. `Completed(Output)`
+    /// matches the pre-cycle-177 `queue(Output)` API (renamed to
+    /// `queue_ok` for clarity post-extension). `Timeout` simulates the
+    /// timeout path without needing a real subprocess.
+    #[allow(dead_code)]
+    enum CannedOutcome {
+        Completed(Output),
+        Timeout {
+            elapsed_ms: u64,
+            escalation: SignalEscalation,
+            partial_stdout: Vec<u8>,
+            partial_stderr: Vec<u8>,
+        },
+    }
+
     #[derive(Default)]
     struct MockInvoker {
-        calls: RefCell<Vec<(PathBuf, Vec<String>)>>,
-        canned: RefCell<Vec<Output>>, // popped front-to-back
+        calls: RefCell<Vec<(PathBuf, Vec<String>, Duration)>>,
+        canned: RefCell<Vec<CannedOutcome>>, // popped front-to-back
     }
 
     impl MockInvoker {
         fn new() -> Self {
             Self::default()
         }
-        fn queue(&self, o: Output) {
-            self.canned.borrow_mut().push(o);
+        /// Queue an `Output` (clean process exit, any status). Replaces
+        /// the cycle 150 `queue(Output)` API per cycle 177 mechanical
+        /// rename — same semantics, clearer name now that `queue_timeout`
+        /// exists alongside.
+        fn queue_ok(&self, o: Output) {
+            self.canned.borrow_mut().push(CannedOutcome::Completed(o));
+        }
+        /// Queue a timeout simulation: the mock will return
+        /// `InvocationResult::TimedOut` with these fields on the next
+        /// `invoke` call. Cycle 177 extension per design scope §5.
+        #[allow(dead_code)]
+        fn queue_timeout(&self, elapsed_ms: u64, escalation: SignalEscalation) {
+            self.canned.borrow_mut().push(CannedOutcome::Timeout {
+                elapsed_ms,
+                escalation,
+                partial_stdout: Vec::new(),
+                partial_stderr: Vec::new(),
+            });
         }
         fn calls(&self) -> Vec<(PathBuf, Vec<String>)> {
-            self.calls.borrow().clone()
+            self.calls
+                .borrow()
+                .iter()
+                .map(|(p, a, _)| (p.clone(), a.clone()))
+                .collect()
+        }
+        #[allow(dead_code)]
+        fn invocation_timeouts(&self) -> Vec<Duration> {
+            self.calls.borrow().iter().map(|(_, _, t)| *t).collect()
         }
         fn invoke_count(&self) -> usize {
             self.calls.borrow().len()
@@ -1897,13 +2372,34 @@ mod tests {
     }
 
     impl PrimitiveInvoker for MockInvoker {
-        fn invoke(&self, bin: &Path, args: &[String]) -> io::Result<Output> {
-            self.calls.borrow_mut().push((bin.to_path_buf(), args.to_vec()));
+        fn invoke(
+            &self,
+            bin: &Path,
+            args: &[String],
+            timeout: Duration,
+        ) -> io::Result<InvocationResult> {
+            self.calls
+                .borrow_mut()
+                .push((bin.to_path_buf(), args.to_vec(), timeout));
             let mut canned = self.canned.borrow_mut();
             if canned.is_empty() {
-                Ok(ok_output())
+                Ok(InvocationResult::Completed(ok_output()))
             } else {
-                Ok(canned.remove(0))
+                let popped = canned.remove(0);
+                Ok(match popped {
+                    CannedOutcome::Completed(o) => InvocationResult::Completed(o),
+                    CannedOutcome::Timeout {
+                        elapsed_ms,
+                        escalation,
+                        partial_stdout,
+                        partial_stderr,
+                    } => InvocationResult::TimedOut {
+                        elapsed: Duration::from_millis(elapsed_ms),
+                        partial_stdout,
+                        partial_stderr,
+                        escalation,
+                    },
+                })
             }
         }
     }
@@ -2175,11 +2671,11 @@ mod tests {
         let mock = MockInvoker::new();
         // Invocation 0 = state-audit (ok); then step 1 ok, step 2 ok, step 3
         // (role-driver invoke reconciler) FAIL with role-session-empty stderr.
-        mock.queue(ok_output()); // state-audit
-        mock.queue(ok_output()); // step 1
-        mock.queue(ok_output()); // step 2
-        mock.queue(fail_output(1, "role session returned empty output")); // step 3 first
-        mock.queue(fail_output(1, "role session returned empty output")); // step 3 retry-once would be classified non-transient → no retry, but queue extra in case
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_ok(ok_output()); // step 1
+        mock.queue_ok(ok_output()); // step 2
+        mock.queue_ok(fail_output(1, "role session returned empty output")); // step 3 first
+        mock.queue_ok(fail_output(1, "role session returned empty output")); // step 3 retry-once would be classified non-transient → no retry, but queue extra in case
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
         match r {
@@ -2205,8 +2701,8 @@ mod tests {
         let mock = MockInvoker::new();
         // Invocation 0 = state-audit (ok); then step 1 fails with
         // super-step-out-of-order.
-        mock.queue(ok_output()); // state-audit
-        mock.queue(fail_output(1, "super-step out of order: not at expected position"));
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_ok(fail_output(1, "super-step out of order: not at expected position"));
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
         match r {
@@ -2229,9 +2725,9 @@ mod tests {
         let mock = MockInvoker::new();
         // Invocation 0 = state-audit (ok). Then step 1: transient fail, retry succeeds.
         // Steps 2-10 succeed by default. Total invocations: 1 audit + 1 fail + 1 retry + 9 = 12.
-        mock.queue(ok_output()); // state-audit
-        mock.queue(fail_output(1, "connection reset"));
-        mock.queue(ok_output()); // retry
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_ok(fail_output(1, "connection reset"));
+        mock.queue_ok(ok_output()); // retry
         // steps 2-10 default-ok.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
@@ -2332,10 +2828,10 @@ mod tests {
         let mock = MockInvoker::new();
         // Invocation 0 = state-audit (ok). Then step 1 ok, step 2 ok, step 3
         // (reconciler-session) fails with role-session-empty.
-        mock.queue(ok_output()); // state-audit
-        mock.queue(ok_output());
-        mock.queue(ok_output());
-        mock.queue(fail_output(1, "role session returned empty output"));
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_ok(ok_output());
+        mock.queue_ok(ok_output());
+        mock.queue_ok(fail_output(1, "role session returned empty output"));
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
         assert!(matches!(r, Err(RunnerError::CycleHalted { .. })));
@@ -2573,7 +3069,7 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 100);
         let mock = MockInvoker::new();
-        mock.queue(fail_output(3, "")); // state-audit Hard
+        mock.queue_ok(fail_output(3, "")); // state-audit Hard
         let mut out = Vec::new();
         let r = run_cycle(&args, &ra, &mut out, &mock);
         match r {
@@ -2604,7 +3100,7 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 101);
         let mock = MockInvoker::new();
-        mock.queue(fail_output(1, "")); // state-audit Advisory
+        mock.queue_ok(fail_output(1, "")); // state-audit Advisory
         // 10 super-step invocations default-ok.
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
@@ -2619,7 +3115,7 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 102);
         let mock = MockInvoker::new();
-        mock.queue(fail_output(2, "")); // state-audit Mandatory
+        mock.queue_ok(fail_output(2, "")); // state-audit Mandatory
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 11);
@@ -2633,7 +3129,7 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 103);
         let mock = MockInvoker::new();
-        mock.queue(fail_output(4, "internal: serialize failed"));
+        mock.queue_ok(fail_output(4, "internal: serialize failed"));
         let mut out = Vec::new();
         run_cycle(&args, &ra, &mut out, &mock).unwrap();
         assert_eq!(mock.invoke_count(), 11);
@@ -2668,7 +3164,7 @@ mod tests {
         let args = synthetic_args(tmp.path());
         let ra = run_args_with_outputs(tmp.path(), 105);
         let mock = MockInvoker::new();
-        mock.queue(fail_output(3, ""));
+        mock.queue_ok(fail_output(3, ""));
         let mut out = Vec::new();
         let _ = run_cycle(&args, &ra, &mut out, &mock);
         let report: serde_json::Value =
@@ -3136,5 +3632,356 @@ mod tests {
         let a7 = arr.iter().find(|a| a["name"] == "state-audit-not-hard").unwrap();
         assert_eq!(a7["passed"], false);
         assert!(a7["details"].as_str().unwrap().contains("hard"));
+    }
+
+    // ===================================================================
+    // Cycle 177: PrimitiveInvoker timeout / cancellation arc tests
+    // Per `docs/redesign/_notes/v2-primitive-invoker-timeout-arc.md` §6.2
+    // and §8 acceptance criteria.
+    // ===================================================================
+
+    #[test]
+    fn failure_class_timeout_kebab_serialization() {
+        assert_eq!(FailureClass::Timeout.as_kebab(), "timeout");
+        // Also confirm round-trip through serde (the cycle report
+        // serializes halt_class via kebab-rename).
+        let json = serde_json::to_string(&FailureClass::Timeout).unwrap();
+        assert_eq!(json, "\"timeout\"");
+    }
+
+    #[test]
+    fn signal_escalation_kebab_serialization() {
+        let clean = serde_json::to_string(&SignalEscalation::SigtermClean).unwrap();
+        let forced = serde_json::to_string(&SignalEscalation::SigkillForced).unwrap();
+        assert_eq!(clean, "\"sigterm-clean\"");
+        assert_eq!(forced, "\"sigkill-forced\"");
+    }
+
+    #[test]
+    fn default_step_timeout_returns_designed_values_per_step_kind() {
+        // Per `v2-primitive-invoker-timeout-arc.md` §3.3 (the subset of
+        // the table this crate exercises).
+        assert_eq!(
+            default_step_timeout(StepKind::SuperStepCycleStart),
+            Duration::from_secs(30),
+        );
+        assert_eq!(
+            default_step_timeout(StepKind::SuperStepAdvance),
+            Duration::from_secs(30),
+        );
+        assert_eq!(
+            default_step_timeout(StepKind::SuperStepCycleEnd),
+            Duration::from_secs(30),
+        );
+        assert_eq!(
+            default_step_timeout(StepKind::ReconcilerPoll),
+            Duration::from_secs(60),
+        );
+        for role in [Role::Reconciler, Role::Planner, Role::Executor, Role::Curator] {
+            assert_eq!(
+                default_step_timeout(StepKind::RoleInvoke(role)),
+                Duration::from_secs(4500),
+                "role={role:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn state_audit_timeout_constant_is_60_seconds() {
+        assert_eq!(STATE_AUDIT_TIMEOUT, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn state_audit_severity_timeout_kebab_and_halt() {
+        assert_eq!(StateAuditSeverity::Timeout.as_kebab(), "timeout");
+        assert!(StateAuditSeverity::Timeout.requires_halt());
+        assert_eq!(
+            StateAuditSeverity::Timeout.halt_failure_class(),
+            Some(FailureClass::Timeout),
+        );
+        // Hard mapping preserved (cycle 162 invariant).
+        assert_eq!(
+            StateAuditSeverity::Hard.halt_failure_class(),
+            Some(FailureClass::StateBoundExceeded),
+        );
+        // Non-halting severities yield None.
+        assert_eq!(StateAuditSeverity::Ok.halt_failure_class(), None);
+        assert_eq!(StateAuditSeverity::Advisory.halt_failure_class(), None);
+    }
+
+    #[test]
+    fn mock_invoker_queue_timeout_produces_timed_out_result() {
+        let mock = MockInvoker::new();
+        mock.queue_timeout(1234, SignalEscalation::SigkillForced);
+        let result = mock
+            .invoke(Path::new("/dev/null"), &[], Duration::from_secs(1))
+            .unwrap();
+        match result {
+            InvocationResult::TimedOut {
+                elapsed,
+                escalation,
+                ..
+            } => {
+                assert_eq!(elapsed, Duration::from_millis(1234));
+                assert_eq!(escalation, SignalEscalation::SigkillForced);
+            }
+            other => panic!("expected TimedOut, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn mock_invoker_records_timeout_per_call() {
+        let mock = MockInvoker::new();
+        let _ = mock
+            .invoke(Path::new("/dev/null"), &[], Duration::from_secs(42))
+            .unwrap();
+        let timeouts = mock.invocation_timeouts();
+        assert_eq!(timeouts, vec![Duration::from_secs(42)]);
+    }
+
+    #[test]
+    fn invoke_with_retry_once_does_not_retry_on_timeout() {
+        let mock = MockInvoker::new();
+        mock.queue_timeout(500, SignalEscalation::SigtermClean);
+        // We deliberately do NOT queue a second outcome. If retry fired,
+        // the mock would pop a default-ok next, but the call sites that
+        // care about exact invocation_count would catch the regression.
+        let bin = synthetic_bin_path();
+        let result = invoke_with_retry_once(&mock, &bin, &[], "test", Duration::from_secs(1))
+            .expect("invoke_with_retry_once should return Ok with TimedOut payload");
+        match result {
+            InvocationResult::TimedOut { .. } => {}
+            other => panic!("expected TimedOut, got {other:?}"),
+        }
+        assert_eq!(
+            mock.invoke_count(),
+            1,
+            "Timeout must not trigger the Transient retry path"
+        );
+    }
+
+    /// Returns a path to a binary that exists (so the `bin.exists()`
+    /// guard in `invoke_with_retry_once` does not error). The mock
+    /// never actually executes it.
+    fn synthetic_bin_path() -> PathBuf {
+        // `/usr/bin/true` is a universal Unix builtin binary; falls
+        // back to `/bin/true` on more minimal layouts.
+        let candidates = ["/usr/bin/true", "/bin/true"];
+        for c in &candidates {
+            if Path::new(c).exists() {
+                return PathBuf::from(c);
+            }
+        }
+        // Last resort: write a temporary empty file. The mock doesn't
+        // execute it; only `bin.exists()` is checked.
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path().join("bin");
+        fs::write(&p, b"").unwrap();
+        // Leak the tempdir so the path stays valid for the test.
+        std::mem::forget(tmp);
+        p
+    }
+
+    #[test]
+    fn live_run_halts_with_timeout_class_when_step_times_out() {
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 7);
+        let mock = MockInvoker::new();
+        // state-audit OK, then step 1 (super-step-init) times out.
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_timeout(31_000, SignalEscalation::SigtermClean);
+        let mut out = Vec::new();
+        let r = run_cycle(&args, &ra, &mut out, &mock);
+        match r {
+            Err(RunnerError::CycleHalted { step, class, .. }) => {
+                assert_eq!(step, "super-step-init");
+                assert_eq!(class, FailureClass::Timeout);
+            }
+            other => panic!("expected CycleHalted Timeout, got {other:?}"),
+        }
+        let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        assert_eq!(parsed["status"], "halted");
+        assert_eq!(parsed["halt_step"], "super-step-init");
+        assert_eq!(parsed["halt_reason"], "timeout");
+    }
+
+    #[test]
+    fn live_run_timeout_trace_carries_diagnostic_in_full_report() {
+        // Verify the full StepTrace contains the timeout diagnostic
+        // (the persisted last-cycle.json strips traces.* down to
+        // {index, name, executed, phase} per cycle 169; this test
+        // exercises the JSON emission path which keeps the full trace).
+        let tmp = tempfile::tempdir().unwrap();
+        let mut args = synthetic_args(tmp.path());
+        args.format = Format::Json;
+        let ra = run_args_with_outputs(tmp.path(), 8);
+        let mock = MockInvoker::new();
+        mock.queue_ok(ok_output()); // state-audit
+        mock.queue_timeout(31_000, SignalEscalation::SigkillForced);
+        let mut out = Vec::new();
+        let _ = run_cycle(&args, &ra, &mut out, &mock);
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        assert_eq!(report["status"], "halted");
+        assert_eq!(report["halt_class"], "timeout");
+        let traces = report["traces"].as_array().unwrap();
+        let halted = traces
+            .iter()
+            .find(|t| t["name"] == "super-step-init")
+            .expect("halted step trace present");
+        assert_eq!(halted["executed"], true);
+        assert!(halted["elapsed_ms"].is_number());
+        let timeout = &halted["timeout"];
+        assert_eq!(timeout["budget_ms"], 30_000);
+        assert_eq!(timeout["elapsed_ms"], 31_000);
+        assert_eq!(timeout["escalation"], "sigkill-forced");
+    }
+
+    #[test]
+    fn live_run_completed_trace_carries_elapsed_ms() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut args = synthetic_args(tmp.path());
+        args.format = Format::Json;
+        let ra = run_args_with_outputs(tmp.path(), 9);
+        let mock = MockInvoker::new();
+        // All 11 invocations clean (state-audit + 10 super-step calls).
+        let mut out = Vec::new();
+        run_cycle(&args, &ra, &mut out, &mock).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&String::from_utf8(out).unwrap()).unwrap();
+        let traces = report["traces"].as_array().unwrap();
+        for t in traces {
+            assert_eq!(
+                t["executed"], true,
+                "completed live cycle: every trace is executed"
+            );
+            assert!(
+                t["elapsed_ms"].is_number(),
+                "elapsed_ms present on completed trace: {t:?}"
+            );
+            // No `timeout` block on non-timeout traces (skip_serializing_if).
+            assert!(
+                t.get("timeout").is_none(),
+                "timeout block absent on completed trace"
+            );
+        }
+    }
+
+    #[test]
+    fn state_audit_timeout_halts_with_timeout_failure_class() {
+        let tmp = tempfile::tempdir().unwrap();
+        let args = synthetic_args(tmp.path());
+        let ra = run_args_with_outputs(tmp.path(), 10);
+        let mock = MockInvoker::new();
+        // First (and only) invocation: state-audit times out.
+        mock.queue_timeout(61_000, SignalEscalation::SigtermClean);
+        let mut out = Vec::new();
+        let r = run_cycle(&args, &ra, &mut out, &mock);
+        match r {
+            Err(RunnerError::CycleHalted { step, class, .. }) => {
+                assert_eq!(step, "state-audit-on-start");
+                assert_eq!(class, FailureClass::Timeout);
+            }
+            other => panic!("expected CycleHalted state-audit-on-start Timeout, got {other:?}"),
+        }
+        // No super-step state mutation — sequence never began.
+        let last_cycle_path = tmp.path().join("state/v2-cycle-runner/last-cycle.json");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&last_cycle_path).unwrap()).unwrap();
+        assert_eq!(parsed["status"], "halted");
+        assert_eq!(parsed["halt_step"], "state-audit-on-start");
+        assert_eq!(parsed["halt_reason"], "timeout");
+        assert_eq!(parsed["state_audit"]["severity"], "timeout");
+    }
+
+    #[test]
+    fn real_invoker_against_sleep_produces_timed_out_with_sigterm_clean() {
+        // Acceptance criterion §8.4: a primitive that exceeds its budget
+        // produces halt_class=timeout with partial_stdout reflecting
+        // whatever the child wrote. `/bin/sleep` is universally
+        // available on Linux runners and respects SIGTERM (no handler
+        // installed → default termination action). Budget 500ms with
+        // a 5-second sleep → timeout fires; child exits cleanly under
+        // the 2-second SIGTERM grace → SigtermClean.
+        let sleep_bin = if Path::new("/usr/bin/sleep").exists() {
+            PathBuf::from("/usr/bin/sleep")
+        } else {
+            PathBuf::from("/bin/sleep")
+        };
+        if !sleep_bin.exists() {
+            // Skip on minimal layouts that lack sleep (none on real
+            // Linux runners; safety net for unusual sandboxes).
+            return;
+        }
+        let invoker = RealInvoker;
+        let started = Instant::now();
+        let result = invoker
+            .invoke(&sleep_bin, &["5".to_string()], Duration::from_millis(500))
+            .expect("real invoker should not error on /bin/sleep");
+        let elapsed = started.elapsed();
+        match result {
+            InvocationResult::TimedOut {
+                elapsed: invocation_elapsed,
+                escalation,
+                partial_stdout,
+                partial_stderr,
+            } => {
+                assert!(
+                    invocation_elapsed >= Duration::from_millis(500),
+                    "timeout must fire at or after the 500ms budget; got {invocation_elapsed:?}"
+                );
+                assert!(
+                    elapsed < Duration::from_secs(5),
+                    "outer wall clock must be well below the 5s sleep argument"
+                );
+                assert_eq!(
+                    escalation,
+                    SignalEscalation::SigtermClean,
+                    "sleep respects SIGTERM cleanly"
+                );
+                // /bin/sleep produces no output before completion.
+                assert!(
+                    partial_stdout.is_empty(),
+                    "sleep should not produce stdout before kill"
+                );
+                assert!(
+                    partial_stderr.is_empty(),
+                    "sleep should not produce stderr before kill"
+                );
+            }
+            InvocationResult::Completed(_) => {
+                panic!("expected TimedOut against /bin/sleep with 500ms budget");
+            }
+        }
+    }
+
+    #[test]
+    fn real_invoker_completes_normally_when_within_budget() {
+        // Inverse of the timeout test: a fast command finishes inside
+        // its budget; result is `Completed(Output)` with exit status
+        // 0 and no signal escalation involved.
+        let true_bin = if Path::new("/usr/bin/true").exists() {
+            PathBuf::from("/usr/bin/true")
+        } else {
+            PathBuf::from("/bin/true")
+        };
+        if !true_bin.exists() {
+            return;
+        }
+        let invoker = RealInvoker;
+        let result = invoker
+            .invoke(&true_bin, &[], Duration::from_secs(5))
+            .expect("real invoker should not error on /bin/true");
+        match result {
+            InvocationResult::Completed(output) => {
+                assert!(output.status.success(), "/bin/true exits 0");
+            }
+            InvocationResult::TimedOut { .. } => {
+                panic!("/bin/true finishes well within a 5s budget");
+            }
+        }
     }
 }
