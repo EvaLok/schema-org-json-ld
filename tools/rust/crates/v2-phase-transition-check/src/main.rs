@@ -282,7 +282,7 @@ fn check_filename_field_consistency(entries: &[Entry]) -> InvariantResult {
     let details = if entries.is_empty() {
         "no entries to check".to_string()
     } else {
-        format!("{}/{} entries consistent", checked - violations.len(), entries.len())
+        format!("{}/{} entries consistent", entries.len() - violations.len(), entries.len())
     };
     InvariantResult {
         name: "filename-field-consistency",
@@ -522,11 +522,14 @@ fn check_phase_field(entries: &[Entry]) -> InvariantResult {
                     ));
                 }
             }
-            Some(other) => violations.push(format!(
-                "{}: phase has wrong type ({}; expected string)",
-                e.filename,
-                value_type(other)
-            )),
+            Some(other) => {
+                checked += 1;
+                violations.push(format!(
+                    "{}: phase has wrong type ({}; expected string)",
+                    e.filename,
+                    value_type(other)
+                ));
+            }
         }
     }
     let status = if checked == 0 && violations.is_empty() {
