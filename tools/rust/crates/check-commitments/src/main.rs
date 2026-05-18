@@ -555,6 +555,7 @@ This should stay focused.
         let history = vec![
             state_schema::ReviewHistoryEntry {
                 cycle: 197,
+                review_issue: None,
                 categories: vec![
                     "cycle-close-drift".to_string(),
                     "disposition-accuracy".to_string(),
@@ -573,6 +574,7 @@ This should stay focused.
             },
             state_schema::ReviewHistoryEntry {
                 cycle: 198,
+                review_issue: None,
                 categories: vec![
                     "clean-cycle-accounting".to_string(),
                     "cycle-close-drift".to_string(),
@@ -591,6 +593,7 @@ This should stay focused.
             },
             state_schema::ReviewHistoryEntry {
                 cycle: 199,
+                review_issue: None,
                 categories: vec![
                     "cycle-close-drift".to_string(),
                     "receipt-integrity".to_string(),
@@ -609,6 +612,7 @@ This should stay focused.
             },
             state_schema::ReviewHistoryEntry {
                 cycle: 200,
+                review_issue: None,
                 categories: vec![
                     "cycle-close-drift".to_string(),
                     "receipt-integrity".to_string(),

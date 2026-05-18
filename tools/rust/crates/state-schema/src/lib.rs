@@ -212,6 +212,8 @@ pub struct FindingDisposition {
 #[serde(default, rename_all = "snake_case")]
 pub struct ReviewHistoryEntry {
     pub cycle: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review_issue: Option<u64>,
     pub categories: Vec<String>,
     pub actioned: u64,
     pub deferred: u64,
@@ -1098,6 +1100,7 @@ mod tests {
     fn review_history_entry_serialization_omits_zero_new_fields() {
         let entry = ReviewHistoryEntry {
             cycle: 162,
+            review_issue: None,
             categories: vec!["data-integrity".to_string()],
             actioned: 1,
             deferred: 1,
@@ -1120,12 +1123,14 @@ mod tests {
         assert!(!object.contains_key("actioned_failed"));
         assert!(!object.contains_key("verified_resolved"));
         assert!(!object.contains_key("finding_dispositions"));
+        assert!(!object.contains_key("review_issue"));
     }
 
     #[test]
     fn review_history_entry_serialization_includes_non_zero_new_fields() {
         let entry = ReviewHistoryEntry {
             cycle: 162,
+            review_issue: Some(2393),
             categories: vec!["data-integrity".to_string()],
             actioned: 1,
             deferred: 1,
@@ -1150,6 +1155,7 @@ mod tests {
         assert_eq!(object.get("dispatch_created"), Some(&json!(2)));
         assert_eq!(object.get("actioned_failed"), Some(&json!(1)));
         assert_eq!(object.get("verified_resolved"), Some(&json!(1)));
+        assert_eq!(object.get("review_issue"), Some(&json!(2393)));
         assert_eq!(
             object.get("finding_dispositions"),
             Some(&json!([{

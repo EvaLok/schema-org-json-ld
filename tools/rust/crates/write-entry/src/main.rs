@@ -1739,6 +1739,18 @@ fn derive_previous_cycle_review_issue(state: &StateJson, review_cycle: u64) -> O
         return session.issue.and_then(|issue| u64::try_from(issue).ok());
     }
 
+    if let Ok(review_agent) = state.review_agent() {
+        if let Some(entry) = review_agent
+            .history
+            .iter()
+            .find(|entry| entry.cycle == review_cycle)
+        {
+            if let Some(issue) = entry.review_issue {
+                return Some(issue);
+            }
+        }
+    }
+
     let dispatch_reference_sources = [
         state.dispatch_log_latest.as_deref(),
         state
@@ -1874,8 +1886,10 @@ fn review_history_entry_matches_target(
     entry: &ReviewHistoryEntry,
     target: ReviewSummaryTarget,
 ) -> bool {
-    entry.extra.get("review_issue").and_then(Value::as_u64) == Some(target.review_issue)
-        || (!entry.extra.contains_key("review_issue") && entry.cycle == target.review_cycle)
+    match entry.review_issue {
+        Some(issue) => issue == target.review_issue,
+        None => entry.cycle == target.review_cycle,
+    }
 }
 
 fn summarize_review_dispositions(state: &StateJson, entry: &ReviewHistoryEntry) -> String {
@@ -7804,6 +7818,68 @@ mod tests {
             input.what_was_done,
             vec![
                 "Processed cycle 153 review (2 findings, complacency 1/5, 1 actioned, 1 deferred)"
+            ]
+        );
+    }
+
+    #[test]
+    fn worklog_auto_review_summary_resolves_review_issue_from_history_when_agent_session_missing() {
+        // Mirrors the post-pruning production shape: agent_sessions has been
+        // pruned of the prior cycle's [Cycle Review] entry, but
+        // review_agent.history retains the disposition record with
+        // review_issue. Resolution must fall back to history so that
+        // --auto-review-summary keeps working after state-cleanup.
+        let repo_root = TempRepoDir::new("worklog-auto-review-summary-history-fallback");
+        init_git_repo(&repo_root.path);
+        write_state_file(
+            &repo_root.path,
+            r#"{
+                "last_cycle": {"number": 474},
+                "cycle_phase": {
+                    "phase": "work",
+                    "phase_entered_at": "2026-04-15T01:00:00Z",
+                    "cycle": 474
+                },
+                "agent_sessions": [
+                    {
+                        "issue": 2575,
+                        "title": "[Cycle Review] Cycle 510 end-of-cycle review",
+                        "status": "closed"
+                    }
+                ],
+                "review_agent": {
+                    "history": [
+                        {
+                            "cycle": 473,
+                            "review_issue": 2393,
+                            "finding_count": 3,
+                            "complacency_score": 3,
+                            "finding_dispositions": [
+                                {"category": "code-change-quality", "disposition": "dispatch_created"},
+                                {"category": "journal-quality", "disposition": "deferred"},
+                                {"category": "state-integrity", "disposition": "actioned"}
+                            ]
+                        }
+                    ]
+                }
+            }"#,
+        );
+
+        let mut args = worklog_args("Auto review summary history fallback");
+        args.auto_review_summary = true;
+        args.pipeline = Some("PASS (6/6)".to_string());
+        args.publish_gate = Some("open".to_string());
+
+        let mut input = resolve_worklog_input(&args, &repo_root.path).unwrap();
+        let warnings =
+            apply_worklog_auto_derivations(&args, &repo_root.path, 474, &mut input).unwrap();
+
+        assert!(warnings.is_empty());
+        assert_eq!(
+            input.what_was_done,
+            vec![
+                "Processed cycle 473 review (3 findings, complacency 3/5, 1 dispatch_created, 1 deferred, 1 actioned)"
+                    .to_string()
             ]
         );
     }
