@@ -187,6 +187,13 @@ struct ParsedTag {
     name: String,
     /// Unique direct child tag names (deduped by name).
     direct_children: Vec<String>,
+    /// `name="..."` attribute values collected from direct child elements
+    /// (in document order, not deduped). Provides semantic content tokens
+    /// beyond just child element names — e.g. for `<constraints>` whose
+    /// children are `<constraint name="single-cycle-scope">`, the names
+    /// surface concrete domain vocabulary the keyword-overlap heuristic
+    /// can match against the manifest intent string.
+    direct_child_name_attrs: Vec<String>,
     has_adaptation_note: bool,
     adaptation_note_text: Option<String>,
     /// Number of non-blank, non-XML-comment text lines under this tag.
@@ -272,6 +279,7 @@ fn parse_prompt_file(path: &Path) -> Result<ParsedPrompt, ToolError> {
                         current_top = Some(ParsedTag {
                             name: tag_name.clone(),
                             direct_children: Vec::new(),
+                            direct_child_name_attrs: Vec::new(),
                             has_adaptation_note: false,
                             adaptation_note_text: None,
                             content_line_count: 0,
@@ -285,6 +293,17 @@ fn parse_prompt_file(path: &Path) -> Result<ParsedPrompt, ToolError> {
                             if !seen_children.contains(&tag_name) {
                                 seen_children.insert(tag_name.clone());
                                 top.direct_children.push(tag_name.clone());
+                            }
+                            // Collect any `name="..."` attribute value — surfaces
+                            // the concrete domain vocabulary of named child entries
+                            // (e.g. `<constraint name="single-cycle-scope">`) for
+                            // the keyword-overlap heuristic.
+                            for attr in e.attributes().flatten() {
+                                if attr.key.as_ref() == b"name" {
+                                    if let Ok(v) = std::str::from_utf8(&attr.value) {
+                                        top.direct_child_name_attrs.push(v.to_string());
+                                    }
+                                }
                             }
                             if tag_name == "semantic-adaptation-note" {
                                 top.has_adaptation_note = true;
@@ -582,6 +601,30 @@ fn tokenize(s: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// Reduce a token to a canonical stem so verb/noun and singular/plural pairs
+/// overlap during keyword comparison — e.g. `consolidate` ↔ `consolidation`,
+/// `surfaces` ↔ `surface`, `failures` ↔ `failure`, `validity` ↔ `valid`.
+///
+/// This is conservative suffix-stripping, not a full Porter stemmer. Suffixes
+/// are tried longest-first; a minimum-stem-length guard (4 chars) avoids
+/// mangling short tokens. Y/IES handling is intentionally omitted (would need
+/// per-word irregularity rules); the suffix list is restricted to forms
+/// observed in v2-prompt manifests and prompt-content vocabulary.
+fn stem(token: &str) -> String {
+    // Order matters: longer suffixes first so e.g. "ation" wins over "tion"
+    // and "ates"/"ate" win over plain "s".
+    const SUFFIXES: &[&str] = &[
+        "ations", "ation", "tions", "tion", "ities", "ity", "ates", "ate",
+        "ings", "ing", "s",
+    ];
+    for suffix in SUFFIXES {
+        if token.len() >= suffix.len() + 4 && token.ends_with(suffix) {
+            return token[..token.len() - suffix.len()].to_string();
+        }
+    }
+    token.to_string()
+}
+
 fn run_tier2(manifest: &Manifest, prompts: &[ParsedPrompt]) -> Vec<Tier2Finding> {
     let mut findings = Vec::new();
 
@@ -631,15 +674,33 @@ fn run_tier2(manifest: &Manifest, prompts: &[ParsedPrompt]) -> Vec<Tier2Finding>
             // Keyword overlap check: only for tags present in the manifest.
             if let Some(entry) = manifest.get(&tag.name) {
                 if tag.content_line_count >= 3 {
-                    let intent_tokens = tokenize(&entry.intent);
-                    let content_tokens = tokenize(&format!(
-                        "{} {}",
-                        tag.name.replace('-', " "),
-                        tag.direct_children.join(" ")
-                    ));
-                    let overlap = intent_tokens
+                    // Include named-child semantic vocabulary (e.g.
+                    // `<constraint name="single-cycle-scope">`) so the
+                    // heuristic compares intent against actual content names,
+                    // not just tag-name-derived tokens. Kebab-case attr values
+                    // are split on '-' like the tag name.
+                    let name_attrs_joined: String = tag
+                        .direct_child_name_attrs
                         .iter()
-                        .filter(|t| content_tokens.contains(*t))
+                        .map(|n| n.replace('-', " "))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let intent_stems: BTreeSet<String> = tokenize(&entry.intent)
+                        .into_iter()
+                        .map(|t| stem(&t))
+                        .collect();
+                    let content_stems: BTreeSet<String> = tokenize(&format!(
+                        "{} {} {}",
+                        tag.name.replace('-', " "),
+                        tag.direct_children.join(" "),
+                        name_attrs_joined,
+                    ))
+                    .into_iter()
+                    .map(|t| stem(&t))
+                    .collect();
+                    let overlap = intent_stems
+                        .iter()
+                        .filter(|t| content_stems.contains(*t))
                         .count();
                     if overlap < 1 {
                         findings.push(Tier2Finding {
@@ -647,7 +708,8 @@ fn run_tier2(manifest: &Manifest, prompts: &[ParsedPrompt]) -> Vec<Tier2Finding>
                             tag: tag.name.clone(),
                             kind: Tier2Kind::KeywordOverlap,
                             details: format!(
-                                "0 shared tokens between intent ({:?}) and tag name+children; \
+                                "0 shared stems between intent ({:?}) and tag \
+                                 name + children + child name attributes; \
                                  possible semantic drift",
                                 entry.intent
                             ),
@@ -1093,6 +1155,7 @@ intent = "something"
         ParsedTag {
             name: name.to_string(),
             direct_children: children.iter().map(|s| s.to_string()).collect(),
+            direct_child_name_attrs: Vec::new(),
             has_adaptation_note: has_note,
             adaptation_note_text: None,
             content_line_count: 5,
@@ -1199,6 +1262,7 @@ intent = "something"
             direct_children: (0..child_count)
                 .map(|i| format!("child-{i}"))
                 .collect(),
+            direct_child_name_attrs: Vec::new(),
             has_adaptation_note: false,
             adaptation_note_text: None,
             content_line_count: line_count,
@@ -1377,6 +1441,136 @@ intent = "something"
         assert!(!tokens.contains("a"), "short token 'a' should be removed");
         assert!(tokens.contains("planner"), "content word should be kept");
         assert!(tokens.contains("system"), "content word should be kept");
+    }
+
+    #[test]
+    fn stem_collapses_verb_noun_and_plural_singular_pairs() {
+        // The named pairs from cycle 173 _notes that motivated stemming.
+        assert_eq!(
+            stem("consolidate"),
+            stem("consolidation"),
+            "ate ↔ ation pair must share a stem"
+        );
+        assert_eq!(
+            stem("surfaces"),
+            stem("surface"),
+            "plural ↔ singular pair must share a stem"
+        );
+        assert_eq!(
+            stem("failures"),
+            stem("failure"),
+            "plural ↔ singular pair must share a stem"
+        );
+        assert_eq!(
+            stem("validity"),
+            stem("valid"),
+            "ity ↔ adjective pair must share a stem"
+        );
+        // Min-stem-length guard protects short tokens.
+        assert_eq!(stem("its"), "its", "3-char token must not be stripped");
+        assert_eq!(stem("yes"), "yes", "3-char token must not be stripped");
+        // Conservative stemming: unrelated words still differ.
+        assert_ne!(stem("planner"), stem("system"));
+    }
+
+    #[test]
+    fn parse_collects_direct_child_name_attrs() {
+        // Synthetic prompt with named constraint children — exercise the
+        // parser's name-attr collection at depth 2.
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<role-prompt version="v2-test" role="planner">
+<constraints>
+  <constraint name="single-cycle-scope">Stay inside one cycle.</constraint>
+  <constraint name="no-channel-writes">Do not write channels directly.</constraint>
+</constraints>
+</role-prompt>"#;
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        fs::write(tmp.path(), xml).unwrap();
+        let parsed = parse_prompt_file(tmp.path()).unwrap();
+        assert_eq!(parsed.top_level_tags.len(), 1);
+        let tag = &parsed.top_level_tags[0];
+        assert_eq!(tag.name, "constraints");
+        assert_eq!(
+            tag.direct_child_name_attrs,
+            vec![
+                "single-cycle-scope".to_string(),
+                "no-channel-writes".to_string(),
+            ],
+            "name attributes from direct children must be collected in order"
+        );
+    }
+
+    #[test]
+    fn tier2_keyword_overlap_uses_child_name_attrs_and_stemming() {
+        // Intent string uses singular "constraint" and the verb form
+        // "consolidate"; content tokens only surface plural-noun
+        // "consolidation" via name attrs. Without stemming + name-attr
+        // inclusion the heuristic would warn; with them the overlap
+        // succeeds and no warning fires.
+        let mut manifest: Manifest = BTreeMap::new();
+        manifest.insert(
+            "consolidation-judgment".to_string(),
+            make_manifest_entry(
+                "Guides the curator on how to consolidate cycle data",
+                &[],
+                &[],
+                &[],
+            ),
+        );
+        let tag = ParsedTag {
+            name: "consolidation-judgment".to_string(),
+            direct_children: vec!["judgment".to_string()],
+            direct_child_name_attrs: vec![],
+            has_adaptation_note: false,
+            adaptation_note_text: None,
+            content_line_count: 5,
+            direct_child_element_count: 1,
+        };
+        let prompt = make_prompt("curator", &[tag]);
+        let findings = run_tier2(&manifest, &[prompt]);
+        // "consolidate" (intent) and "consolidation" (in tag-name-tokens) share
+        // a stem; no Tier-2 keyword-overlap warning expected.
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.kind != Tier2Kind::KeywordOverlap),
+            "stemming should let consolidate↔consolidation overlap; got {findings:?}"
+        );
+
+        // Now exercise name-attr inclusion: a `<constraints>` tag whose intent
+        // shares no tokens with "constraint" or "constraints" still overlaps
+        // via a named child whose name encodes the relevant vocabulary.
+        let mut manifest2: Manifest = BTreeMap::new();
+        manifest2.insert(
+            "constraints".to_string(),
+            make_manifest_entry(
+                "Declares the runtime obligations around channel discipline",
+                &[],
+                &[],
+                &[],
+            ),
+        );
+        let tag2 = ParsedTag {
+            name: "constraints".to_string(),
+            direct_children: vec!["constraint".to_string()],
+            direct_child_name_attrs: vec![
+                "no-channel-writes".to_string(),
+                "single-cycle-scope".to_string(),
+            ],
+            has_adaptation_note: false,
+            adaptation_note_text: None,
+            content_line_count: 5,
+            direct_child_element_count: 2,
+        };
+        let prompt2 = make_prompt("planner", &[tag2]);
+        let findings2 = run_tier2(&manifest2, &[prompt2]);
+        // Intent token "channel" (stem) overlaps name-attr token "channel".
+        assert!(
+            findings2
+                .iter()
+                .all(|f| f.kind != Tier2Kind::KeywordOverlap),
+            "name-attr inclusion should surface channel↔channel overlap; got {findings2:?}"
+        );
     }
 
     // ------------------------------------------------------------------
