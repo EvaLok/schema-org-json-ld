@@ -369,7 +369,7 @@
     If action execution fails (dispatch failure, test/build breakage,
     missing inputs, blocked push), report failure honestly in artifacts-
     written records with success-criterion-met false. Curator reads this
-    at session-close and surfaces it in memory-channel in cycle 145+.
+    at session-close and surfaces it in memory-channel.
   </failure-reporting>
 </communication>
 

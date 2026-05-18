@@ -46,7 +46,7 @@ required-in-roles = ["planner", "executor", "curator", "reconciler"]
 expected-children = ["session-output-file"]
 
 [tags.constraints]
-intent = "Hard rules the role must obey; tooling expectations; what the role MUST NOT do"
+intent = "Declares the hard runtime constraints the role must obey: scope, channel reducer discipline, self-modification prohibition, payload validity, and commit-push discipline"
 required-in-roles = ["planner", "executor", "curator", "reconciler"]
 
 [tags.session-structure]
@@ -92,7 +92,7 @@ intent = "Enumerates all output surfaces the curator is responsible for writing 
 allowed-in-roles = ["curator"]
 
 [tags.consolidation-judgment]
-intent = "Guides the curator on how to consolidate cycle data: what to preserve, summarise, and omit"
+intent = "Guides the curator's consolidation judgment over cycle data: what to preserve as memory, what to summarise, and what to omit"
 allowed-in-roles = ["curator"]
 
 [tags.notes-authoring]
