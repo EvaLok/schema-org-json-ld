@@ -1,0 +1,136 @@
+# prompts/v2/tag-semantics.toml
+#
+# Tag-semantics manifest for v2 role prompts.
+# Authoritative declaration of what each top-level tag in a <role-prompt>
+# means, which roles must or may include it, and what immediate children
+# it should contain.
+#
+# Tool: v2-prompt-tag-semantic-fidelity (cycle 168 design)
+# Generated from: scan of prompts/v2/*-prompt.xml at HEAD (cycle 169+ implementation)
+#
+# "required-in-roles" → roles that MUST include this tag; missing is an error.
+# "allowed-in-roles"  → roles that MAY include it; unexpected role is an error.
+#                       (use instead of required-in-roles for role-specific tags)
+# "intent"            → one-line semantic description; Tier 2 checks keyword alignment.
+# "expected-children" → immediate child tag names that MUST appear under this tag.
+#
+# At least one of required-in-roles / allowed-in-roles is required per entry.
+
+# ---------------------------------------------------------------------------
+# Tags required in ALL four roles
+# ---------------------------------------------------------------------------
+
+[tags.role-identity]
+intent = "Names the role, its decision authority, its position in the super-step sequence, and the cycle-scope it operates within"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["one-line", "position-in-super-step-sequence", "one-cycle-scope"]
+
+[tags.inputs]
+intent = "Enumerates the input channels and harness-provided context the role reads at session start, including forbidden inputs"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["forbidden-inputs"]
+
+[tags.output-contract]
+intent = "Specifies the output payload contract: where output is written, its format, an example, and validation rules"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["where", "format", "example", "validation"]
+
+[tags.tools]
+intent = "Lists the tools the role is permitted to use and those that are forbidden"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["forbidden-tools"]
+
+[tags.communication]
+intent = "Declares where the role writes session output, how it uses stderr, and its issue-comment policy"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["session-output-file"]
+
+[tags.constraints]
+intent = "Hard rules the role must obey; tooling expectations; what the role MUST NOT do"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+
+[tags.session-structure]
+intent = "The procedural sequence the role follows during its session: entry phase, work phase, exit phase"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["entry", "work", "exit"]
+
+[tags.meta]
+intent = "Prompt-maintenance metadata: small-prompt discipline, evolution path, and reference alignment notes"
+required-in-roles = ["planner", "executor", "curator", "reconciler"]
+expected-children = ["small-prompt-discipline"]
+
+# ---------------------------------------------------------------------------
+# Tags allowed only in the planner role
+# ---------------------------------------------------------------------------
+
+[tags.substantive-focal-judgment]
+intent = "Guides the planner on how to make the primary focal judgment: what constitutes substantive work this cycle"
+allowed-in-roles = ["planner"]
+
+[tags.per-role-tasks-decomposition]
+intent = "Defines how the planner decomposes cycle work into per-role task assignments with required sub-keys"
+allowed-in-roles = ["planner"]
+
+# ---------------------------------------------------------------------------
+# Tags allowed only in the executor role
+# ---------------------------------------------------------------------------
+
+[tags.execution-judgment]
+intent = "Guides the executor on how to make execution decisions: when to proceed, pause, or escalate"
+allowed-in-roles = ["executor"]
+
+[tags.action-execution-shapes]
+intent = "Describes the distinct execution shapes the executor may follow depending on the type of work dispatched"
+allowed-in-roles = ["executor"]
+
+# ---------------------------------------------------------------------------
+# Tags allowed only in the curator role
+# ---------------------------------------------------------------------------
+
+[tags.output-surfaces]
+intent = "Enumerates all output surfaces the curator is responsible for writing during its session"
+allowed-in-roles = ["curator"]
+
+[tags.consolidation-judgment]
+intent = "Guides the curator on how to consolidate cycle data: what to preserve, summarise, and omit"
+allowed-in-roles = ["curator"]
+
+[tags.notes-authoring]
+intent = "Prescribes the structure and anti-overstatement discipline for the curator's worklog notes output"
+allowed-in-roles = ["curator"]
+
+[tags.journal-append]
+intent = "Specifies the immutability rules and minimum content requirements for appending to the journal"
+allowed-in-roles = ["curator"]
+
+[tags.cycle-history-append]
+intent = "Defines when and how the curator invokes the cycle-history-append tool and handles errors"
+allowed-in-roles = ["curator"]
+
+[tags.cycle-issue-comment]
+intent = "Prescribes the required elements, tone, and posting discipline for the curator's cycle-issue comment"
+allowed-in-roles = ["curator"]
+
+[tags.failure-policy]
+intent = "Defines how the curator handles partial-write failures across its multiple output surfaces"
+allowed-in-roles = ["curator"]
+
+# ---------------------------------------------------------------------------
+# Tags allowed only in the reconciler role
+# ---------------------------------------------------------------------------
+
+[tags.inbound-event-classification]
+intent = "Defines the scope and source kinds of inbound events the reconciler classifies and records"
+allowed-in-roles = ["reconciler"]
+
+[tags.polling-procedure]
+intent = "Specifies the reconciler's event-polling procedure: preferred path, fallback, error handling, and quiet-cycle handling"
+allowed-in-roles = ["reconciler"]
+
+[tags.decision-boundaries]
+intent = "Declares the decision-authority boundaries between the four roles to prevent the reconciler overstepping"
+allowed-in-roles = ["reconciler"]
+
+[tags.pre-exit-checklist]
+intent = "A checklist of items the reconciler must verify before exiting its session"
+allowed-in-roles = ["reconciler"]
