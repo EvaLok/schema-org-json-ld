@@ -1,0 +1,10 @@
+[package]
+name = "v2-error-envelope"
+version = "0.1.0"
+edition = "2021"
+description = "Structured error envelope shared by v2-* orchestrator primitives. ErrorEnvelope + ErrorClass shape per docs/redesign/_notes/v2-structured-error-envelope-arc.md (C6+C7+C9 arc, cycle 181 design / cycle 182+ implementation). Emit-side helpers for primitives, tail-parse helper for v2-cycle-runner classifier."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+v2-primitive-invoker = { path = "../v2-primitive-invoker" }

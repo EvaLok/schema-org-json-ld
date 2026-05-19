@@ -1069,6 +1069,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "v2-error-envelope"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "v2-primitive-invoker",
+]
+
+[[package]]
 name = "v2-gardening-sweep"
 version = "0.1.0"
 dependencies = [
