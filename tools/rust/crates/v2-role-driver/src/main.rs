@@ -63,11 +63,15 @@ enum Command {
         /// `prompts/v2/<role>-prompt.xml`. Only consulted in live-spawn mode.
         #[arg(long)]
         prompt_file: Option<PathBuf>,
-        /// LIVE-SPAWN: maximum conversation turns before claude-code exits.
-        /// Defaults to 50 (a single role session should resolve in one turn;
-        /// the ceiling is a safety net). Only consulted in live-spawn mode.
-        #[arg(long, default_value = "50")]
-        max_turns: u32,
+        /// LIVE-SPAWN: maximum dollar spend on the role's claude session
+        /// (passed through as claude's `--max-budget-usd`). Defaults to 5.0.
+        /// Acts as the safety cap: the real claude CLI has no
+        /// turn-count ceiling, only a wall-clock timeout (handled by
+        /// `LIVE_SPAWN_TIMEOUT` via PrimitiveInvoker) and this budget cap.
+        /// Only consulted in live-spawn mode. OQ-LS-1 reconciled cycle 180:
+        /// the cycle-178 design's `--max-turns` is not a real claude flag.
+        #[arg(long, default_value = "5.0")]
+        max_budget_usd: f64,
 
         /// SCAFFOLD: path to a JSON file containing the session output.
         /// Required when `--claude-code-bin` is NOT set. Accepted shapes:
@@ -819,7 +823,7 @@ enum InvokeMode<'a> {
     LiveSpawn {
         claude_code_bin: &'a Path,
         prompt_file: Option<&'a Path>,
-        max_turns: u32,
+        max_budget_usd: f64,
     },
     Scaffold {
         session_output_file: &'a Path,
@@ -829,7 +833,7 @@ enum InvokeMode<'a> {
 fn resolve_invoke_mode<'a>(
     claude_code_bin: Option<&'a Path>,
     prompt_file: Option<&'a Path>,
-    max_turns: u32,
+    max_budget_usd: f64,
     session_output_file: Option<&'a Path>,
 ) -> Result<InvokeMode<'a>, DriverError> {
     match (claude_code_bin, session_output_file) {
@@ -838,7 +842,7 @@ fn resolve_invoke_mode<'a>(
         (Some(bin), None) => Ok(InvokeMode::LiveSpawn {
             claude_code_bin: bin,
             prompt_file,
-            max_turns,
+            max_budget_usd,
         }),
         (None, Some(f)) => Ok(InvokeMode::Scaffold {
             session_output_file: f,
@@ -854,7 +858,7 @@ fn cmd_invoke(
     cycle: u32,
     claude_code_bin: Option<&Path>,
     prompt_file: Option<&Path>,
-    max_turns: u32,
+    max_budget_usd: f64,
     session_output_file: Option<&Path>,
     timestamp: Option<String>,
     skip_super_step_check: bool,
@@ -863,7 +867,7 @@ fn cmd_invoke(
     let mode = resolve_invoke_mode(
         claude_code_bin,
         prompt_file,
-        max_turns,
+        max_budget_usd,
         session_output_file,
     )?;
 
@@ -899,7 +903,7 @@ fn cmd_invoke(
         InvokeMode::LiveSpawn {
             claude_code_bin,
             prompt_file,
-            max_turns,
+            max_budget_usd,
         } => cmd_invoke_live_spawn(
             repo_root,
             format,
@@ -907,7 +911,7 @@ fn cmd_invoke(
             cycle,
             claude_code_bin,
             prompt_file,
-            max_turns,
+            max_budget_usd,
             timestamp,
             skip_super_step_check,
             skip_channel_write,
@@ -1004,7 +1008,7 @@ fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
     cycle: u32,
     claude_code_bin: &Path,
     prompt_file: Option<&Path>,
-    max_turns: u32,
+    max_budget_usd: f64,
     timestamp: Option<String>,
     skip_super_step_check: bool,
     skip_channel_write: bool,
@@ -1038,7 +1042,7 @@ fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
     // Build the claude-code argv per design §3.2. The user-message is
     // passed positionally as the `--print` argument (single-shot mode);
     // the role's system-prompt body is `--append-system-prompt`.
-    let argv = build_claude_code_argv(role, &prompt_contents, max_turns, &user_message);
+    let argv = build_claude_code_argv(role, &prompt_contents, max_budget_usd, &user_message);
 
     let invocation = invoker
         .invoke(claude_code_bin, &argv, LIVE_SPAWN_TIMEOUT)
@@ -1213,7 +1217,7 @@ fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
 fn build_claude_code_argv(
     role: Role,
     prompt_contents: &str,
-    max_turns: u32,
+    max_budget_usd: f64,
     user_message: &str,
 ) -> Vec<String> {
     let allowed = role.allowed_tools().join(",");
@@ -1224,8 +1228,8 @@ fn build_claude_code_argv(
         "json".to_string(),
         "--append-system-prompt".to_string(),
         prompt_contents.to_string(),
-        "--max-turns".to_string(),
-        max_turns.to_string(),
+        "--max-budget-usd".to_string(),
+        format!("{max_budget_usd}"),
         "--allowed-tools".to_string(),
         allowed,
         "--permission-mode".to_string(),
@@ -1773,7 +1777,7 @@ fn main() -> ExitCode {
             cycle,
             claude_code_bin,
             prompt_file,
-            max_turns,
+            max_budget_usd,
             session_output_file,
             timestamp,
             skip_super_step_check,
@@ -1785,7 +1789,7 @@ fn main() -> ExitCode {
             cycle,
             claude_code_bin.as_deref(),
             prompt_file.as_deref(),
-            max_turns,
+            max_budget_usd,
             session_output_file.as_deref(),
             timestamp,
             skip_super_step_check,
@@ -2030,22 +2034,24 @@ mod tests {
     fn resolve_invoke_mode_errors_when_both_set() {
         let ccbin = PathBuf::from("/bin/claude-code");
         let sof = PathBuf::from("/tmp/session.json");
-        let err = resolve_invoke_mode(Some(&ccbin), None, 50, Some(&sof)).unwrap_err();
+        let err = resolve_invoke_mode(Some(&ccbin), None, 5.0, Some(&sof)).unwrap_err();
         assert!(matches!(err, DriverError::ConflictingInvokeModes));
     }
 
     #[test]
     fn resolve_invoke_mode_errors_when_neither_set() {
-        let err = resolve_invoke_mode(None, None, 50, None).unwrap_err();
+        let err = resolve_invoke_mode(None, None, 5.0, None).unwrap_err();
         assert!(matches!(err, DriverError::MissingInvokeMode));
     }
 
     #[test]
     fn resolve_invoke_mode_selects_live_spawn_when_only_bin_set() {
         let ccbin = PathBuf::from("/bin/claude-code");
-        let mode = resolve_invoke_mode(Some(&ccbin), None, 25, None).unwrap();
+        let mode = resolve_invoke_mode(Some(&ccbin), None, 2.5, None).unwrap();
         match mode {
-            InvokeMode::LiveSpawn { max_turns, .. } => assert_eq!(max_turns, 25),
+            InvokeMode::LiveSpawn { max_budget_usd, .. } => {
+                assert!((max_budget_usd - 2.5).abs() < f64::EPSILON);
+            }
             _ => panic!("expected LiveSpawn"),
         }
     }
@@ -2053,7 +2059,7 @@ mod tests {
     #[test]
     fn resolve_invoke_mode_selects_scaffold_when_only_session_file_set() {
         let sof = PathBuf::from("/tmp/session.json");
-        let mode = resolve_invoke_mode(None, None, 50, Some(&sof)).unwrap();
+        let mode = resolve_invoke_mode(None, None, 5.0, Some(&sof)).unwrap();
         assert!(matches!(mode, InvokeMode::Scaffold { .. }));
     }
 
@@ -2119,14 +2125,16 @@ mod tests {
 
     #[test]
     fn build_claude_code_argv_includes_per_role_tools_and_required_flags() {
-        let argv = build_claude_code_argv(Role::Executor, "system-prompt-body", 25, "user-msg");
+        let argv = build_claude_code_argv(Role::Executor, "system-prompt-body", 2.5, "user-msg");
         assert!(argv.contains(&"--print".to_string()));
         assert!(argv.contains(&"--output-format".to_string()));
         assert!(argv.contains(&"json".to_string()));
         assert!(argv.contains(&"--append-system-prompt".to_string()));
         assert!(argv.contains(&"system-prompt-body".to_string()));
-        assert!(argv.contains(&"--max-turns".to_string()));
-        assert!(argv.contains(&"25".to_string()));
+        // OQ-LS-1 reconciled cycle 180: real claude has no --max-turns;
+        // the safety knob is --max-budget-usd (dollar cap on the session).
+        assert!(argv.contains(&"--max-budget-usd".to_string()));
+        assert!(argv.contains(&"2.5".to_string()));
         assert!(argv.contains(&"--allowed-tools".to_string()));
         // Executor profile is the full one.
         assert!(argv.contains(&"Read,Edit,Write,Grep,Bash".to_string()));
@@ -2135,11 +2143,13 @@ mod tests {
         assert!(argv.contains(&"--model".to_string()));
         assert!(argv.contains(&"claude-opus-4-7".to_string()));
         assert!(argv.contains(&"user-msg".to_string()));
+        // Negative assertion: the cycle-178 design's --max-turns is gone.
+        assert!(!argv.contains(&"--max-turns".to_string()));
     }
 
     #[test]
     fn build_claude_code_argv_passes_reconciler_specific_tools() {
-        let argv = build_claude_code_argv(Role::Reconciler, "sys", 50, "ctx");
+        let argv = build_claude_code_argv(Role::Reconciler, "sys", 5.0, "ctx");
         assert!(argv.contains(&"Read,Bash".to_string()));
         // Reconciler lacks Edit/Write per profile.
         assert!(!argv.contains(&"Read,Edit,Write,Grep,Bash".to_string()));
@@ -2226,7 +2236,7 @@ mod tests {
             7,
             &ccbin,
             None,
-            50,
+            5.0,
             Some("2026-05-19T00:00:00Z".to_string()),
             /* skip_super_step_check */ true,
             /* skip_channel_write */ false,
@@ -2277,7 +2287,7 @@ mod tests {
             3,
             &ccbin,
             None,
-            50,
+            5.0,
             None,
             true,
             false,
@@ -2316,7 +2326,7 @@ mod tests {
             11,
             &ccbin,
             None,
-            50,
+            5.0,
             None,
             true,
             false,
@@ -2362,7 +2372,7 @@ mod tests {
             1,
             &ccbin,
             None,
-            50,
+            5.0,
             None,
             true,
             false,
@@ -2393,7 +2403,7 @@ mod tests {
             1,
             &nonexistent,
             None,
-            50,
+            5.0,
             None,
             true,
             false,
@@ -2418,7 +2428,7 @@ mod tests {
             1,
             &ccbin,
             None,
-            50,
+            5.0,
             None,
             true,
             false,

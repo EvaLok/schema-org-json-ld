@@ -87,6 +87,7 @@ struct Args {
 }
 
 #[derive(Subcommand, Debug)]
+#[allow(clippy::large_enum_variant)]
 enum Subcmd {
     /// Idempotent state initialization. Composes the four primitive-side `init` commands
     /// (channel-router init, super-step-boundary init, role-driver init,
@@ -134,7 +135,7 @@ enum Subcmd {
     ///   SCAFFOLD (default): role-session steps require pre-provided session-output
     ///   files (one per role) — `v2-role-driver invoke --session-output-file <path>`.
     ///   LIVE: pass `--claude-code-bin <path>` and the runner instead invokes
-    ///   `v2-role-driver invoke --claude-code-bin ... --max-turns ...`. Live-spawn
+    ///   `v2-role-driver invoke --claude-code-bin ... --max-budget-usd ...`. Live-spawn
     ///   makes the per-role `--*-output-file` flags unused (the role's output comes
     ///   from claude-code's stdout JSON envelope).
     /// The --dry-run flag traces the sequence without invoking primitives.
@@ -179,10 +180,12 @@ enum Subcmd {
         /// `--*-output-file` flags are then ignored.
         #[arg(long)]
         claude_code_bin: Option<PathBuf>,
-        /// LIVE-SPAWN: max conversation turns to pass to claude-code (default 50).
-        /// Ignored in SCAFFOLD mode.
-        #[arg(long, default_value = "50")]
-        role_max_turns: u32,
+        /// LIVE-SPAWN: per-role max dollar spend, passed through to v2-role-driver
+        /// as `--max-budget-usd` (claude's real safety knob). Default 5.0.
+        /// Ignored in SCAFFOLD mode. OQ-LS-1 reconciled cycle 180: the
+        /// cycle-178 design's `--max-turns` is not a real claude flag.
+        #[arg(long, default_value = "5.0")]
+        role_max_budget_usd: f64,
     },
 }
 
@@ -346,7 +349,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
             executor_output_file,
             curator_output_file,
             claude_code_bin,
-            role_max_turns,
+            role_max_budget_usd,
         } => run_cycle(
             args,
             &RunArgs {
@@ -362,7 +365,7 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
                 executor_output_file: executor_output_file.clone(),
                 curator_output_file: curator_output_file.clone(),
                 claude_code_bin: claude_code_bin.clone(),
-                role_max_turns: *role_max_turns,
+                role_max_budget_usd: *role_max_budget_usd,
             },
             out,
             &RealInvoker,
@@ -558,9 +561,9 @@ struct RunArgs {
     /// `--session-output-file`. Per cycle 179
     /// `v2-role-driver-live-spawn-arc.md` §2.2.
     claude_code_bin: Option<PathBuf>,
-    /// LIVE-SPAWN: passed through to v2-role-driver's `--max-turns`.
-    /// Ignored in SCAFFOLD mode. Default 50.
-    role_max_turns: u32,
+    /// LIVE-SPAWN: passed through to v2-role-driver's `--max-budget-usd`.
+    /// Ignored in SCAFFOLD mode. Default 5.0.
+    role_max_budget_usd: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -1224,8 +1227,8 @@ fn build_step_invocation(
             if let Some(ccbin) = &run_args.claude_code_bin {
                 a.push("--claude-code-bin".into());
                 a.push(ccbin.to_string_lossy().into_owned());
-                a.push("--max-turns".into());
-                a.push(run_args.role_max_turns.to_string());
+                a.push("--max-budget-usd".into());
+                a.push(format!("{}", run_args.role_max_budget_usd));
             } else if let Some(p) = session_output_path_for(run_args, role) {
                 a.push("--session-output-file".into());
                 a.push(p.to_string_lossy().into_owned());
@@ -2148,7 +2151,7 @@ mod tests {
             executor_output_file: Some(exec),
             curator_output_file: Some(cur),
             claude_code_bin: None,
-            role_max_turns: 50,
+            role_max_budget_usd: 5.0,
         }
     }
 

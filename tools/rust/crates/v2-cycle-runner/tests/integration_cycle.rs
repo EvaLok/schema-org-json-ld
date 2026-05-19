@@ -975,7 +975,7 @@ fn live_spawn_with_mock_claude_code_drives_all_four_roles_end_to_end() {
         "--issue".into(), "77777".into(),
         "--claude-code-bin".into(),
         mock_claude.to_string_lossy().into_owned(),
-        "--role-max-turns".into(), "10".into(),
+        "--role-max-budget-usd".into(), "1.0".into(),
     ]);
 
     let output = run_cycle_runner(&args);
