@@ -761,3 +761,279 @@ fn invoke_cli_timestamp_overrides_payload_timestamp() {
     .unwrap();
     assert_eq!(chan["timestamp"], "cli-ts");
 }
+
+// =================================================================
+// Cycle 184: --error-format <text|json> emit-side wiring (design §5.2)
+// =================================================================
+//
+// Each test pairs a CLI-surface error case against the text-mode (legacy)
+// stderr and the json-mode (envelope) stderr. The envelope-mode tests
+// confirm: stderr's last non-empty line parses as ErrorEnvelope, primitive
+// matches "v2-role-driver", class matches the design §5.2 mapping, details
+// keys per the table. Mirrors v2-channel-router cycle-183 integration test
+// layout. Live-spawn-only variants (LiveSpawnAuthFailure, LiveSpawnInvocationIo,
+// LiveSpawnEnvelopeParseFailure) are unit-tested above via PrimitiveInvoker
+// mocks; here we cover the CLI-surface variants reachable without a real
+// claude-code spawn.
+
+fn extract_envelope_from_stderr(stderr: &str) -> v2_error_envelope::ErrorEnvelope {
+    v2_error_envelope::parse_from_stderr_tail(stderr)
+        .unwrap_or_else(|| panic!("expected ErrorEnvelope on last stderr line; got:\n{stderr}"))
+}
+
+#[test]
+fn error_format_text_default_preserves_legacy_v2_role_driver_prefix() {
+    // The pre-cycle-184 stderr format must continue to work for every
+    // caller that hasn't migrated to --error-format=json. Default is text.
+    let (_td, repo) = fresh_repo();
+    let out = run_cmd(&repo, &["invoke", "--role", "planner", "--cycle", "1"]);
+    assert!(!out.status.success(), "expected failure (no mode flag)");
+    let stderr = stderr_str(&out);
+    assert!(
+        stderr.contains("v2-role-driver:"),
+        "text mode must keep `v2-role-driver:` prefix; got:\n{stderr}"
+    );
+    assert!(
+        stderr.contains("missing invoke mode"),
+        "text mode must keep human Display text; got:\n{stderr}"
+    );
+    // Negative: should NOT look like an ErrorEnvelope JSON line.
+    assert!(
+        !stderr.trim().ends_with('}'),
+        "text mode stderr must not end with a JSON object; got:\n{stderr}"
+    );
+}
+
+#[test]
+fn error_format_json_missing_invoke_mode_emits_config_envelope() {
+    // CLI surface: `invoke` without --claude-code-bin or --session-output-file
+    // → MissingInvokeMode → Config class per design §5.2.
+    let (_td, repo) = fresh_repo();
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+        ],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.primitive, "v2-role-driver");
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::Config);
+    assert_eq!(env.details.get("key").unwrap(), "invoke-mode");
+    assert!(env
+        .details
+        .get("reason")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .contains("neither"));
+}
+
+#[test]
+fn error_format_json_conflicting_invoke_modes_emits_config_envelope() {
+    // CLI surface: both --claude-code-bin AND --session-output-file → Config.
+    // Note: ConflictingInvokeModes is raised BEFORE super-step verification
+    // (per resolve_invoke_mode → cmd_invoke ordering), so we don't need
+    // --skip-super-step-check here.
+    let (_td, repo) = fresh_repo();
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+            "--claude-code-bin",
+            "/nonexistent/claude",
+            "--session-output-file",
+            "/nonexistent/session.json",
+        ],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::Config);
+    assert!(env
+        .details
+        .get("reason")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .contains("both"));
+}
+
+#[test]
+fn error_format_json_session_output_missing_emits_io_envelope() {
+    // CLI surface: --session-output-file points at a nonexistent path →
+    // SessionOutputMissing → Io class with `op=read`.
+    let (_td, repo) = fresh_repo();
+    run_cmd(&repo, &["init"]);
+    write_super_step_state(&repo, 1, "planner");
+    let bogus = repo.join("nonexistent-session.json");
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+            "--session-output-file",
+            &bogus.to_string_lossy(),
+        ],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::Io);
+    assert_eq!(env.details.get("op").unwrap(), "read");
+    assert!(env
+        .details
+        .get("path")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .ends_with("nonexistent-session.json"));
+}
+
+#[test]
+fn error_format_json_not_initialized_emits_config_envelope() {
+    // CLI surface: `history` on a fresh repo (no `init` run) hits
+    // read_role_history → NotInitialized → Config class with the
+    // `run \`v2-role-driver init\`` hint.
+    let (_td, repo) = fresh_repo();
+    let out = run_cmd(
+        &repo,
+        &["--error-format", "json", "history", "--role", "planner"],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::Config);
+    assert_eq!(env.details.get("key").unwrap(), "state/roles");
+    assert!(env
+        .details
+        .get("hint")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .contains("v2-role-driver init"));
+}
+
+#[test]
+fn error_format_json_super_step_mismatch_emits_super_step_envelope() {
+    // CLI surface: super-step says cycle=2 role=executor but we invoke
+    // cycle=1 role=planner → SuperStepMismatch → SuperStepOutOfOrder
+    // class with role-or-cycle-mismatch reason.
+    let (_td, repo) = fresh_repo();
+    run_cmd(&repo, &["init"]);
+    write_super_step_state(&repo, 2, "executor");
+    let p = write_session_output_full(&repo, "p", 1, "ts", payload_for("planner"));
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+            "--session-output-file",
+            &p.to_string_lossy(),
+        ],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::SuperStepOutOfOrder);
+    assert_eq!(env.details.get("reason").unwrap(), "role-or-cycle-mismatch");
+    assert_eq!(env.details.get("invoked_role").unwrap(), "planner");
+    assert_eq!(env.details.get("invoked_cycle").unwrap(), 1);
+    assert_eq!(env.details.get("current_role").unwrap(), "executor");
+    assert_eq!(env.details.get("current_cycle").unwrap(), 2);
+}
+
+#[test]
+fn error_format_json_invalid_session_output_emits_protocol_envelope() {
+    // CLI surface: --session-output-file points at a malformed-payload file
+    // → InvalidSessionOutput → Protocol class.
+    let (_td, repo) = fresh_repo();
+    run_cmd(&repo, &["init"]);
+    write_super_step_state(&repo, 1, "planner");
+    // Write a session file that's valid JSON but missing the required
+    // planner-channel keys, so validate_payload returns InvalidSessionOutput.
+    let bad = repo.join("bad-session.json");
+    std::fs::write(
+        &bad,
+        serde_json::to_string(&json!({
+            "cycle": 1,
+            "timestamp": "ts",
+            "payload": {"unrelated": "key"},
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+            "--session-output-file",
+            &bad.to_string_lossy(),
+        ],
+    );
+    assert!(!out.status.success());
+    let env = extract_envelope_from_stderr(&stderr_str(&out));
+    assert_eq!(env.class, v2_error_envelope::ErrorClass::Protocol);
+    assert!(env
+        .details
+        .get("observed_shape")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .contains("missing required key"));
+}
+
+#[test]
+fn error_format_json_emits_single_line_envelope_on_stderr_tail() {
+    // §3.2: envelope is the LAST non-empty line of stderr. Verify that
+    // when role-driver emits its envelope, it does so as a single JSON
+    // line (no embedded newlines) so the tail-parse convention holds
+    // even if stderr accumulates pre-envelope warnings from other code.
+    let (_td, repo) = fresh_repo();
+    let out = run_cmd(
+        &repo,
+        &[
+            "--error-format",
+            "json",
+            "invoke",
+            "--role",
+            "planner",
+            "--cycle",
+            "1",
+        ],
+    );
+    let stderr = stderr_str(&out);
+    let last = stderr
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .expect("stderr must have at least one non-empty line");
+    assert!(last.starts_with('{') && last.ends_with('}'));
+    let v: serde_json::Value = serde_json::from_str(last).expect("last line must parse as JSON");
+    assert_eq!(v["primitive"], "v2-role-driver");
+    assert_eq!(v["class"], "config");
+}

@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
+use v2_error_envelope::{ErrorClass, ErrorEnvelope};
 use v2_primitive_invoker::{
     InvocationResult, PrimitiveInvoker, RealInvoker, SignalEscalation, TimeoutDiagnostic,
 };
@@ -25,6 +26,15 @@ struct Args {
     /// Output format.
     #[arg(long, value_enum, default_value_t = Format::Text, global = true)]
     format: Format,
+
+    /// Stderr error-emission format. `text` (default) preserves the legacy
+    /// `v2-role-driver: <message>` line. `json` emits a single-line
+    /// `ErrorEnvelope` JSON record (last non-empty line of stderr) per
+    /// `docs/redesign/_notes/v2-structured-error-envelope-arc.md` §3.2. This
+    /// is the cycle-3 emit-side wiring per design §5.2 — v2-cycle-runner
+    /// switches its invocations to `json` at cycle 4 (caller-side migration).
+    #[arg(long, value_enum, default_value_t = ErrorFormat::Text, global = true)]
+    error_format: ErrorFormat,
 
     #[command(subcommand)]
     command: Command,
@@ -135,6 +145,12 @@ enum Role {
 
 #[derive(Copy, Clone, Debug, ValueEnum, PartialEq, Eq)]
 enum Format {
+    Text,
+    Json,
+}
+
+#[derive(Copy, Clone, Debug, ValueEnum, PartialEq, Eq)]
+enum ErrorFormat {
     Text,
     Json,
 }
@@ -397,6 +413,18 @@ enum DriverError {
     /// not executable, fork failure, etc.). The inner string carries the
     /// underlying `io::Error` message.
     LiveSpawnInvocationIo(String),
+    /// LIVE-SPAWN: claude-code returned `is_error: true` with a recognized
+    /// auth-shape `result` (cycle 184 OQ-LS-AUTH visibility extension per
+    /// design §5.2). The orchestrator-visible classification becomes
+    /// `class=auth` instead of the generic `LiveSpawnEnvelopeParseFailure`
+    /// → `class=protocol` it would otherwise collapse to. `subsystem`
+    /// identifies which auth path failed (currently always
+    /// `"claude-code-oauth"`); `upstream_result` is the raw `result` field
+    /// from claude-code's envelope (e.g., `"Not logged in"`).
+    LiveSpawnAuthFailure {
+        subsystem: String,
+        upstream_result: String,
+    },
 }
 
 impl std::fmt::Display for DriverError {
@@ -465,6 +493,13 @@ impl std::fmt::Display for DriverError {
                 f,
                 "live-spawn invocation IO error: {s}"
             ),
+            DriverError::LiveSpawnAuthFailure {
+                subsystem,
+                upstream_result,
+            } => write!(
+                f,
+                "live-spawn auth failure: subsystem '{subsystem}' reports \"{upstream_result}\""
+            ),
         }
     }
 }
@@ -478,6 +513,127 @@ impl From<io::Error> for DriverError {
 impl From<serde_json::Error> for DriverError {
     fn from(e: serde_json::Error) -> Self {
         DriverError::Json(e.to_string())
+    }
+}
+
+impl DriverError {
+    /// Cycle 184: map a `DriverError` to a structured `ErrorEnvelope` per
+    /// design `_notes/v2-structured-error-envelope-arc.md` §5.2. Emitted
+    /// when `--error-format=json` is set; consumed by v2-cycle-runner's
+    /// rewritten `classify_failure` at cycle 4 of the implementation arc.
+    ///
+    /// Variant-count note: design §5.2 enumerated 11 variants; the actual
+    /// `DriverError` enum has 15 (14 pre-cycle-184 + cycle-184's
+    /// `LiveSpawnAuthFailure`). The 4 design-table gaps (`Io`, `Json`,
+    /// `NotInitialized`, `LiveSpawnAuthFailure`) are mapped here under
+    /// fallback classes (Io→io, Json→protocol, NotInitialized→config,
+    /// LiveSpawnAuthFailure→auth). Cycle-183 `design-tacit-assumption-
+    /// falsified-during-implementation` pattern's fourth recurrence, this
+    /// time on a coordinated-arc variant-enumeration claim.
+    fn to_envelope(&self) -> ErrorEnvelope {
+        const PRIMITIVE: &str = "v2-role-driver";
+        let human = self.to_string();
+        match self {
+            // Generic io::Error from `?` propagation (e.g., reading
+            // state/super-step.json, state/roles/<role>-history.json). The
+            // underlying io::Error doesn't carry a consistent path field
+            // across kinds, so we expose only `kind` + `message`. Path-
+            // bearing io failures (SessionOutputMissing, ClaudeCodeBinMissing,
+            // PromptFileMissing) are surfaced via their explicit variants
+            // below, not this catch-all.
+            DriverError::Io(io_err) => ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                .with_detail("kind", format!("{:?}", io_err.kind()))
+                .with_detail("message", io_err.to_string()),
+            DriverError::Json(parse_error) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Protocol, human)
+                    .with_detail("parse_error", parse_error.clone())
+            }
+            DriverError::NotInitialized(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Config, human)
+                    .with_detail("key", "state/roles")
+                    .with_detail("expected", path.display().to_string())
+                    .with_detail("hint", "run `v2-role-driver init`")
+            }
+            DriverError::SuperStepMismatch {
+                invoked_role,
+                invoked_cycle,
+                current_role,
+                current_cycle,
+            } => ErrorEnvelope::new(PRIMITIVE, ErrorClass::SuperStepOutOfOrder, human)
+                .with_detail("reason", "role-or-cycle-mismatch")
+                .with_detail("invoked_role", invoked_role.name())
+                .with_detail("invoked_cycle", *invoked_cycle)
+                .with_detail("current_role", current_role.name())
+                .with_detail("current_cycle", *current_cycle),
+            DriverError::SuperStepNotInProgress => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::SuperStepOutOfOrder, human)
+                    .with_detail("reason", "no-super-step-in-progress")
+                    .with_detail(
+                        "hint",
+                        "run `v2-super-step-boundary cycle-start --cycle N` first",
+                    )
+            }
+            DriverError::SessionOutputMissing(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                    .with_detail("path", path.display().to_string())
+                    .with_detail("op", "read")
+            }
+            DriverError::InvalidSessionOutput(observed) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Protocol, human)
+                    .with_detail("observed_shape", observed.clone())
+            }
+            DriverError::CycleMismatch {
+                cli_cycle,
+                payload_cycle,
+            } => ErrorEnvelope::new(PRIMITIVE, ErrorClass::SuperStepOutOfOrder, human)
+                .with_detail("reason", "cli-vs-payload-cycle-mismatch")
+                .with_detail("cli_cycle", *cli_cycle)
+                .with_detail("payload_cycle", *payload_cycle),
+            DriverError::ConflictingInvokeModes => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Config, human)
+                    .with_detail("key", "invoke-mode")
+                    .with_detail("reason", "both --claude-code-bin and --session-output-file set")
+                    .with_detail("hint", "pass exactly one")
+            }
+            DriverError::MissingInvokeMode => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Config, human)
+                    .with_detail("key", "invoke-mode")
+                    .with_detail(
+                        "reason",
+                        "neither --claude-code-bin nor --session-output-file set",
+                    )
+                    .with_detail(
+                        "hint",
+                        "pass --claude-code-bin (live) or --session-output-file (scaffold)",
+                    )
+            }
+            DriverError::ClaudeCodeBinMissing(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                    .with_detail("path", path.display().to_string())
+                    .with_detail("op", "stat")
+            }
+            DriverError::PromptFileMissing(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                    .with_detail("path", path.display().to_string())
+                    .with_detail("op", "read")
+            }
+            DriverError::LiveSpawnEnvelopeParseFailure(diagnostic) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Protocol, human)
+                    .with_detail("parse_error", diagnostic.clone())
+                    .with_detail("expected_shape", "claude-code result envelope")
+            }
+            DriverError::LiveSpawnInvocationIo(detail) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                    .with_detail("op", "spawn")
+                    .with_detail("message", detail.clone())
+            }
+            DriverError::LiveSpawnAuthFailure {
+                subsystem,
+                upstream_result,
+            } => ErrorEnvelope::new(PRIMITIVE, ErrorClass::Auth, human)
+                .with_detail("subsystem", subsystem.clone())
+                .with_detail("upstream_result", upstream_result.clone()),
+        }
     }
 }
 
@@ -1112,9 +1268,10 @@ fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
 
             let result_text = match parse_claude_code_envelope(&stdout_bytes) {
                 Ok(text) => text,
-                Err(e) => {
+                Err(env_err) => {
+                    let driver_err = classify_envelope_error(env_err);
                     let notes = format!(
-                        "live-spawn envelope parse failed (exit={exit_code}): {e}; \
+                        "live-spawn envelope handling failed (exit={exit_code}): {driver_err}; \
                          stdout={} bytes; stderr={} bytes",
                         stdout_bytes.len(),
                         stderr_bytes.len()
@@ -1142,7 +1299,7 @@ fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
                         !skip_super_step_check,
                         &notes,
                     )?;
-                    return Err(DriverError::LiveSpawnEnvelopeParseFailure(e));
+                    return Err(driver_err);
                 }
             };
 
@@ -1239,37 +1396,109 @@ fn build_claude_code_argv(
     ]
 }
 
+/// Cycle 184 enriched envelope-parse error per design §5.2. Distinguishes
+/// the auth-shape case (`is_error: true` + recognizable `result` content)
+/// from other parse failures, so the live-spawn caller can route to
+/// `DriverError::LiveSpawnAuthFailure` (class=auth) instead of the generic
+/// `LiveSpawnEnvelopeParseFailure` → class=protocol it would otherwise
+/// collapse to. Pre-cycle-184 the parser returned `Result<String, String>`
+/// and the auth distinction was unreachable; cycle-180 OQ-LS-AUTH
+/// surfaced the visibility gap.
+#[derive(Debug)]
+enum ClaudeCodeEnvelopeError {
+    /// Stdout couldn't be parsed as JSON, or the root wasn't an object.
+    NotJson(String),
+    /// Envelope is a JSON object with `is_error: true`. `subtype` is the
+    /// envelope's `subtype` field (or `"unknown"`); `result` is the raw
+    /// `result` string if present — used by the live-spawn caller to detect
+    /// the auth-shape pattern (`Some("Not logged in")` → auth).
+    IsError {
+        subtype: String,
+        result: Option<String>,
+    },
+    /// Envelope is OK but missing the string `result` field.
+    MissingResult,
+}
+
+impl ClaudeCodeEnvelopeError {
+    /// One-line diagnostic. Substring shape (`is_error=true`,
+    /// `not a JSON object`, `missing string \`result\` field`) preserved
+    /// from the pre-cycle-184 string-error format so existing
+    /// `LiveSpawnEnvelopeParseFailure` consumers and tests still match.
+    fn into_diagnostic(self) -> String {
+        match self {
+            ClaudeCodeEnvelopeError::NotJson(e) => e,
+            ClaudeCodeEnvelopeError::IsError { subtype, result } => match result {
+                Some(r) => format!("envelope reports is_error=true subtype={subtype} result={r}"),
+                None => format!("envelope reports is_error=true subtype={subtype}"),
+            },
+            ClaudeCodeEnvelopeError::MissingResult => {
+                "envelope missing string `result` field".to_string()
+            }
+        }
+    }
+}
+
 /// Parse the `claude-code --output-format json` envelope and extract
 /// the `result` field (the final assistant message text). Per design
 /// §4.4 the envelope shape is approximately
 /// `{"type":"result","subtype":"success","is_error":false,"result":"...","session_id":...,...}`.
 /// On a recognized envelope, return the `result` string. Other shapes
-/// (`is_error: true`, missing `result`, non-object root) return Err
-/// with a one-line diagnostic.
-fn parse_claude_code_envelope(stdout_bytes: &[u8]) -> Result<String, String> {
+/// (`is_error: true`, missing `result`, non-object root) return
+/// `ClaudeCodeEnvelopeError`. The caller decides whether `IsError`
+/// represents an auth failure (cycle-180 OQ-LS-AUTH visibility) or the
+/// generic protocol failure.
+fn parse_claude_code_envelope(stdout_bytes: &[u8]) -> Result<String, ClaudeCodeEnvelopeError> {
     let stdout = std::str::from_utf8(stdout_bytes)
-        .map_err(|e| format!("stdout is not valid UTF-8: {e}"))?;
-    let envelope: serde_json::Value = serde_json::from_str(stdout.trim())
-        .map_err(|e| format!("stdout is not a JSON object: {e}"))?;
+        .map_err(|e| ClaudeCodeEnvelopeError::NotJson(format!("stdout is not valid UTF-8: {e}")))?;
+    let envelope: serde_json::Value = serde_json::from_str(stdout.trim()).map_err(|e| {
+        ClaudeCodeEnvelopeError::NotJson(format!("stdout is not a JSON object: {e}"))
+    })?;
     let obj = envelope
         .as_object()
-        .ok_or_else(|| "envelope must be a JSON object".to_string())?;
+        .ok_or_else(|| ClaudeCodeEnvelopeError::NotJson("envelope must be a JSON object".into()))?;
     if obj
         .get("is_error")
         .and_then(|v| v.as_bool())
         .unwrap_or(false)
     {
-        let sub = obj
+        let subtype = obj
             .get("subtype")
             .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-        return Err(format!("envelope reports is_error=true subtype={sub}"));
+            .unwrap_or("unknown")
+            .to_string();
+        let result = obj
+            .get("result")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        return Err(ClaudeCodeEnvelopeError::IsError { subtype, result });
     }
     let result = obj
         .get("result")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| "envelope missing string `result` field".to_string())?;
+        .ok_or(ClaudeCodeEnvelopeError::MissingResult)?;
     Ok(result.to_string())
+}
+
+/// Cycle 184: classify a `ClaudeCodeEnvelopeError` into the appropriate
+/// `DriverError`. The cycle-180 OQ-LS-AUTH visibility extension fires here:
+/// `is_error: true` + `result == "Not logged in"` → `LiveSpawnAuthFailure`
+/// (class=auth); everything else collapses to `LiveSpawnEnvelopeParseFailure`
+/// (class=protocol).
+fn classify_envelope_error(env_err: ClaudeCodeEnvelopeError) -> DriverError {
+    if let ClaudeCodeEnvelopeError::IsError {
+        result: Some(ref r),
+        ..
+    } = env_err
+    {
+        if r == "Not logged in" {
+            return DriverError::LiveSpawnAuthFailure {
+                subsystem: "claude-code-oauth".to_string(),
+                upstream_result: r.clone(),
+            };
+        }
+    }
+    DriverError::LiveSpawnEnvelopeParseFailure(env_err.into_diagnostic())
 }
 
 /// Render the user-message context block per design §5.1. Used by
@@ -1807,7 +2036,10 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("v2-role-driver: {e}");
+            match args.error_format {
+                ErrorFormat::Text => eprintln!("v2-role-driver: {e}"),
+                ErrorFormat::Json => eprintln!("{}", e.to_envelope().to_json_line()),
+            }
             ExitCode::FAILURE
         }
     }
@@ -2174,22 +2406,369 @@ mod tests {
     fn parse_claude_code_envelope_rejects_is_error_true() {
         let envelope = br#"{"type":"result","subtype":"auth-error","is_error":true,"result":""}"#;
         let err = parse_claude_code_envelope(envelope).unwrap_err();
-        assert!(err.contains("is_error=true"));
-        assert!(err.contains("subtype=auth-error"));
+        // Cycle 184: structured error variant + diagnostic substring.
+        match &err {
+            ClaudeCodeEnvelopeError::IsError { subtype, result } => {
+                assert_eq!(subtype, "auth-error");
+                assert_eq!(result.as_deref(), Some(""));
+            }
+            other => panic!("expected IsError, got {other:?}"),
+        }
+        let diag = err.into_diagnostic();
+        assert!(diag.contains("is_error=true"));
+        assert!(diag.contains("subtype=auth-error"));
     }
 
     #[test]
     fn parse_claude_code_envelope_rejects_missing_result() {
         let envelope = br#"{"type":"result","subtype":"success","is_error":false}"#;
         let err = parse_claude_code_envelope(envelope).unwrap_err();
-        assert!(err.contains("missing string `result` field"));
+        assert!(matches!(err, ClaudeCodeEnvelopeError::MissingResult));
+        assert!(err.into_diagnostic().contains("missing string `result` field"));
     }
 
     #[test]
     fn parse_claude_code_envelope_rejects_non_json_stdout() {
         let envelope = b"this is not JSON";
         let err = parse_claude_code_envelope(envelope).unwrap_err();
-        assert!(err.contains("not a JSON object"));
+        assert!(matches!(err, ClaudeCodeEnvelopeError::NotJson(_)));
+        assert!(err.into_diagnostic().contains("not a JSON object"));
+    }
+
+    // ----- Cycle 184: envelope emit-side (design §5.2) ----------------
+    //
+    // Mirrors the cycle-183 v2-channel-router test layout: one envelope-
+    // mapping test per `DriverError` variant + a few cross-cutting
+    // invariants. The 15 variants × 1 test = the bulk of these. The
+    // cycle-180 OQ-LS-AUTH visibility extension (LiveSpawnAuthFailure)
+    // gets two additional tests: the classify_envelope_error routing
+    // and the parser-returns-Some(result) round trip.
+
+    #[test]
+    fn envelope_io_variant_maps_to_io_class_with_kind_and_message() {
+        let err = DriverError::Io(io::Error::new(io::ErrorKind::PermissionDenied, "denied"));
+        let env = err.to_envelope();
+        assert_eq!(env.primitive, "v2-role-driver");
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.human, err.to_string());
+        assert_eq!(env.details.get("kind").unwrap(), "PermissionDenied");
+        assert_eq!(env.details.get("message").unwrap(), "denied");
+    }
+
+    #[test]
+    fn envelope_json_variant_maps_to_protocol_class_with_parse_error() {
+        let err = DriverError::Json("expected `,` at line 3 column 5".to_string());
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Protocol);
+        assert_eq!(
+            env.details.get("parse_error").unwrap(),
+            "expected `,` at line 3 column 5"
+        );
+    }
+
+    #[test]
+    fn envelope_not_initialized_maps_to_config_class_with_path_and_hint() {
+        let err = DriverError::NotInitialized(PathBuf::from("/some/repo/state/roles"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Config);
+        assert_eq!(env.details.get("key").unwrap(), "state/roles");
+        assert_eq!(env.details.get("expected").unwrap(), "/some/repo/state/roles");
+        assert_eq!(
+            env.details.get("hint").unwrap(),
+            "run `v2-role-driver init`"
+        );
+    }
+
+    #[test]
+    fn envelope_super_step_mismatch_maps_to_super_step_out_of_order_with_reason() {
+        let err = DriverError::SuperStepMismatch {
+            invoked_role: Role::Planner,
+            invoked_cycle: 42,
+            current_role: Role::Reconciler,
+            current_cycle: 41,
+        };
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::SuperStepOutOfOrder);
+        assert_eq!(env.details.get("reason").unwrap(), "role-or-cycle-mismatch");
+        assert_eq!(env.details.get("invoked_role").unwrap(), "planner");
+        assert_eq!(env.details.get("invoked_cycle").unwrap(), 42);
+        assert_eq!(env.details.get("current_role").unwrap(), "reconciler");
+        assert_eq!(env.details.get("current_cycle").unwrap(), 41);
+    }
+
+    #[test]
+    fn envelope_super_step_not_in_progress_maps_with_reason_subvariant() {
+        let env = DriverError::SuperStepNotInProgress.to_envelope();
+        assert_eq!(env.class, ErrorClass::SuperStepOutOfOrder);
+        assert_eq!(
+            env.details.get("reason").unwrap(),
+            "no-super-step-in-progress"
+        );
+        assert!(env
+            .details
+            .get("hint")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("v2-super-step-boundary"));
+    }
+
+    #[test]
+    fn envelope_session_output_missing_maps_to_io_class_with_path_and_read_op() {
+        let err = DriverError::SessionOutputMissing(PathBuf::from("/tmp/session.json"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.details.get("path").unwrap(), "/tmp/session.json");
+        assert_eq!(env.details.get("op").unwrap(), "read");
+    }
+
+    #[test]
+    fn envelope_invalid_session_output_maps_to_protocol_class_with_observed_shape() {
+        let err = DriverError::InvalidSessionOutput("payload missing 'foo'".to_string());
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Protocol);
+        assert_eq!(
+            env.details.get("observed_shape").unwrap(),
+            "payload missing 'foo'"
+        );
+    }
+
+    #[test]
+    fn envelope_cycle_mismatch_maps_to_super_step_out_of_order_with_reason() {
+        let err = DriverError::CycleMismatch {
+            cli_cycle: 41,
+            payload_cycle: 42,
+        };
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::SuperStepOutOfOrder);
+        assert_eq!(
+            env.details.get("reason").unwrap(),
+            "cli-vs-payload-cycle-mismatch"
+        );
+        assert_eq!(env.details.get("cli_cycle").unwrap(), 41);
+        assert_eq!(env.details.get("payload_cycle").unwrap(), 42);
+    }
+
+    #[test]
+    fn envelope_conflicting_invoke_modes_maps_to_config_class() {
+        let env = DriverError::ConflictingInvokeModes.to_envelope();
+        assert_eq!(env.class, ErrorClass::Config);
+        assert_eq!(env.details.get("key").unwrap(), "invoke-mode");
+        assert!(env
+            .details
+            .get("reason")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("both"));
+    }
+
+    #[test]
+    fn envelope_missing_invoke_mode_maps_to_config_class() {
+        let env = DriverError::MissingInvokeMode.to_envelope();
+        assert_eq!(env.class, ErrorClass::Config);
+        assert_eq!(env.details.get("key").unwrap(), "invoke-mode");
+        assert!(env
+            .details
+            .get("reason")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("neither"));
+    }
+
+    #[test]
+    fn envelope_claude_code_bin_missing_maps_to_io_class_with_stat_op() {
+        let err = DriverError::ClaudeCodeBinMissing(PathBuf::from("/usr/local/bin/claude-code"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.details.get("path").unwrap(), "/usr/local/bin/claude-code");
+        assert_eq!(env.details.get("op").unwrap(), "stat");
+    }
+
+    #[test]
+    fn envelope_prompt_file_missing_maps_to_io_class_with_read_op() {
+        let err = DriverError::PromptFileMissing(PathBuf::from("/r/prompts/v2/planner-prompt.xml"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(
+            env.details.get("path").unwrap(),
+            "/r/prompts/v2/planner-prompt.xml"
+        );
+        assert_eq!(env.details.get("op").unwrap(), "read");
+    }
+
+    #[test]
+    fn envelope_live_spawn_envelope_parse_failure_maps_to_protocol_class() {
+        let err = DriverError::LiveSpawnEnvelopeParseFailure(
+            "envelope reports is_error=true subtype=unknown".to_string(),
+        );
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Protocol);
+        assert!(env
+            .details
+            .get("parse_error")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("is_error=true"));
+        assert_eq!(
+            env.details.get("expected_shape").unwrap(),
+            "claude-code result envelope"
+        );
+    }
+
+    #[test]
+    fn envelope_live_spawn_invocation_io_maps_to_io_class_with_spawn_op() {
+        let err = DriverError::LiveSpawnInvocationIo("ENOEXEC".to_string());
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.details.get("op").unwrap(), "spawn");
+        assert_eq!(env.details.get("message").unwrap(), "ENOEXEC");
+    }
+
+    #[test]
+    fn envelope_live_spawn_auth_failure_maps_to_auth_class_with_subsystem() {
+        // Cycle 184 OQ-LS-AUTH visibility extension: the auth-shape case
+        // gets an Auth-class envelope so the orchestrator observes a typed
+        // class rather than the generic WriteSkipped / Protocol diagnostic.
+        let err = DriverError::LiveSpawnAuthFailure {
+            subsystem: "claude-code-oauth".to_string(),
+            upstream_result: "Not logged in".to_string(),
+        };
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Auth);
+        assert_eq!(env.details.get("subsystem").unwrap(), "claude-code-oauth");
+        assert_eq!(env.details.get("upstream_result").unwrap(), "Not logged in");
+    }
+
+    #[test]
+    fn classify_envelope_error_routes_not_logged_in_to_auth_failure() {
+        // The exact pattern v2-cycle-runner needs to observe: claude-code
+        // returns is_error=true with result="Not logged in"; role-driver
+        // upgrades from LiveSpawnEnvelopeParseFailure (protocol) to
+        // LiveSpawnAuthFailure (auth) per design §5.2 cycle-180 OQ-LS-AUTH.
+        let env_err = ClaudeCodeEnvelopeError::IsError {
+            subtype: "auth-error".to_string(),
+            result: Some("Not logged in".to_string()),
+        };
+        match classify_envelope_error(env_err) {
+            DriverError::LiveSpawnAuthFailure {
+                subsystem,
+                upstream_result,
+            } => {
+                assert_eq!(subsystem, "claude-code-oauth");
+                assert_eq!(upstream_result, "Not logged in");
+            }
+            other => panic!("expected LiveSpawnAuthFailure, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn classify_envelope_error_routes_other_is_error_to_parse_failure() {
+        // Any is_error with a non-auth-shape result (or no result) falls
+        // through to the legacy LiveSpawnEnvelopeParseFailure path.
+        for env_err in [
+            ClaudeCodeEnvelopeError::IsError {
+                subtype: "rate-limit".to_string(),
+                result: Some("too many requests".to_string()),
+            },
+            ClaudeCodeEnvelopeError::IsError {
+                subtype: "auth-error".to_string(),
+                result: None,
+            },
+            ClaudeCodeEnvelopeError::NotJson("garbage".to_string()),
+            ClaudeCodeEnvelopeError::MissingResult,
+        ] {
+            assert!(
+                matches!(
+                    classify_envelope_error(env_err),
+                    DriverError::LiveSpawnEnvelopeParseFailure(_)
+                ),
+                "non-auth env_err must classify as LiveSpawnEnvelopeParseFailure"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_claude_code_envelope_surfaces_result_field_on_is_error() {
+        // Cycle 184: the parser must extract `result` even when is_error
+        // is true, so classify_envelope_error can detect the auth pattern.
+        // Pre-cycle-184 parser discarded result in the is_error branch.
+        let envelope =
+            br#"{"type":"result","subtype":"auth-error","is_error":true,"result":"Not logged in"}"#;
+        let err = parse_claude_code_envelope(envelope).unwrap_err();
+        match err {
+            ClaudeCodeEnvelopeError::IsError { subtype, result } => {
+                assert_eq!(subtype, "auth-error");
+                assert_eq!(result.as_deref(), Some("Not logged in"));
+            }
+            other => panic!("expected IsError variant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn envelope_serializes_to_compact_single_line_json() {
+        // §3.2 emission protocol: `to_json_line()` is single-line, no
+        // embedded newlines (so the "last non-empty line of stderr is the
+        // envelope" convention holds even when stderr accumulates other
+        // lines). Also round-trips via parse_from_stderr_tail.
+        let err = DriverError::MissingInvokeMode;
+        let line = err.to_envelope().to_json_line();
+        assert!(
+            !line.contains('\n'),
+            "envelope line must not contain newlines: {line}"
+        );
+        assert!(
+            line.starts_with('{') && line.ends_with('}'),
+            "envelope must be a JSON object: {line}"
+        );
+        let parsed = v2_error_envelope::parse_from_stderr_tail(&line)
+            .expect("parse_from_stderr_tail must recover the envelope");
+        assert_eq!(parsed.class, ErrorClass::Config);
+        assert_eq!(parsed.primitive, "v2-role-driver");
+    }
+
+    #[test]
+    fn envelope_retry_policy_for_role_driver_classes_is_all_non_retryable() {
+        // Pin that none of v2-role-driver's emit-side classes are retryable
+        // per design §4 table. Auth in particular MUST be non-retryable
+        // (cycle-180 OQ-LS-AUTH: retrying without operator action wastes
+        // budget and locks more accounts).
+        for err in [
+            DriverError::Io(io::Error::other("x")),
+            DriverError::Json("p".to_string()),
+            DriverError::NotInitialized(PathBuf::from("/x")),
+            DriverError::SuperStepMismatch {
+                invoked_role: Role::Planner,
+                invoked_cycle: 1,
+                current_role: Role::Reconciler,
+                current_cycle: 1,
+            },
+            DriverError::SuperStepNotInProgress,
+            DriverError::SessionOutputMissing(PathBuf::from("/x")),
+            DriverError::InvalidSessionOutput("x".to_string()),
+            DriverError::CycleMismatch {
+                cli_cycle: 1,
+                payload_cycle: 2,
+            },
+            DriverError::ConflictingInvokeModes,
+            DriverError::MissingInvokeMode,
+            DriverError::ClaudeCodeBinMissing(PathBuf::from("/x")),
+            DriverError::PromptFileMissing(PathBuf::from("/x")),
+            DriverError::LiveSpawnEnvelopeParseFailure("x".to_string()),
+            DriverError::LiveSpawnInvocationIo("x".to_string()),
+            DriverError::LiveSpawnAuthFailure {
+                subsystem: "claude-code-oauth".to_string(),
+                upstream_result: "Not logged in".to_string(),
+            },
+        ] {
+            assert!(
+                !err.to_envelope().is_retryable_class(),
+                "{} must classify as non-retryable",
+                err
+            );
+        }
     }
 
     fn fresh_repo_with_init(td: &tempfile::TempDir) -> PathBuf {
