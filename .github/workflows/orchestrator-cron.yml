@@ -1,8 +1,8 @@
 name: Orchestrator Cron
 
 on:
-  schedule:
-    - cron: '0 0,2,4,6,8,10,20,22 * * *'
+  # schedule:
+  #   - cron: '0 0,2,4,6,8,10,20,22 * * *'
   workflow_dispatch: {}
 
 concurrency:
