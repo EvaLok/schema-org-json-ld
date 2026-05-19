@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use v2_error_envelope::{ErrorClass, ErrorEnvelope};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -22,6 +23,15 @@ struct Args {
     /// Payload validation mode.
     #[arg(long, value_enum, default_value_t = Mode::Strict, global = true)]
     mode: Mode,
+
+    /// Stderr error-emission format. `text` (default) preserves the legacy
+    /// `v2-channel-router: <message>` line. `json` emits a single-line
+    /// `ErrorEnvelope` JSON record (last non-empty line of stderr) per
+    /// `docs/redesign/_notes/v2-structured-error-envelope-arc.md` §3.2. This
+    /// is the cycle-2 emit-side wiring — v2-cycle-runner switches its
+    /// invocations to `json` at cycle 4 (caller-side migration).
+    #[arg(long, value_enum, default_value_t = ErrorFormat::Text, global = true)]
+    error_format: ErrorFormat,
 
     #[command(subcommand)]
     command: Command,
@@ -90,6 +100,12 @@ enum Format {
 enum Mode {
     Strict,
     Lenient,
+}
+
+#[derive(Copy, Clone, Debug, ValueEnum, PartialEq, Eq)]
+enum ErrorFormat {
+    Text,
+    Json,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -383,6 +399,55 @@ impl From<io::Error> for RouterError {
 impl From<serde_json::Error> for RouterError {
     fn from(e: serde_json::Error) -> Self {
         RouterError::Json(e.to_string())
+    }
+}
+
+impl RouterError {
+    /// Map a `RouterError` to a structured `ErrorEnvelope` per the design
+    /// `_notes/v2-structured-error-envelope-arc.md` §5.1 table. Emitted when
+    /// `--error-format=json` is set; consumed by v2-cycle-runner's rewritten
+    /// `classify_failure` at cycle 4 of the implementation arc.
+    fn to_envelope(&self) -> ErrorEnvelope {
+        const PRIMITIVE: &str = "v2-channel-router";
+        let human = self.to_string();
+        match self {
+            // Io variants from `?` propagation: the underlying io::Error
+            // doesn't consistently carry a `path` field across kinds, so we
+            // expose only `kind` + `message`. Path-bearing io failures (e.g.,
+            // missing payload file) are surfaced via the explicit
+            // `MissingPayloadFile` variant below, not this catch-all.
+            RouterError::Io(io_err) => ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                .with_detail("kind", format!("{:?}", io_err.kind()))
+                .with_detail("message", io_err.to_string()),
+            RouterError::Json(parse_error) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Protocol, human)
+                    .with_detail("parse_error", parse_error.clone())
+            }
+            RouterError::ReducerViolation {
+                channel,
+                attempted_writer,
+                allowed_writer,
+            } => ErrorEnvelope::new(PRIMITIVE, ErrorClass::ChannelWriteRejected, human)
+                .with_detail("channel", channel.name())
+                .with_detail("writer", attempted_writer.name())
+                .with_detail("allowed_writer", allowed_writer.name())
+                .with_detail("reason", "reducer-rule-mismatch"),
+            RouterError::InvalidPayload(observed) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Protocol, human)
+                    .with_detail("observed_shape", observed.clone())
+            }
+            RouterError::NotInitialized(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Config, human)
+                    .with_detail("key", "channels_dir")
+                    .with_detail("expected", path.display().to_string())
+                    .with_detail("hint", "run `v2-channel-router init`")
+            }
+            RouterError::MissingPayloadFile(path) => {
+                ErrorEnvelope::new(PRIMITIVE, ErrorClass::Io, human)
+                    .with_detail("path", path.display().to_string())
+                    .with_detail("op", "read")
+            }
+        }
     }
 }
 
@@ -1030,7 +1095,10 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(err) => {
-            eprintln!("v2-channel-router: {err}");
+            match args.error_format {
+                ErrorFormat::Text => eprintln!("v2-channel-router: {err}"),
+                ErrorFormat::Json => eprintln!("{}", err.to_envelope().to_json_line()),
+            }
             ExitCode::FAILURE
         }
     }
@@ -1420,5 +1488,129 @@ mod tests {
         };
         let json = serde_json::to_value(schema).unwrap();
         assert_eq!(json["schema_format_version"], 2);
+    }
+
+    // ----- Cycle 183: envelope emit-side (design §5.1) -----------------
+    //
+    // One test per `RouterError` variant verifies the §5.1 mapping table:
+    // primitive name, class, expected detail keys, and that `human` matches
+    // the existing Display impl. A final test pins the cross-cutting
+    // invariants (primitive constant, JSON shape).
+
+    #[test]
+    fn envelope_io_variant_maps_to_io_class_with_kind_and_message() {
+        let err = RouterError::Io(io::Error::new(io::ErrorKind::PermissionDenied, "denied"));
+        let env = err.to_envelope();
+        assert_eq!(env.primitive, "v2-channel-router");
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.human, err.to_string());
+        assert_eq!(env.details.get("kind").unwrap(), "PermissionDenied");
+        assert_eq!(env.details.get("message").unwrap(), "denied");
+    }
+
+    #[test]
+    fn envelope_json_variant_maps_to_protocol_class_with_parse_error() {
+        let err = RouterError::Json("expected `,` at line 3 column 5".to_string());
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Protocol);
+        assert_eq!(
+            env.details.get("parse_error").unwrap(),
+            "expected `,` at line 3 column 5"
+        );
+    }
+
+    #[test]
+    fn envelope_reducer_violation_maps_to_channel_write_rejected_with_full_detail() {
+        let err = RouterError::ReducerViolation {
+            channel: Channel::PlanChannel,
+            attempted_writer: Role::Executor,
+            allowed_writer: Role::Planner,
+        };
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::ChannelWriteRejected);
+        assert_eq!(env.details.get("channel").unwrap(), "plan-channel");
+        assert_eq!(env.details.get("writer").unwrap(), "executor");
+        assert_eq!(env.details.get("allowed_writer").unwrap(), "planner");
+        assert_eq!(env.details.get("reason").unwrap(), "reducer-rule-mismatch");
+    }
+
+    #[test]
+    fn envelope_invalid_payload_maps_to_protocol_class_with_observed_shape() {
+        let err = RouterError::InvalidPayload("missing required key 'foo'".to_string());
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Protocol);
+        assert_eq!(
+            env.details.get("observed_shape").unwrap(),
+            "missing required key 'foo'"
+        );
+    }
+
+    #[test]
+    fn envelope_not_initialized_maps_to_config_class_with_path_and_hint() {
+        let err = RouterError::NotInitialized(PathBuf::from("/some/repo/state/channels"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Config);
+        assert_eq!(env.details.get("key").unwrap(), "channels_dir");
+        assert_eq!(
+            env.details.get("expected").unwrap(),
+            "/some/repo/state/channels"
+        );
+        assert_eq!(
+            env.details.get("hint").unwrap(),
+            "run `v2-channel-router init`"
+        );
+    }
+
+    #[test]
+    fn envelope_missing_payload_file_maps_to_io_class_with_path_and_read_op() {
+        let err = RouterError::MissingPayloadFile(PathBuf::from("/tmp/payload.json"));
+        let env = err.to_envelope();
+        assert_eq!(env.class, ErrorClass::Io);
+        assert_eq!(env.details.get("path").unwrap(), "/tmp/payload.json");
+        assert_eq!(env.details.get("op").unwrap(), "read");
+    }
+
+    #[test]
+    fn envelope_serializes_to_compact_single_line_json() {
+        // Pin the §3.2 emission protocol: `to_json_line()` is a single line,
+        // no embedded newlines (so the "last non-empty line of stderr is the
+        // envelope" convention holds even when stderr accumulates other
+        // lines).
+        let err = RouterError::NotInitialized(PathBuf::from("/x/y"));
+        let line = err.to_envelope().to_json_line();
+        assert!(!line.contains('\n'), "envelope line must not contain newlines: {line}");
+        assert!(line.starts_with('{') && line.ends_with('}'), "envelope must be a JSON object: {line}");
+        // Parse round-trip via parse_from_stderr_tail to verify the line is
+        // recoverable through the consumer-side helper too.
+        let parsed = v2_error_envelope::parse_from_stderr_tail(&line)
+            .expect("parse_from_stderr_tail must recover the envelope");
+        assert_eq!(parsed.class, ErrorClass::Config);
+        assert_eq!(parsed.primitive, "v2-channel-router");
+    }
+
+    #[test]
+    fn envelope_retry_policy_for_router_classes_is_all_non_retryable() {
+        // Pin that none of v2-channel-router's emit-side classes are
+        // retryable per design §4 table. If a future migration adds a
+        // Transient class to router, this test forces the question.
+        for err in [
+            RouterError::Io(io::Error::other("x")),
+            RouterError::Json("x".to_string()),
+            RouterError::InvalidPayload("x".to_string()),
+            RouterError::NotInitialized(PathBuf::from("/x")),
+            RouterError::MissingPayloadFile(PathBuf::from("/x")),
+            RouterError::ReducerViolation {
+                channel: Channel::WorkChannel,
+                attempted_writer: Role::Planner,
+                allowed_writer: Role::Executor,
+            },
+        ] {
+            let env = err.to_envelope();
+            assert!(
+                !env.is_retryable_class(),
+                "router classes are halt-only; {:?} surfaced as retryable",
+                env.class
+            );
+        }
     }
 }

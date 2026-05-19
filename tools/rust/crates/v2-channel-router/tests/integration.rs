@@ -816,3 +816,147 @@ fn schema_subcommand_emits_format_version_2() {
     assert_eq!(code, 0);
     assert_eq!(v["schema_format_version"].as_u64().unwrap(), 2);
 }
+
+// ----- Cycle 183: envelope emit-side end-to-end (design §7.1 cycle 2) ------
+
+#[test]
+fn error_format_json_emits_envelope_for_not_initialized_read() {
+    // Acceptance criterion: invoke router with --error-format=json on a
+    // deliberately-erroring input (here: read against a non-initialized
+    // state dir), parse the envelope from stderr's last line, assert class +
+    // key details land.
+    let tmp = TempDir::new().unwrap();
+    let (_stdout, stderr, code) = run(
+        &[
+            "--error-format",
+            "json",
+            "read",
+            "--channel",
+            "plan-channel",
+        ],
+        tmp.path(),
+    );
+    assert_ne!(code, 0, "must exit non-zero on uninitialized read");
+
+    let envelope = v2_error_envelope::parse_from_stderr_tail(&stderr)
+        .unwrap_or_else(|| panic!("expected envelope on stderr; got: {stderr}"));
+    assert_eq!(envelope.primitive, "v2-channel-router");
+    assert_eq!(envelope.class, v2_error_envelope::ErrorClass::Config);
+    assert_eq!(
+        envelope.details.get("key").and_then(|v| v.as_str()),
+        Some("channels_dir"),
+    );
+    assert_eq!(
+        envelope.details.get("hint").and_then(|v| v.as_str()),
+        Some("run `v2-channel-router init`"),
+    );
+    // human field is the legacy Display text — preserved so text mode and
+    // JSON mode carry the same operator-visible message.
+    assert!(
+        envelope.human.contains("channel state directory not initialized"),
+        "human field should mirror Display impl: {}",
+        envelope.human
+    );
+}
+
+#[test]
+fn error_format_text_still_emits_legacy_line_by_default() {
+    // Backward-compat: omitting --error-format must preserve the legacy
+    // `v2-channel-router: <message>` stderr line. The cycle 4 caller-side
+    // migration is what flips invocations to json; this cycle's emit-side
+    // change must not silently break operators reading text stderr today.
+    let tmp = TempDir::new().unwrap();
+    let (_stdout, stderr, code) = run(
+        &["read", "--channel", "plan-channel"],
+        tmp.path(),
+    );
+    assert_ne!(code, 0);
+    assert!(
+        stderr.starts_with("v2-channel-router: "),
+        "text-mode stderr must keep legacy prefix: {stderr:?}",
+    );
+    assert!(
+        v2_error_envelope::parse_from_stderr_tail(&stderr).is_none(),
+        "text-mode stderr must NOT parse as an envelope: {stderr:?}",
+    );
+}
+
+#[test]
+fn error_format_json_with_lenient_mode_pre_envelope_warning_still_parses() {
+    // Pin design §6.2 / OQ-SEE-2: when stderr already contains pre-envelope
+    // warning lines (lenient-mode validation warnings), the envelope on the
+    // last non-empty line of stderr must still be recoverable via
+    // parse_from_stderr_tail.
+    //
+    // We trigger this by:
+    //   1. init
+    //   2. write a plan-channel payload that is mostly valid but missing a
+    //      sub-key (`per-role-tasks` deep schema mismatch) — lenient-mode
+    //      logs a `[router-lenient]` warning then succeeds.
+    //   3. read with --error-format=json, --writer Executor, payload-file
+    //      that triggers a strict-mode validation failure. Since we want the
+    //      lenient-warning + envelope co-occurrence, we exercise via the
+    //      reducer-violation path which both validates AND rejects writers
+    //      that don't own the channel — and use lenient mode to attach a
+    //      warning preamble.
+    //
+    // Simpler shape: trigger a reducer violation in lenient mode. That
+    // emits the lenient warning then surfaces the ReducerViolation as a
+    // hard error (lenient is for payload validation, not for ownership).
+    let tmp = TempDir::new().unwrap();
+    let (_o, _e, c) = run(&["init"], tmp.path());
+    assert_eq!(c, 0);
+
+    // Write a well-formed plan-channel payload but declare writer=executor
+    // (only planner is allowed). Use lenient mode to introduce a
+    // pre-envelope warning line into stderr.
+    let body = serde_json::json!({
+        "cycle": 1,
+        "timestamp": "2026-05-19T09:00:00Z",
+        "payload": {
+            "substantive-focal": "exercise pre-envelope warning",
+            "per-role-tasks": {
+                "executor": {"action": "x"},
+                "curator": {"action": "x"},
+                "reconciler": {"action": "x"}
+            },
+            "unexpected-extra-key": "lenient warns on this"
+        }
+    })
+    .to_string();
+    let payload = write_payload_file(tmp.path(), "violation.json", &body);
+    let (_stdout, stderr, code) = run(
+        &[
+            "--error-format",
+            "json",
+            "--mode",
+            "lenient",
+            "write",
+            "--channel",
+            "plan-channel",
+            "--writer",
+            "executor",
+            "--payload-file",
+            payload.to_str().unwrap(),
+        ],
+        tmp.path(),
+    );
+    assert_ne!(code, 0, "reducer-violation must exit non-zero");
+
+    // Envelope must be recoverable as the last non-empty line.
+    let envelope = v2_error_envelope::parse_from_stderr_tail(&stderr)
+        .unwrap_or_else(|| panic!("expected envelope on stderr; got: {stderr}"));
+    assert_eq!(envelope.class, v2_error_envelope::ErrorClass::ChannelWriteRejected);
+    assert_eq!(
+        envelope.details.get("channel").and_then(|v| v.as_str()),
+        Some("plan-channel"),
+    );
+    assert_eq!(
+        envelope.details.get("writer").and_then(|v| v.as_str()),
+        Some("executor"),
+    );
+    assert_eq!(
+        envelope.details.get("allowed_writer").and_then(|v| v.as_str()),
+        Some("planner"),
+    );
+}

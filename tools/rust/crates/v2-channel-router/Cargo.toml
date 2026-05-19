@@ -8,6 +8,8 @@ description = "Typed-channel reducer-rule application and per-channel file persi
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+v2-error-envelope = { path = "../v2-error-envelope" }
 
 [dev-dependencies]
 tempfile = "3"
+v2-error-envelope = { path = "../v2-error-envelope" }

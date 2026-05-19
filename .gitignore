@@ -21,4 +21,5 @@ docs/.tmp-*
 docs/**/.tmp-*
 tools/rust/.tmp-*
 .cycle*-tmp.md
+.tmp-c*/
 .cache/

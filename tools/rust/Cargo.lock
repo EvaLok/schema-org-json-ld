@@ -1026,6 +1026,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "v2-error-envelope",
 ]
 
 [[package]]
