@@ -130,9 +130,14 @@ enum Subcmd {
     /// reconciler-pre-poll, reconciler-session, advance, planner-session, advance,
     /// executor-session, advance, curator-session, super-step-settle.
     ///
-    /// SCAFFOLD scope cycle 151: role-session steps require pre-provided session-output files
-    /// (one per role) because v2-role-driver `invoke` is itself SCAFFOLD — no live claude-code
-    /// spawn yet. The --dry-run flag traces the sequence without invoking primitives.
+    /// Two role-spawn modes per cycle 179 `v2-role-driver-live-spawn-arc.md` §2.2:
+    ///   SCAFFOLD (default): role-session steps require pre-provided session-output
+    ///   files (one per role) — `v2-role-driver invoke --session-output-file <path>`.
+    ///   LIVE: pass `--claude-code-bin <path>` and the runner instead invokes
+    ///   `v2-role-driver invoke --claude-code-bin ... --max-turns ...`. Live-spawn
+    ///   makes the per-role `--*-output-file` flags unused (the role's output comes
+    ///   from claude-code's stdout JSON envelope).
+    /// The --dry-run flag traces the sequence without invoking primitives.
     Run {
         /// Cycle number (the orchestrator-run issue's sequence position).
         #[arg(long)]
@@ -157,18 +162,27 @@ enum Subcmd {
         #[arg(long)]
         dispatch_source_file: Option<PathBuf>,
         /// Path to the reconciler session output (v2-role-driver --session-output-file).
-        /// Required unless --dry-run.
+        /// Required in SCAFFOLD mode (no --claude-code-bin) unless --dry-run.
         #[arg(long)]
         reconciler_output_file: Option<PathBuf>,
-        /// Path to the planner session output. Required unless --dry-run.
+        /// Path to the planner session output. Required in SCAFFOLD mode unless --dry-run.
         #[arg(long)]
         planner_output_file: Option<PathBuf>,
-        /// Path to the executor session output. Required unless --dry-run.
+        /// Path to the executor session output. Required in SCAFFOLD mode unless --dry-run.
         #[arg(long)]
         executor_output_file: Option<PathBuf>,
-        /// Path to the curator session output. Required unless --dry-run.
+        /// Path to the curator session output. Required in SCAFFOLD mode unless --dry-run.
         #[arg(long)]
         curator_output_file: Option<PathBuf>,
+        /// LIVE-SPAWN: path to the `claude-code` binary. When present, role-session
+        /// steps invoke v2-role-driver in live-spawn mode; the per-role
+        /// `--*-output-file` flags are then ignored.
+        #[arg(long)]
+        claude_code_bin: Option<PathBuf>,
+        /// LIVE-SPAWN: max conversation turns to pass to claude-code (default 50).
+        /// Ignored in SCAFFOLD mode.
+        #[arg(long, default_value = "50")]
+        role_max_turns: u32,
     },
 }
 
@@ -331,6 +345,8 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
             planner_output_file,
             executor_output_file,
             curator_output_file,
+            claude_code_bin,
+            role_max_turns,
         } => run_cycle(
             args,
             &RunArgs {
@@ -345,6 +361,8 @@ fn run<W: Write>(args: &Args, out: &mut W) -> Result<(), RunnerError> {
                 planner_output_file: planner_output_file.clone(),
                 executor_output_file: executor_output_file.clone(),
                 curator_output_file: curator_output_file.clone(),
+                claude_code_bin: claude_code_bin.clone(),
+                role_max_turns: *role_max_turns,
             },
             out,
             &RealInvoker,
@@ -535,6 +553,14 @@ struct RunArgs {
     planner_output_file: Option<PathBuf>,
     executor_output_file: Option<PathBuf>,
     curator_output_file: Option<PathBuf>,
+    /// LIVE-SPAWN mode-selector: when `Some`, role-session steps invoke
+    /// v2-role-driver with `--claude-code-bin` instead of
+    /// `--session-output-file`. Per cycle 179
+    /// `v2-role-driver-live-spawn-arc.md` §2.2.
+    claude_code_bin: Option<PathBuf>,
+    /// LIVE-SPAWN: passed through to v2-role-driver's `--max-turns`.
+    /// Ignored in SCAFFOLD mode. Default 50.
+    role_max_turns: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -654,62 +680,15 @@ impl FailureClass {
     }
 }
 
-/// Outcome of a single `PrimitiveInvoker::invoke` call. Distinguishes
-/// "process exited" (regardless of exit code; this is the historical
-/// shape) from "we killed it on timeout" (new in cycle 177 per
-/// `v2-primitive-invoker-timeout-arc.md` §2.1).
-///
-/// The non-timeout `Completed(Output)` case carries the same
-/// `std::process::Output` the trait returned before this cycle and is
-/// classified by the existing `classify_failure` exit-code + stderr
-/// path. `TimedOut` is set when `RealInvoker` exhausted the per-step
-/// budget and signal-escalated the child to termination; the call site
-/// maps it to `FailureClass::Timeout` directly without consulting
-/// `classify_failure` (the child's stderr at kill is best-effort
-/// diagnostic data, not classification input).
-#[derive(Debug)]
-pub enum InvocationResult {
-    /// Child exited (with any status) within the budget. The carried
-    /// `Output` is unchanged from the pre-cycle-177 trait return type.
-    Completed(std::process::Output),
-    /// Per-step budget exhausted; `RealInvoker` escalated SIGTERM →
-    /// 2s grace → SIGKILL to terminate the child. Caller maps to
-    /// `FailureClass::Timeout`. `partial_stdout` / `partial_stderr`
-    /// hold whatever the child had buffered at kill (best-effort —
-    /// may be empty if the child wrote nothing before the stall).
-    TimedOut {
-        elapsed: Duration,
-        partial_stdout: Vec<u8>,
-        partial_stderr: Vec<u8>,
-        escalation: SignalEscalation,
-    },
-}
-
-/// How `RealInvoker` terminated a child on timeout. See
-/// `v2-primitive-invoker-timeout-arc.md` §4.2 for the escalation
-/// policy: SIGTERM is sent first, then a 2-second internal grace
-/// window, then SIGKILL if the child has not yet exited.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum SignalEscalation {
-    /// Child exited cleanly within the 2-second SIGTERM grace window.
-    SigtermClean,
-    /// Child did not exit within the grace; SIGKILL was applied and
-    /// the kernel reaped the process.
-    SigkillForced,
-}
-
-/// Diagnostic block attached to `StepTrace` when (and only when) a step
-/// was halted by per-step timeout. Distinguishes the budget from the
-/// observed elapsed (operators can see how far past budget the kill
-/// happened — typically `elapsed_ms` ≈ `budget_ms + small_overhead`,
-/// but signal-escalation adds up to ~2s when SIGKILL is required).
-#[derive(Debug, Clone, Serialize)]
-pub struct TimeoutDiagnostic {
-    pub budget_ms: u64,
-    pub elapsed_ms: u64,
-    pub escalation: SignalEscalation,
-}
+// `InvocationResult`, `SignalEscalation`, `TimeoutDiagnostic`,
+// `PrimitiveInvoker`, `RealInvoker`, `MockInvoker`, `SIGTERM_GRACE`, and
+// the signal-escalation helpers live in the `v2-primitive-invoker`
+// crate (extracted cycle 179 from the cycle-177 in-crate originals so
+// `v2-role-driver`'s live-claude-code-spawn arc can re-use them).
+// See `docs/redesign/_notes/v2-role-driver-live-spawn-arc.md` §3.1.
+use v2_primitive_invoker::{
+    InvocationResult, PrimitiveInvoker, RealInvoker, SignalEscalation, TimeoutDiagnostic,
+};
 
 fn classify_failure(_exit_code: i32, stderr: &str) -> FailureClass {
     let lower = stderr.to_lowercase();
@@ -894,29 +873,6 @@ fn invoke_state_audit_on_start<I: PrimitiveInvoker>(
     }
 }
 
-trait PrimitiveInvoker {
-    /// Invoke `bin` with `args`, killing the child if it exceeds
-    /// `timeout`. Returns `InvocationResult` distinguishing clean
-    /// completion (regardless of exit code) from timeout-induced
-    /// signal-escalation. `io::Result` wraps OS-level failures before
-    /// the child is reaped (bin missing, fork failure, etc.); these
-    /// are NOT timeouts. See `v2-primitive-invoker-timeout-arc.md` §2.1.
-    fn invoke(
-        &self,
-        bin: &Path,
-        args: &[String],
-        timeout: Duration,
-    ) -> io::Result<InvocationResult>;
-}
-
-/// Internal grace window between SIGTERM and SIGKILL. Cycle 177 picks
-/// 2 seconds per design scope §4.2: child primitives in this repo are
-/// short-lived I/O loops with no cleanup-on-SIGTERM logic, so 2s is
-/// more than enough for graceful exit. The grace is internal to
-/// `RealInvoker`; it does not change the budget visible to the caller
-/// (the budget IS `timeout`; the grace is an internal escalation step).
-const SIGTERM_GRACE: Duration = Duration::from_secs(2);
-
 /// Default per-step timeouts per `v2-primitive-invoker-timeout-arc.md`
 /// §3.3. Only the primitives invoked by THIS crate (v2-cycle-runner)
 /// are mapped here; the §3.3 table covers a broader set used by other
@@ -940,170 +896,6 @@ fn default_step_timeout(kind: StepKind) -> Duration {
 /// with state size; 60s comfortable through cycle ~500 per
 /// `v2-primitive-invoker-timeout-arc.md` §3.3.
 const STATE_AUDIT_TIMEOUT: Duration = Duration::from_secs(60);
-
-struct RealInvoker;
-
-impl PrimitiveInvoker for RealInvoker {
-    /// Unix-only timeout-aware spawn per `v2-primitive-invoker-timeout-arc.md`
-    /// §4. Pattern A (thread + mpsc): spawn child piped, hand the wait to a
-    /// dedicated thread, recv-with-timeout from the main thread; on timeout
-    /// send SIGTERM, wait up to `SIGTERM_GRACE`, then escalate to SIGKILL.
-    fn invoke(
-        &self,
-        bin: &Path,
-        args: &[String],
-        timeout: Duration,
-    ) -> io::Result<InvocationResult> {
-        use std::process::Stdio;
-        use std::sync::mpsc;
-        use std::thread;
-
-        let started = Instant::now();
-        let mut child = ProcessCommand::new(bin)
-            .args(args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-
-        let pid = child.id();
-        // Take the stdout/stderr handles so `wait_with_output` can drain
-        // them in the wait-thread. On timeout we read whatever's been
-        // written so far for partial-output diagnostics.
-        let stdout = child.stdout.take();
-        let stderr = child.stderr.take();
-
-        let (tx, rx) = mpsc::channel();
-        let wait_thread = thread::spawn(move || {
-            // Reattach the piped streams and let `wait_with_output` drain
-            // them. The thread holds the only handle to `child`; sending
-            // the result over the channel transfers ownership of the
-            // Output (Completed path) or signals exit-after-kill (Timeout
-            // path uses partial output gathered post-signal).
-            let result = WaitChild { child, stdout, stderr }.wait_with_output();
-            // Receiver may be gone (timeout path raced ahead); ignore send error.
-            let _ = tx.send(result);
-        });
-
-        match rx.recv_timeout(timeout) {
-            Ok(io_result) => {
-                // Reap the thread (already terminating).
-                let _ = wait_thread.join();
-                let output = io_result?;
-                Ok(InvocationResult::Completed(output))
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                // Budget exhausted. Send SIGTERM, wait grace, then SIGKILL.
-                let escalation = signal_escalate(pid, &rx);
-                // Drain the channel one more time to collect partial output.
-                // The wait-thread should have terminated by now (kernel
-                // reaped the child); recv() blocks until it does.
-                let final_io = rx.recv().ok().and_then(|r| r.ok());
-                let _ = wait_thread.join();
-                let elapsed = started.elapsed();
-                let (partial_stdout, partial_stderr) = match final_io {
-                    Some(out) => (out.stdout, out.stderr),
-                    None => (Vec::new(), Vec::new()),
-                };
-                Ok(InvocationResult::TimedOut {
-                    elapsed,
-                    partial_stdout,
-                    partial_stderr,
-                    escalation,
-                })
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                // wait-thread panicked or the child reaped before the
-                // first recv could complete. Treat as IO error.
-                let _ = wait_thread.join();
-                Err(io::Error::other(
-                    "v2-cycle-runner: wait-thread channel disconnected before child exit",
-                ))
-            }
-        }
-    }
-}
-
-/// Bundle the `Child` with its piped stdout/stderr so the wait-thread
-/// can drain them via `wait_with_output()`. Wrapped because
-/// `Child::wait_with_output` takes ownership AND requires the streams
-/// be attached; we have to take them off `Child` before sending the
-/// pieces across threads, then call a hand-rolled drain on this end.
-struct WaitChild {
-    child: std::process::Child,
-    stdout: Option<std::process::ChildStdout>,
-    stderr: Option<std::process::ChildStderr>,
-}
-
-impl WaitChild {
-    fn wait_with_output(mut self) -> io::Result<std::process::Output> {
-        use std::io::Read;
-        // Drain stdout/stderr in parallel threads to avoid the deadlock
-        // where the child blocks on writing to a full pipe while we
-        // block on wait().
-        let stdout_thread = self.stdout.take().map(|mut s| {
-            std::thread::spawn(move || {
-                let mut buf = Vec::new();
-                let _ = s.read_to_end(&mut buf);
-                buf
-            })
-        });
-        let stderr_thread = self.stderr.take().map(|mut s| {
-            std::thread::spawn(move || {
-                let mut buf = Vec::new();
-                let _ = s.read_to_end(&mut buf);
-                buf
-            })
-        });
-        let status = self.child.wait()?;
-        let stdout = stdout_thread
-            .and_then(|t| t.join().ok())
-            .unwrap_or_default();
-        let stderr = stderr_thread
-            .and_then(|t| t.join().ok())
-            .unwrap_or_default();
-        Ok(std::process::Output { status, stdout, stderr })
-    }
-}
-
-/// Send SIGTERM to `pid`, wait up to `SIGTERM_GRACE` for the child to
-/// exit (signaled via `rx`), then SIGKILL if still alive. Unix-only.
-/// Returns the escalation level reached.
-#[cfg(unix)]
-fn signal_escalate(
-    pid: u32,
-    rx: &std::sync::mpsc::Receiver<io::Result<std::process::Output>>,
-) -> SignalEscalation {
-    // Safety: `libc::kill` is a thin FFI wrapper; passing a valid pid
-    // and a defined signal constant. EPERM/ESRCH on a reaped child is
-    // harmless (the wait-thread will report exit via `rx` regardless).
-    unsafe {
-        libc::kill(pid as libc::pid_t, libc::SIGTERM);
-    }
-    match rx.recv_timeout(SIGTERM_GRACE) {
-        Ok(_) => SignalEscalation::SigtermClean,
-        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-            unsafe {
-                libc::kill(pid as libc::pid_t, libc::SIGKILL);
-            }
-            SignalEscalation::SigkillForced
-        }
-        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-            // wait-thread already terminated (rare race); treat as clean.
-            SignalEscalation::SigtermClean
-        }
-    }
-}
-
-#[cfg(not(unix))]
-fn signal_escalate(
-    _pid: u32,
-    _rx: &std::sync::mpsc::Receiver<io::Result<std::process::Output>>,
-) -> SignalEscalation {
-    // Non-Unix platforms are out of scope for cycle 1 of implementation
-    // per `v2-primitive-invoker-timeout-arc.md` §4.4. The cycle-runner
-    // is deployed only on Linux GitHub Actions runners.
-    SignalEscalation::SigkillForced
-}
 
 #[derive(Debug, Clone, Serialize)]
 struct StepTrace {
@@ -1429,7 +1221,12 @@ fn build_step_invocation(
                 "--cycle".into(), cycle_str,
                 "--timestamp".into(), timestamp.into(),
             ];
-            if let Some(p) = session_output_path_for(run_args, role) {
+            if let Some(ccbin) = &run_args.claude_code_bin {
+                a.push("--claude-code-bin".into());
+                a.push(ccbin.to_string_lossy().into_owned());
+                a.push("--max-turns".into());
+                a.push(run_args.role_max_turns.to_string());
+            } else if let Some(p) = session_output_path_for(run_args, role) {
                 a.push("--session-output-file".into());
                 a.push(p.to_string_lossy().into_owned());
             }
@@ -1467,6 +1264,12 @@ fn session_output_path_for(run_args: &RunArgs, role: Role) -> Option<&PathBuf> {
 }
 
 fn validate_session_output_files(run_args: &RunArgs) -> Result<(), RunnerError> {
+    // LIVE-SPAWN mode does not need per-role session-output files —
+    // claude-code's stdout envelope IS the session output. Only SCAFFOLD
+    // mode requires the four pre-provided files.
+    if run_args.claude_code_bin.is_some() {
+        return Ok(());
+    }
     for role in [Role::Reconciler, Role::Planner, Role::Executor, Role::Curator] {
         if session_output_path_for(run_args, role).is_none() {
             return Err(RunnerError::MissingSessionOutput { role });
@@ -2288,121 +2091,7 @@ mod tests {
 
     // -------- run subcommand tests (cycle 151) --------
 
-    use std::cell::RefCell;
-    use std::os::unix::process::ExitStatusExt;
-    use std::process::{ExitStatus, Output};
-
-    fn ok_output() -> Output {
-        Output {
-            status: ExitStatus::from_raw(0),
-            stdout: Vec::new(),
-            stderr: Vec::new(),
-        }
-    }
-
-    fn fail_output(code: i32, stderr: &str) -> Output {
-        // ExitStatus::from_raw on unix encodes (signal | (exit_code << 8)).
-        let raw = (code & 0xff) << 8;
-        Output {
-            status: ExitStatus::from_raw(raw),
-            stdout: Vec::new(),
-            stderr: stderr.as_bytes().to_vec(),
-        }
-    }
-
-    /// Test-only canned outcome: the test queues one per expected
-    /// invocation; the mock pops front-to-back. `Completed(Output)`
-    /// matches the pre-cycle-177 `queue(Output)` API (renamed to
-    /// `queue_ok` for clarity post-extension). `Timeout` simulates the
-    /// timeout path without needing a real subprocess.
-    #[allow(dead_code)]
-    enum CannedOutcome {
-        Completed(Output),
-        Timeout {
-            elapsed_ms: u64,
-            escalation: SignalEscalation,
-            partial_stdout: Vec<u8>,
-            partial_stderr: Vec<u8>,
-        },
-    }
-
-    #[derive(Default)]
-    struct MockInvoker {
-        calls: RefCell<Vec<(PathBuf, Vec<String>, Duration)>>,
-        canned: RefCell<Vec<CannedOutcome>>, // popped front-to-back
-    }
-
-    impl MockInvoker {
-        fn new() -> Self {
-            Self::default()
-        }
-        /// Queue an `Output` (clean process exit, any status). Replaces
-        /// the cycle 150 `queue(Output)` API per cycle 177 mechanical
-        /// rename — same semantics, clearer name now that `queue_timeout`
-        /// exists alongside.
-        fn queue_ok(&self, o: Output) {
-            self.canned.borrow_mut().push(CannedOutcome::Completed(o));
-        }
-        /// Queue a timeout simulation: the mock will return
-        /// `InvocationResult::TimedOut` with these fields on the next
-        /// `invoke` call. Cycle 177 extension per design scope §5.
-        #[allow(dead_code)]
-        fn queue_timeout(&self, elapsed_ms: u64, escalation: SignalEscalation) {
-            self.canned.borrow_mut().push(CannedOutcome::Timeout {
-                elapsed_ms,
-                escalation,
-                partial_stdout: Vec::new(),
-                partial_stderr: Vec::new(),
-            });
-        }
-        fn calls(&self) -> Vec<(PathBuf, Vec<String>)> {
-            self.calls
-                .borrow()
-                .iter()
-                .map(|(p, a, _)| (p.clone(), a.clone()))
-                .collect()
-        }
-        #[allow(dead_code)]
-        fn invocation_timeouts(&self) -> Vec<Duration> {
-            self.calls.borrow().iter().map(|(_, _, t)| *t).collect()
-        }
-        fn invoke_count(&self) -> usize {
-            self.calls.borrow().len()
-        }
-    }
-
-    impl PrimitiveInvoker for MockInvoker {
-        fn invoke(
-            &self,
-            bin: &Path,
-            args: &[String],
-            timeout: Duration,
-        ) -> io::Result<InvocationResult> {
-            self.calls
-                .borrow_mut()
-                .push((bin.to_path_buf(), args.to_vec(), timeout));
-            let mut canned = self.canned.borrow_mut();
-            if canned.is_empty() {
-                Ok(InvocationResult::Completed(ok_output()))
-            } else {
-                let popped = canned.remove(0);
-                Ok(match popped {
-                    CannedOutcome::Completed(o) => InvocationResult::Completed(o),
-                    CannedOutcome::Timeout {
-                        elapsed_ms,
-                        escalation,
-                        partial_stdout,
-                        partial_stderr,
-                    } => InvocationResult::TimedOut {
-                        elapsed: Duration::from_millis(elapsed_ms),
-                        partial_stdout,
-                        partial_stderr,
-                        escalation,
-                    },
-                })
-            }
-        }
-    }
+    use v2_primitive_invoker::{fail_output, ok_output, MockInvoker};
 
     fn touch(path: &Path) {
         if let Some(parent) = path.parent() {
@@ -2458,6 +2147,8 @@ mod tests {
             planner_output_file: Some(plan),
             executor_output_file: Some(exec),
             curator_output_file: Some(cur),
+            claude_code_bin: None,
+            role_max_turns: 50,
         }
     }
 

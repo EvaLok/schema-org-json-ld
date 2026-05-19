@@ -4,6 +4,10 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::Duration;
+use v2_primitive_invoker::{
+    InvocationResult, PrimitiveInvoker, RealInvoker, SignalEscalation, TimeoutDiagnostic,
+};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -32,21 +36,47 @@ enum Command {
     Init,
     /// Invoke a role's session at the current super-step.
     ///
-    /// SCAFFOLD scope: session output is provided via `--session-output-file` (no live
-    /// claude-code subprocess). DEFERRED to COMPLETE arc: spawn claude-code with the
-    /// role's prompt + assembled context, parse stdout/exit-code, classify silent-zero
-    /// output, enforce per-role iteration ceiling.
+    /// Two modes (cycle 179 live-claude-code-spawn arc; pre-cycle-179 was
+    /// SCAFFOLD-only):
+    ///   - LIVE-SPAWN: pass `--claude-code-bin <path>`. The role-driver
+    ///     assembles the user-message context, spawns `claude-code` as a
+    ///     subprocess via the shared timeout-aware PrimitiveInvoker, parses
+    ///     the JSON envelope on stdout, validates + writes the channel.
+    ///   - SCAFFOLD (hermetic): pass `--session-output-file <path>` instead.
+    ///     The role-driver reads the file as the session output (no real
+    ///     subprocess). Preserved for v2-cycle-runner integration tests
+    ///     and any other hermetic flow.
+    ///
+    /// Exactly one of `--claude-code-bin` / `--session-output-file` must be
+    /// set; passing both or neither is an error.
     Invoke {
         #[arg(long, value_enum)]
         role: Role,
         #[arg(long)]
         cycle: u32,
-        /// Path to a JSON file containing the session output. Accepted shapes:
+
+        /// LIVE-SPAWN: path to the `claude-code` binary. When present,
+        /// live-spawn mode is selected.
+        #[arg(long)]
+        claude_code_bin: Option<PathBuf>,
+        /// LIVE-SPAWN: role prompt file. Defaults to
+        /// `prompts/v2/<role>-prompt.xml`. Only consulted in live-spawn mode.
+        #[arg(long)]
+        prompt_file: Option<PathBuf>,
+        /// LIVE-SPAWN: maximum conversation turns before claude-code exits.
+        /// Defaults to 50 (a single role session should resolve in one turn;
+        /// the ceiling is a safety net). Only consulted in live-spawn mode.
+        #[arg(long, default_value = "50")]
+        max_turns: u32,
+
+        /// SCAFFOLD: path to a JSON file containing the session output.
+        /// Required when `--claude-code-bin` is NOT set. Accepted shapes:
         ///   1. `{ "cycle": N, "timestamp": "...", "payload": { ... } }` (channel-router WritePayload shape)
         ///   2. `{ "payload": { ... } }` (role-driver supplies cycle + timestamp)
         ///   3. `{ ...raw payload keys... }` (role-driver wraps as `payload`)
         #[arg(long)]
-        session_output_file: PathBuf,
+        session_output_file: Option<PathBuf>,
+
         /// Timestamp to record (ISO-8601). Defaults to a sentinel string; callers
         /// SHOULD supply a real timestamp.
         #[arg(long)]
@@ -157,6 +187,19 @@ impl Role {
             }],
         }
     }
+
+    /// Per-role `claude-code --allowed-tools` profile for live-spawn
+    /// mode. See `v2-role-driver-live-spawn-arc.md` §6.1: reconciler
+    /// needs Bash for `gh` polling but no edits; planner/curator are
+    /// pure analysis; executor is the only role that mutates source.
+    fn allowed_tools(self) -> &'static [&'static str] {
+        match self {
+            Role::Reconciler => &["Read", "Bash"],
+            Role::Planner => &["Read", "Grep"],
+            Role::Executor => &["Read", "Edit", "Write", "Grep", "Bash"],
+            Role::Curator => &["Read", "Grep"],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -243,6 +286,13 @@ struct RoleRun {
     /// Free-form notes (which file the session output came from, why a skip fired,
     /// the channel that was written, etc.). Not load-bearing for tests.
     notes: String,
+    /// Timeout diagnostic populated only when `outcome == Timeout`.
+    /// Cycle 179 live-spawn extension per `v2-role-driver-live-spawn-arc.md`
+    /// §4.3 / §7.3 — mirrors `StepTrace.timeout` from cycle 177 in
+    /// v2-cycle-runner. Skipped from serialized output when absent so the
+    /// pre-cycle-179 record shape stays unchanged for SCAFFOLD-mode runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    timeout: Option<TimeoutDiagnosticRecord>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -250,6 +300,49 @@ struct RoleRun {
 enum Outcome {
     Success,
     WriteSkipped,
+    /// Live-spawn timed out before claude-code emitted a complete envelope.
+    /// `RoleRun.timeout` carries the budget / elapsed / escalation
+    /// diagnostic. Channel state is NOT written on timeout (see §4.3).
+    Timeout,
+}
+
+/// Serializable mirror of `v2_primitive_invoker::TimeoutDiagnostic`
+/// that also derives `Deserialize`, so the role-history file can be
+/// round-tripped. The upstream type only derives `Serialize` (its
+/// caller doesn't need to deserialize its own logs); this wrapper
+/// adds `Deserialize` and avoids leaking the upstream type into the
+/// public history schema.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct TimeoutDiagnosticRecord {
+    budget_ms: u64,
+    elapsed_ms: u64,
+    escalation: TimeoutEscalation,
+}
+
+impl TimeoutDiagnosticRecord {
+    fn from_invoker(d: TimeoutDiagnostic) -> Self {
+        Self {
+            budget_ms: d.budget_ms,
+            elapsed_ms: d.elapsed_ms,
+            escalation: TimeoutEscalation::from_invoker(d.escalation),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+enum TimeoutEscalation {
+    SigtermClean,
+    SigkillForced,
+}
+
+impl TimeoutEscalation {
+    fn from_invoker(e: SignalEscalation) -> Self {
+        match e {
+            SignalEscalation::SigtermClean => Self::SigtermClean,
+            SignalEscalation::SigkillForced => Self::SigkillForced,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -282,6 +375,24 @@ enum DriverError {
         cli_cycle: u32,
         payload_cycle: u32,
     },
+    /// Both `--claude-code-bin` AND `--session-output-file` were set.
+    /// Live-spawn and SCAFFOLD modes are mutually exclusive.
+    ConflictingInvokeModes,
+    /// Neither `--claude-code-bin` nor `--session-output-file` was set.
+    /// Live-spawn and SCAFFOLD are the only supported modes.
+    MissingInvokeMode,
+    /// LIVE-SPAWN: the `claude-code` binary path does not exist.
+    ClaudeCodeBinMissing(PathBuf),
+    /// LIVE-SPAWN: the role prompt file does not exist.
+    PromptFileMissing(PathBuf),
+    /// LIVE-SPAWN: `claude-code` produced output that did not parse as a
+    /// valid JSON envelope (`{"type":"result", ..., "result": "..."}`).
+    /// The inner string carries a one-line diagnostic.
+    LiveSpawnEnvelopeParseFailure(String),
+    /// LIVE-SPAWN: invoking `claude-code` failed at the OS level (binary
+    /// not executable, fork failure, etc.). The inner string carries the
+    /// underlying `io::Error` message.
+    LiveSpawnInvocationIo(String),
 }
 
 impl std::fmt::Display for DriverError {
@@ -322,6 +433,33 @@ impl std::fmt::Display for DriverError {
             } => write!(
                 f,
                 "cycle mismatch: --cycle {cli_cycle} but session-output payload declares cycle {payload_cycle}"
+            ),
+            DriverError::ConflictingInvokeModes => write!(
+                f,
+                "conflicting invoke modes: both --claude-code-bin and --session-output-file were set; \
+                 pass exactly one (--claude-code-bin selects live-spawn, --session-output-file selects SCAFFOLD)"
+            ),
+            DriverError::MissingInvokeMode => write!(
+                f,
+                "missing invoke mode: pass either --claude-code-bin (live-spawn) or --session-output-file (SCAFFOLD)"
+            ),
+            DriverError::ClaudeCodeBinMissing(p) => write!(
+                f,
+                "claude-code binary not found at {} (--claude-code-bin)",
+                p.display()
+            ),
+            DriverError::PromptFileMissing(p) => write!(
+                f,
+                "role prompt file not found at {} (--prompt-file or default prompts/v2/<role>-prompt.xml)",
+                p.display()
+            ),
+            DriverError::LiveSpawnEnvelopeParseFailure(s) => write!(
+                f,
+                "live-spawn envelope parse failure: {s}"
+            ),
+            DriverError::LiveSpawnInvocationIo(s) => write!(
+                f,
+                "live-spawn invocation IO error: {s}"
             ),
         }
     }
@@ -667,17 +805,68 @@ fn cmd_init(repo_root: &Path, format: Format) -> Result<(), DriverError> {
     Ok(())
 }
 
+/// Per-step timeout budget for the `claude-code` subprocess in
+/// live-spawn mode. Matches `default_step_timeout(StepKind::RoleInvoke)`
+/// in v2-cycle-runner (cycle 177 C13+X2): 4500s = 75 minutes, the same
+/// wall-clock ceiling the harness running THIS Claude session enforces.
+const LIVE_SPAWN_TIMEOUT: Duration = Duration::from_secs(4500);
+
+/// Resolution of the `--claude-code-bin` / `--session-output-file`
+/// mode-selection per cycle 178 design §2.1: live-spawn vs SCAFFOLD,
+/// or one of the two error states (both / neither).
+#[derive(Debug)]
+enum InvokeMode<'a> {
+    LiveSpawn {
+        claude_code_bin: &'a Path,
+        prompt_file: Option<&'a Path>,
+        max_turns: u32,
+    },
+    Scaffold {
+        session_output_file: &'a Path,
+    },
+}
+
+fn resolve_invoke_mode<'a>(
+    claude_code_bin: Option<&'a Path>,
+    prompt_file: Option<&'a Path>,
+    max_turns: u32,
+    session_output_file: Option<&'a Path>,
+) -> Result<InvokeMode<'a>, DriverError> {
+    match (claude_code_bin, session_output_file) {
+        (Some(_), Some(_)) => Err(DriverError::ConflictingInvokeModes),
+        (None, None) => Err(DriverError::MissingInvokeMode),
+        (Some(bin), None) => Ok(InvokeMode::LiveSpawn {
+            claude_code_bin: bin,
+            prompt_file,
+            max_turns,
+        }),
+        (None, Some(f)) => Ok(InvokeMode::Scaffold {
+            session_output_file: f,
+        }),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn cmd_invoke(
     repo_root: &Path,
     format: Format,
     role: Role,
     cycle: u32,
-    session_output_file: &Path,
+    claude_code_bin: Option<&Path>,
+    prompt_file: Option<&Path>,
+    max_turns: u32,
+    session_output_file: Option<&Path>,
     timestamp: Option<String>,
     skip_super_step_check: bool,
     skip_channel_write: bool,
 ) -> Result<(), DriverError> {
+    let mode = resolve_invoke_mode(
+        claude_code_bin,
+        prompt_file,
+        max_turns,
+        session_output_file,
+    )?;
+
     if !skip_super_step_check {
         match read_super_step_state(repo_root)? {
             None => return Err(DriverError::SuperStepNotInProgress),
@@ -694,6 +883,50 @@ fn cmd_invoke(
         }
     }
 
+    match mode {
+        InvokeMode::Scaffold {
+            session_output_file,
+        } => cmd_invoke_scaffold(
+            repo_root,
+            format,
+            role,
+            cycle,
+            session_output_file,
+            timestamp,
+            skip_super_step_check,
+            skip_channel_write,
+        ),
+        InvokeMode::LiveSpawn {
+            claude_code_bin,
+            prompt_file,
+            max_turns,
+        } => cmd_invoke_live_spawn(
+            repo_root,
+            format,
+            role,
+            cycle,
+            claude_code_bin,
+            prompt_file,
+            max_turns,
+            timestamp,
+            skip_super_step_check,
+            skip_channel_write,
+            &RealInvoker,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_invoke_scaffold(
+    repo_root: &Path,
+    format: Format,
+    role: Role,
+    cycle: u32,
+    session_output_file: &Path,
+    timestamp: Option<String>,
+    skip_super_step_check: bool,
+    skip_channel_write: bool,
+) -> Result<(), DriverError> {
     if !session_output_file.exists() {
         return Err(DriverError::SessionOutputMissing(
             session_output_file.to_path_buf(),
@@ -746,9 +979,437 @@ fn cmd_invoke(
             at: effective_timestamp.clone(),
             outcome,
             notes: notes.clone(),
+            timeout: None,
         },
     )?;
 
+    emit_invoke_result(
+        format,
+        role,
+        cycle,
+        outcome,
+        &effective_timestamp,
+        channel,
+        !skip_channel_write,
+        !skip_super_step_check,
+        &notes,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_invoke_live_spawn<I: PrimitiveInvoker>(
+    repo_root: &Path,
+    format: Format,
+    role: Role,
+    cycle: u32,
+    claude_code_bin: &Path,
+    prompt_file: Option<&Path>,
+    max_turns: u32,
+    timestamp: Option<String>,
+    skip_super_step_check: bool,
+    skip_channel_write: bool,
+    invoker: &I,
+) -> Result<(), DriverError> {
+    if !claude_code_bin.exists() {
+        return Err(DriverError::ClaudeCodeBinMissing(
+            claude_code_bin.to_path_buf(),
+        ));
+    }
+    let resolved_prompt = match prompt_file {
+        Some(p) => p.to_path_buf(),
+        None => default_prompt_path(repo_root, role),
+    };
+    if !resolved_prompt.exists() {
+        return Err(DriverError::PromptFileMissing(resolved_prompt));
+    }
+    let prompt_contents = fs::read_to_string(&resolved_prompt)?;
+
+    let channel = role.output_channel();
+    let effective_timestamp = timestamp.unwrap_or_else(default_timestamp);
+
+    // Assemble the user-message context and persist a debug record
+    // BEFORE spawning. The subprocess receives the assembled context via
+    // its argv (`--print` ... payload); the on-disk record at
+    // `state/roles/<role>-last-context-cycle-N.json` is for post-hoc
+    // debugging per design §3.3 / §4.1.
+    let user_message = render_context_for_session(repo_root, role, cycle, &effective_timestamp)?;
+    persist_live_spawn_debug_record(repo_root, role, cycle, &user_message)?;
+
+    // Build the claude-code argv per design §3.2. The user-message is
+    // passed positionally as the `--print` argument (single-shot mode);
+    // the role's system-prompt body is `--append-system-prompt`.
+    let argv = build_claude_code_argv(role, &prompt_contents, max_turns, &user_message);
+
+    let invocation = invoker
+        .invoke(claude_code_bin, &argv, LIVE_SPAWN_TIMEOUT)
+        .map_err(|e| DriverError::LiveSpawnInvocationIo(e.to_string()))?;
+
+    match invocation {
+        InvocationResult::TimedOut {
+            elapsed,
+            partial_stdout,
+            partial_stderr,
+            escalation,
+        } => {
+            let budget_ms = LIVE_SPAWN_TIMEOUT.as_millis() as u64;
+            let elapsed_ms = elapsed.as_millis() as u64;
+            let diagnostic = TimeoutDiagnostic {
+                budget_ms,
+                elapsed_ms,
+                escalation,
+            };
+            let notes = format!(
+                "live-spawn timeout: budget={}ms elapsed={}ms escalation={:?}; \
+                 partial_stdout={} bytes; partial_stderr={} bytes",
+                budget_ms,
+                elapsed_ms,
+                escalation,
+                partial_stdout.len(),
+                partial_stderr.len()
+            );
+            append_role_history(
+                repo_root,
+                role,
+                RoleRun {
+                    cycle,
+                    role,
+                    at: effective_timestamp.clone(),
+                    outcome: Outcome::Timeout,
+                    notes: notes.clone(),
+                    timeout: Some(TimeoutDiagnosticRecord::from_invoker(diagnostic)),
+                },
+            )?;
+            emit_invoke_result(
+                format,
+                role,
+                cycle,
+                Outcome::Timeout,
+                &effective_timestamp,
+                channel,
+                /* channel_write_performed */ false,
+                !skip_super_step_check,
+                &notes,
+            )?;
+            // Exit non-zero so v2-cycle-runner classifies as FailureClass::Timeout.
+            // (cmd_invoke is callable directly; the non-zero is surfaced by
+            // returning an io-class DriverError after the history append.)
+            Err(DriverError::LiveSpawnInvocationIo(format!(
+                "live-spawn timeout after {elapsed_ms}ms (budget {budget_ms}ms)"
+            )))
+        }
+        InvocationResult::Completed(output) => {
+            // Even non-zero exits from claude-code are "Completed" — the
+            // process produced an exit code. Treat non-zero as a parse
+            // failure if the envelope is unparseable; treat zero with
+            // bad envelope likewise.
+            let stdout_bytes = output.stdout;
+            let stderr_bytes = output.stderr;
+            let exit_code = output.status.code().unwrap_or(-1);
+
+            let result_text = match parse_claude_code_envelope(&stdout_bytes) {
+                Ok(text) => text,
+                Err(e) => {
+                    let notes = format!(
+                        "live-spawn envelope parse failed (exit={exit_code}): {e}; \
+                         stdout={} bytes; stderr={} bytes",
+                        stdout_bytes.len(),
+                        stderr_bytes.len()
+                    );
+                    append_role_history(
+                        repo_root,
+                        role,
+                        RoleRun {
+                            cycle,
+                            role,
+                            at: effective_timestamp.clone(),
+                            outcome: Outcome::WriteSkipped,
+                            notes: notes.clone(),
+                            timeout: None,
+                        },
+                    )?;
+                    emit_invoke_result(
+                        format,
+                        role,
+                        cycle,
+                        Outcome::WriteSkipped,
+                        &effective_timestamp,
+                        channel,
+                        false,
+                        !skip_super_step_check,
+                        &notes,
+                    )?;
+                    return Err(DriverError::LiveSpawnEnvelopeParseFailure(e));
+                }
+            };
+
+            // The result_text MUST be a JSON object matching the
+            // channel-payload contract. Parse, validate, write.
+            let payload: serde_json::Value =
+                serde_json::from_str(&result_text).map_err(|e| {
+                    DriverError::LiveSpawnEnvelopeParseFailure(format!(
+                        "result field is not a JSON object: {e}"
+                    ))
+                })?;
+            validate_payload(channel, &payload)?;
+
+            let (outcome, notes) = if skip_channel_write {
+                (
+                    Outcome::WriteSkipped,
+                    format!(
+                        "validated live-spawn session output for channel '{channel}'; channel write skipped (--skip-channel-write)"
+                    ),
+                )
+            } else {
+                write_channel(
+                    repo_root,
+                    channel,
+                    role,
+                    cycle,
+                    &effective_timestamp,
+                    payload,
+                )?;
+                (
+                    Outcome::Success,
+                    format!(
+                        "wrote channel '{channel}' from live-spawn session output ({} bytes stdout, exit={exit_code})",
+                        stdout_bytes.len()
+                    ),
+                )
+            };
+
+            append_role_history(
+                repo_root,
+                role,
+                RoleRun {
+                    cycle,
+                    role,
+                    at: effective_timestamp.clone(),
+                    outcome,
+                    notes: notes.clone(),
+                    timeout: None,
+                },
+            )?;
+            emit_invoke_result(
+                format,
+                role,
+                cycle,
+                outcome,
+                &effective_timestamp,
+                channel,
+                !skip_channel_write,
+                !skip_super_step_check,
+                &notes,
+            )
+        }
+    }
+}
+
+/// Build the `claude-code` argv for a live-spawn role session per
+/// `v2-role-driver-live-spawn-arc.md` §3.2. The CLI surface here is
+/// the cycle-178 design's documented SHAPE; exact flag names are
+/// reconciled when the live binary is exercised (OQ-LS-1, §3.2). All
+/// flags here match the `--help` surface published for `claude-code`
+/// as of cycle 178.
+fn build_claude_code_argv(
+    role: Role,
+    prompt_contents: &str,
+    max_turns: u32,
+    user_message: &str,
+) -> Vec<String> {
+    let allowed = role.allowed_tools().join(",");
+    vec![
+        "--print".to_string(),
+        user_message.to_string(),
+        "--output-format".to_string(),
+        "json".to_string(),
+        "--append-system-prompt".to_string(),
+        prompt_contents.to_string(),
+        "--max-turns".to_string(),
+        max_turns.to_string(),
+        "--allowed-tools".to_string(),
+        allowed,
+        "--permission-mode".to_string(),
+        "acceptEdits".to_string(),
+        "--model".to_string(),
+        "claude-opus-4-7".to_string(),
+    ]
+}
+
+/// Parse the `claude-code --output-format json` envelope and extract
+/// the `result` field (the final assistant message text). Per design
+/// §4.4 the envelope shape is approximately
+/// `{"type":"result","subtype":"success","is_error":false,"result":"...","session_id":...,...}`.
+/// On a recognized envelope, return the `result` string. Other shapes
+/// (`is_error: true`, missing `result`, non-object root) return Err
+/// with a one-line diagnostic.
+fn parse_claude_code_envelope(stdout_bytes: &[u8]) -> Result<String, String> {
+    let stdout = std::str::from_utf8(stdout_bytes)
+        .map_err(|e| format!("stdout is not valid UTF-8: {e}"))?;
+    let envelope: serde_json::Value = serde_json::from_str(stdout.trim())
+        .map_err(|e| format!("stdout is not a JSON object: {e}"))?;
+    let obj = envelope
+        .as_object()
+        .ok_or_else(|| "envelope must be a JSON object".to_string())?;
+    if obj
+        .get("is_error")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let sub = obj
+            .get("subtype")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        return Err(format!("envelope reports is_error=true subtype={sub}"));
+    }
+    let result = obj
+        .get("result")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "envelope missing string `result` field".to_string())?;
+    Ok(result.to_string())
+}
+
+/// Render the user-message context block per design §5.1. Used by
+/// both `cmd_invoke_live_spawn` (for the live `--print` payload) and
+/// optionally by `cmd_context` for a structured-output mode. The
+/// per-role variations (e.g. reconciler's `<inbound-surfaces>` block)
+/// live in `render_role_specific_surfaces`.
+fn render_context_for_session(
+    repo_root: &Path,
+    role: Role,
+    cycle: u32,
+    timestamp: &str,
+) -> Result<String, DriverError> {
+    let mut out = String::new();
+    out.push_str("<cycle-context>\n");
+    out.push_str(&format!("  <cycle>{cycle}</cycle>\n"));
+    out.push_str(&format!("  <role>{}</role>\n", role.name()));
+    out.push_str(&format!("  <timestamp>{}</timestamp>\n", xml_escape(timestamp)));
+    out.push_str(&format!(
+        "  <output-channel>{}</output-channel>\n",
+        role.output_channel()
+    ));
+    let keys = required_payload_keys(role.output_channel());
+    out.push_str(&format!(
+        "  <required-payload-keys>{}</required-payload-keys>\n",
+        keys.join(", ")
+    ));
+    out.push_str("</cycle-context>\n");
+
+    out.push_str("\n<input-channels>\n");
+    for binding in role.input_channels() {
+        out.push_str(&format!(
+            "  <channel name=\"{}\" source=\"{}\">\n",
+            binding.channel,
+            binding.source.name()
+        ));
+        match read_channel_state(repo_root, binding.channel)? {
+            ChannelRead::NotInitialized => {
+                out.push_str("    <state>not-initialized</state>\n");
+            }
+            ChannelRead::Empty => {
+                out.push_str("    <state>empty</state>\n");
+            }
+            ChannelRead::Populated(s) => {
+                let payload_json = serde_json::to_string(&s.payload).unwrap_or_else(|_| "{}".to_string());
+                out.push_str(&format!(
+                    "    <state cycle=\"{}\" writer=\"{}\" timestamp=\"{}\">\n",
+                    s.cycle,
+                    s.writer.name(),
+                    xml_escape(&s.timestamp)
+                ));
+                out.push_str("      ");
+                out.push_str(&xml_escape(&payload_json));
+                out.push('\n');
+                out.push_str("    </state>\n");
+            }
+        }
+        out.push_str("  </channel>\n");
+    }
+    out.push_str("</input-channels>\n");
+
+    if let Some(surfaces) = render_role_specific_surfaces(role) {
+        out.push('\n');
+        out.push_str(&surfaces);
+    }
+
+    Ok(out)
+}
+
+/// Per-role auxiliary surface descriptors that go into the
+/// user-message after `<input-channels>`. Currently only the
+/// reconciler has one (the external-surface pollable URIs per
+/// design §5.3). Other roles return None.
+fn render_role_specific_surfaces(role: Role) -> Option<String> {
+    match role {
+        Role::Reconciler => Some(
+            r#"<inbound-surfaces>
+  <surface name="github-issues" repo="EvaLok/schema-org-json-ld">
+    <description>Open issues with labels question-for-eva, input-from-eva, agent-task</description>
+  </surface>
+  <surface name="github-prs" repo="EvaLok/schema-org-json-ld">
+    <description>Open PRs with draft state or recently merged</description>
+  </surface>
+  <surface name="audit-repo-activity" repo="EvaLok/schema-org-json-ld-audit">
+    <description>New audit cycles posted since the last reconciler cycle</description>
+  </surface>
+  <surface name="dispatch-returns" path="docs/state.json">
+    <description>Active dispatches and their return states</description>
+  </surface>
+</inbound-surfaces>
+"#
+            .to_string(),
+        ),
+        Role::Planner | Role::Executor | Role::Curator => None,
+    }
+}
+
+/// Minimal XML attr/text escaping for the structured context block.
+/// Handles `&` first, then `<`, `>`, `"`, `'`. Sufficient for the
+/// payload-JSON embedded in `<state>` and for timestamp strings.
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+/// Persist a per-invocation debug record at
+/// `state/roles/<role>-last-context-cycle-<N>.json` containing the
+/// assembled user-message exactly as passed to the subprocess. This
+/// lets post-hoc debugging see what the model received without
+/// having to re-derive it from channel state.
+fn persist_live_spawn_debug_record(
+    repo_root: &Path,
+    role: Role,
+    cycle: u32,
+    user_message: &str,
+) -> Result<(), DriverError> {
+    let dir = roles_dir(repo_root);
+    fs::create_dir_all(&dir)?;
+    let path = dir.join(format!("{}-last-context-cycle-{}.json", role.name(), cycle));
+    let envelope = serde_json::json!({
+        "role": role.name(),
+        "cycle": cycle,
+        "user_message": user_message,
+    });
+    let body = serde_json::to_string_pretty(&envelope)?;
+    write_atomic(&path, body.as_bytes())?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_invoke_result(
+    format: Format,
+    role: Role,
+    cycle: u32,
+    outcome: Outcome,
+    effective_timestamp: &str,
+    channel: &str,
+    channel_write_performed: bool,
+    super_step_check_performed: bool,
+    notes: &str,
+) -> Result<(), DriverError> {
     match format {
         Format::Text => {
             println!(
@@ -769,14 +1430,13 @@ fn cmd_invoke(
                 "outcome": outcome,
                 "timestamp": effective_timestamp,
                 "channel": channel,
-                "channel_write_performed": !skip_channel_write,
-                "super_step_check_performed": !skip_super_step_check,
+                "channel_write_performed": channel_write_performed,
+                "super_step_check_performed": super_step_check_performed,
                 "notes": notes,
             });
             println!("{}", serde_json::to_string_pretty(&out)?);
         }
     }
-
     Ok(())
 }
 
@@ -1046,8 +1706,9 @@ fn cmd_schema(format: Format) -> Result<(), DriverError> {
     let envelope = serde_json::json!({
         "roles": role_specs,
         "run_record": {
-            "fields": ["cycle", "role", "at", "outcome", "notes"],
-            "outcomes": ["success", "write-skipped"],
+            "fields": ["cycle", "role", "at", "outcome", "notes", "timeout?"],
+            "outcomes": ["success", "write-skipped", "timeout"],
+            "timeout_diagnostic_fields": ["budget_ms", "elapsed_ms", "escalation"],
         },
         "paths": {
             "role_history": "state/roles/<role>-history.json",
@@ -1055,6 +1716,7 @@ fn cmd_schema(format: Format) -> Result<(), DriverError> {
             "channel_state": "state/channels/<channel>.json",
             "channel_history": "state/channels/<channel>-history.json",
             "default_prompt": "prompts/v2/<role>-prompt.xml",
+            "live_spawn_debug_record": "state/roles/<role>-last-context-cycle-<N>.json",
         },
     });
     match format {
@@ -1109,6 +1771,9 @@ fn main() -> ExitCode {
         Command::Invoke {
             role,
             cycle,
+            claude_code_bin,
+            prompt_file,
+            max_turns,
             session_output_file,
             timestamp,
             skip_super_step_check,
@@ -1118,7 +1783,10 @@ fn main() -> ExitCode {
             args.format,
             role,
             cycle,
-            &session_output_file,
+            claude_code_bin.as_deref(),
+            prompt_file.as_deref(),
+            max_turns,
+            session_output_file.as_deref(),
             timestamp,
             skip_super_step_check,
             skip_channel_write,
@@ -1329,11 +1997,434 @@ mod tests {
                 at: "now".into(),
                 outcome: Outcome::Success,
                 notes: "test".into(),
+                timeout: None,
             }],
         };
         let s = serde_json::to_string(&h).unwrap();
         let r: RoleHistory = serde_json::from_str(&s).unwrap();
         assert_eq!(r.runs.len(), 1);
         assert_eq!(r.runs[0].outcome, Outcome::Success);
+        assert!(r.runs[0].timeout.is_none(), "SCAFFOLD-mode runs preserve None timeout");
+    }
+
+    // =================================================================
+    // Live-spawn cycle 179 implementation cycle 1 — §12 acceptance
+    // =================================================================
+
+    use v2_primitive_invoker::{ok_output_with_stdout, MockInvoker, SignalEscalation as InvokerSignalEscalation};
+
+    #[test]
+    fn allowed_tools_per_role_per_design_section_6_1() {
+        // Design §6.1: reconciler=Read,Bash; planner=Read,Grep;
+        // executor=Read,Edit,Write,Grep,Bash; curator=Read,Grep.
+        assert_eq!(Role::Reconciler.allowed_tools(), &["Read", "Bash"]);
+        assert_eq!(Role::Planner.allowed_tools(), &["Read", "Grep"]);
+        assert_eq!(
+            Role::Executor.allowed_tools(),
+            &["Read", "Edit", "Write", "Grep", "Bash"]
+        );
+        assert_eq!(Role::Curator.allowed_tools(), &["Read", "Grep"]);
+    }
+
+    #[test]
+    fn resolve_invoke_mode_errors_when_both_set() {
+        let ccbin = PathBuf::from("/bin/claude-code");
+        let sof = PathBuf::from("/tmp/session.json");
+        let err = resolve_invoke_mode(Some(&ccbin), None, 50, Some(&sof)).unwrap_err();
+        assert!(matches!(err, DriverError::ConflictingInvokeModes));
+    }
+
+    #[test]
+    fn resolve_invoke_mode_errors_when_neither_set() {
+        let err = resolve_invoke_mode(None, None, 50, None).unwrap_err();
+        assert!(matches!(err, DriverError::MissingInvokeMode));
+    }
+
+    #[test]
+    fn resolve_invoke_mode_selects_live_spawn_when_only_bin_set() {
+        let ccbin = PathBuf::from("/bin/claude-code");
+        let mode = resolve_invoke_mode(Some(&ccbin), None, 25, None).unwrap();
+        match mode {
+            InvokeMode::LiveSpawn { max_turns, .. } => assert_eq!(max_turns, 25),
+            _ => panic!("expected LiveSpawn"),
+        }
+    }
+
+    #[test]
+    fn resolve_invoke_mode_selects_scaffold_when_only_session_file_set() {
+        let sof = PathBuf::from("/tmp/session.json");
+        let mode = resolve_invoke_mode(None, None, 50, Some(&sof)).unwrap();
+        assert!(matches!(mode, InvokeMode::Scaffold { .. }));
+    }
+
+    #[test]
+    fn render_context_for_session_includes_required_sections() {
+        let td = tempfile::tempdir().unwrap();
+        // Reconciler has no input channels; still produces cycle-context
+        // and (per role-specific) inbound-surfaces.
+        let ctx = render_context_for_session(td.path(), Role::Reconciler, 42, "2026-05-19T00:00:00Z")
+            .unwrap();
+        assert!(ctx.contains("<cycle-context>"));
+        assert!(ctx.contains("<cycle>42</cycle>"));
+        assert!(ctx.contains("<role>reconciler</role>"));
+        assert!(ctx.contains("<output-channel>inbound-channel</output-channel>"));
+        assert!(ctx.contains("<required-payload-keys>eva-responses, audit-posts, dispatch-returns, inbound-completeness-marker</required-payload-keys>"));
+        assert!(ctx.contains("<input-channels>"));
+        assert!(ctx.contains("<inbound-surfaces>"), "reconciler must include external-surface block");
+        assert!(ctx.contains("github-issues"));
+        assert!(ctx.contains("audit-repo-activity"));
+    }
+
+    #[test]
+    fn render_context_for_session_omits_inbound_surfaces_for_non_reconciler() {
+        let td = tempfile::tempdir().unwrap();
+        for role in [Role::Planner, Role::Executor, Role::Curator] {
+            let ctx = render_context_for_session(td.path(), role, 1, "t").unwrap();
+            assert!(
+                !ctx.contains("<inbound-surfaces>"),
+                "{}: inbound-surfaces is reconciler-only",
+                role.name()
+            );
+        }
+    }
+
+    #[test]
+    fn render_context_for_session_embeds_populated_channel_state() {
+        let td = tempfile::tempdir().unwrap();
+        // Hand-place a memory-channel state file so planner's context-read
+        // populates the <state> block.
+        let mem_path = channel_state_path(td.path(), "memory-channel");
+        fs::create_dir_all(mem_path.parent().unwrap()).unwrap();
+        let state_json = serde_json::json!({
+            "channel": "memory-channel",
+            "writer": "curator",
+            "cycle": 100,
+            "timestamp": "2026-05-18T12:00:00Z",
+            "payload": {"consolidated-insights": ["x", "y"]}
+        });
+        fs::write(&mem_path, serde_json::to_string_pretty(&state_json).unwrap()).unwrap();
+
+        let ctx = render_context_for_session(td.path(), Role::Planner, 101, "ts").unwrap();
+        assert!(ctx.contains("<channel name=\"memory-channel\""));
+        assert!(ctx.contains("cycle=\"100\""));
+        assert!(ctx.contains("writer=\"curator\""));
+        assert!(ctx.contains("consolidated-insights"));
+    }
+
+    #[test]
+    fn xml_escape_handles_metacharacters() {
+        assert_eq!(xml_escape("a&b<c>d\"e'f"), "a&amp;b&lt;c&gt;d&quot;e&apos;f");
+        assert_eq!(xml_escape("safe text"), "safe text");
+    }
+
+    #[test]
+    fn build_claude_code_argv_includes_per_role_tools_and_required_flags() {
+        let argv = build_claude_code_argv(Role::Executor, "system-prompt-body", 25, "user-msg");
+        assert!(argv.contains(&"--print".to_string()));
+        assert!(argv.contains(&"--output-format".to_string()));
+        assert!(argv.contains(&"json".to_string()));
+        assert!(argv.contains(&"--append-system-prompt".to_string()));
+        assert!(argv.contains(&"system-prompt-body".to_string()));
+        assert!(argv.contains(&"--max-turns".to_string()));
+        assert!(argv.contains(&"25".to_string()));
+        assert!(argv.contains(&"--allowed-tools".to_string()));
+        // Executor profile is the full one.
+        assert!(argv.contains(&"Read,Edit,Write,Grep,Bash".to_string()));
+        assert!(argv.contains(&"--permission-mode".to_string()));
+        assert!(argv.contains(&"acceptEdits".to_string()));
+        assert!(argv.contains(&"--model".to_string()));
+        assert!(argv.contains(&"claude-opus-4-7".to_string()));
+        assert!(argv.contains(&"user-msg".to_string()));
+    }
+
+    #[test]
+    fn build_claude_code_argv_passes_reconciler_specific_tools() {
+        let argv = build_claude_code_argv(Role::Reconciler, "sys", 50, "ctx");
+        assert!(argv.contains(&"Read,Bash".to_string()));
+        // Reconciler lacks Edit/Write per profile.
+        assert!(!argv.contains(&"Read,Edit,Write,Grep,Bash".to_string()));
+    }
+
+    #[test]
+    fn parse_claude_code_envelope_extracts_result_field() {
+        let envelope = br#"{
+            "type": "result",
+            "subtype": "success",
+            "is_error": false,
+            "result": "{\"substantive-focal\":\"x\",\"per-role-tasks\":{}}",
+            "session_id": "abc"
+        }"#;
+        let text = parse_claude_code_envelope(envelope).unwrap();
+        // The result field is itself a JSON-stringified channel payload.
+        let payload: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(payload["substantive-focal"], "x");
+    }
+
+    #[test]
+    fn parse_claude_code_envelope_rejects_is_error_true() {
+        let envelope = br#"{"type":"result","subtype":"auth-error","is_error":true,"result":""}"#;
+        let err = parse_claude_code_envelope(envelope).unwrap_err();
+        assert!(err.contains("is_error=true"));
+        assert!(err.contains("subtype=auth-error"));
+    }
+
+    #[test]
+    fn parse_claude_code_envelope_rejects_missing_result() {
+        let envelope = br#"{"type":"result","subtype":"success","is_error":false}"#;
+        let err = parse_claude_code_envelope(envelope).unwrap_err();
+        assert!(err.contains("missing string `result` field"));
+    }
+
+    #[test]
+    fn parse_claude_code_envelope_rejects_non_json_stdout() {
+        let envelope = b"this is not JSON";
+        let err = parse_claude_code_envelope(envelope).unwrap_err();
+        assert!(err.contains("not a JSON object"));
+    }
+
+    fn fresh_repo_with_init(td: &tempfile::TempDir) -> PathBuf {
+        let repo = td.path().to_path_buf();
+        cmd_init(&repo, Format::Json).unwrap();
+        repo
+    }
+
+    fn touch_claude_code_bin(repo: &Path) -> PathBuf {
+        let bin = repo.join("fake-claude-code");
+        fs::write(&bin, b"#!/bin/sh\nexit 0\n").unwrap();
+        bin
+    }
+
+    fn touch_prompt(repo: &Path, role: Role, contents: &str) {
+        let p = default_prompt_path(repo, role);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(&p, contents).unwrap();
+    }
+
+    #[test]
+    fn live_spawn_success_path_writes_channel_and_records_history() {
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        let ccbin = touch_claude_code_bin(&repo);
+        touch_prompt(&repo, Role::Executor, "<role>executor</role>");
+
+        // MockInvoker returns a well-formed envelope whose `result` is a
+        // valid work-channel payload (`{"artifacts-written":[...]}`).
+        let mock = MockInvoker::new();
+        let envelope = serde_json::json!({
+            "type": "result",
+            "subtype": "success",
+            "is_error": false,
+            "result": "{\"artifacts-written\":[\"file-a.rs\"]}",
+            "session_id": "test-session"
+        });
+        mock.queue_ok(ok_output_with_stdout(envelope.to_string().into_bytes()));
+
+        cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Executor,
+            7,
+            &ccbin,
+            None,
+            50,
+            Some("2026-05-19T00:00:00Z".to_string()),
+            /* skip_super_step_check */ true,
+            /* skip_channel_write */ false,
+            &mock,
+        )
+        .expect("live-spawn should succeed");
+
+        // Channel was written.
+        let cs = channel_state_path(&repo, "work-channel");
+        let body: serde_json::Value =
+            serde_json::from_slice(&fs::read(&cs).unwrap()).unwrap();
+        assert_eq!(body["cycle"], 7);
+        assert_eq!(body["writer"], "executor");
+        assert_eq!(body["payload"]["artifacts-written"][0], "file-a.rs");
+
+        // Role history records a Success outcome with no timeout block.
+        let h = read_role_history(&repo, Role::Executor).unwrap();
+        assert_eq!(h.runs.len(), 1);
+        assert_eq!(h.runs[0].outcome, Outcome::Success);
+        assert!(h.runs[0].timeout.is_none());
+
+        // Debug record was persisted.
+        let dbg = roles_dir(&repo).join("executor-last-context-cycle-7.json");
+        assert!(dbg.exists(), "live-spawn must persist last-context debug record");
+
+        // Mock saw exactly one invocation with the per-role tool profile.
+        assert_eq!(mock.invoke_count(), 1);
+        let calls = mock.calls();
+        let argv = &calls[0].1;
+        assert!(argv.contains(&"Read,Edit,Write,Grep,Bash".to_string()));
+    }
+
+    #[test]
+    fn live_spawn_envelope_parse_failure_skips_channel_write() {
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        let ccbin = touch_claude_code_bin(&repo);
+        touch_prompt(&repo, Role::Planner, "<role>planner</role>");
+
+        let mock = MockInvoker::new();
+        // Stdout that doesn't look like a claude-code envelope at all.
+        mock.queue_ok(ok_output_with_stdout(b"not a JSON envelope at all".to_vec()));
+
+        let err = cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Planner,
+            3,
+            &ccbin,
+            None,
+            50,
+            None,
+            true,
+            false,
+            &mock,
+        )
+        .unwrap_err();
+        assert!(matches!(
+            err,
+            DriverError::LiveSpawnEnvelopeParseFailure(_)
+        ));
+
+        // Channel must NOT have been written.
+        let cs = channel_state_path(&repo, "plan-channel");
+        assert!(!cs.exists(), "envelope parse failure must not write channel");
+
+        // Role history records a WriteSkipped outcome.
+        let h = read_role_history(&repo, Role::Planner).unwrap();
+        assert_eq!(h.runs.len(), 1);
+        assert_eq!(h.runs[0].outcome, Outcome::WriteSkipped);
+    }
+
+    #[test]
+    fn live_spawn_timeout_path_records_outcome_timeout_with_diagnostic() {
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        let ccbin = touch_claude_code_bin(&repo);
+        touch_prompt(&repo, Role::Curator, "<role>curator</role>");
+
+        let mock = MockInvoker::new();
+        mock.queue_timeout(123_456, InvokerSignalEscalation::SigkillForced);
+
+        let err = cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Curator,
+            11,
+            &ccbin,
+            None,
+            50,
+            None,
+            true,
+            false,
+            &mock,
+        )
+        .unwrap_err();
+        assert!(matches!(err, DriverError::LiveSpawnInvocationIo(_)));
+
+        // Channel state NOT written.
+        let cs = channel_state_path(&repo, "memory-channel");
+        assert!(!cs.exists());
+
+        // Role history records Outcome::Timeout with the diagnostic.
+        let h = read_role_history(&repo, Role::Curator).unwrap();
+        assert_eq!(h.runs.len(), 1);
+        assert_eq!(h.runs[0].outcome, Outcome::Timeout);
+        let t = h.runs[0].timeout.as_ref().expect("timeout block populated");
+        assert_eq!(t.elapsed_ms, 123_456);
+        assert_eq!(t.budget_ms, LIVE_SPAWN_TIMEOUT.as_millis() as u64);
+        assert_eq!(t.escalation, TimeoutEscalation::SigkillForced);
+    }
+
+    #[test]
+    fn live_spawn_invalid_payload_shape_returns_error_and_skips_write() {
+        // Envelope is well-formed but `result` is JSON missing required keys.
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        let ccbin = touch_claude_code_bin(&repo);
+        touch_prompt(&repo, Role::Executor, "<role>executor</role>");
+
+        let mock = MockInvoker::new();
+        let envelope = serde_json::json!({
+            "type": "result",
+            "is_error": false,
+            "result": "{\"wrong-key\":\"oops\"}",
+        });
+        mock.queue_ok(ok_output_with_stdout(envelope.to_string().into_bytes()));
+
+        let err = cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Executor,
+            1,
+            &ccbin,
+            None,
+            50,
+            None,
+            true,
+            false,
+            &mock,
+        )
+        .unwrap_err();
+        match err {
+            DriverError::InvalidSessionOutput(msg) => {
+                assert!(msg.contains("artifacts-written"));
+            }
+            other => panic!("expected InvalidSessionOutput, got {other:?}"),
+        }
+        let cs = channel_state_path(&repo, "work-channel");
+        assert!(!cs.exists());
+    }
+
+    #[test]
+    fn live_spawn_missing_bin_returns_dedicated_error() {
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        touch_prompt(&repo, Role::Reconciler, "<role>reconciler</role>");
+        let mock = MockInvoker::new();
+        let nonexistent = repo.join("no-such-claude-code");
+        let err = cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Reconciler,
+            1,
+            &nonexistent,
+            None,
+            50,
+            None,
+            true,
+            false,
+            &mock,
+        )
+        .unwrap_err();
+        assert!(matches!(err, DriverError::ClaudeCodeBinMissing(_)));
+        assert_eq!(mock.invoke_count(), 0, "should not invoke when bin is missing");
+    }
+
+    #[test]
+    fn live_spawn_missing_prompt_returns_dedicated_error() {
+        let td = tempfile::tempdir().unwrap();
+        let repo = fresh_repo_with_init(&td);
+        let ccbin = touch_claude_code_bin(&repo);
+        // Do NOT touch the prompt file.
+        let mock = MockInvoker::new();
+        let err = cmd_invoke_live_spawn(
+            &repo,
+            Format::Json,
+            Role::Reconciler,
+            1,
+            &ccbin,
+            None,
+            50,
+            None,
+            true,
+            false,
+            &mock,
+        )
+        .unwrap_err();
+        assert!(matches!(err, DriverError::PromptFileMissing(_)));
     }
 }

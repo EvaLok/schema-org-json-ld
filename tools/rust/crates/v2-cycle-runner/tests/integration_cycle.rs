@@ -860,3 +860,175 @@ fn status_and_verify_after_live_cycle_report_clean_then_dirty_after_corruption()
         .find(|a| a["name"] == "no-halt-step").unwrap();
     assert_eq!(halt_step_assertion["passed"], false);
 }
+
+// =====================================================================
+// Live-spawn cycle 179 §12 item 4: hermetic end-to-end with mock
+// claude-code — v2-cycle-runner --claude-code-bin <mock-script>
+// drives all four roles end-to-end without invoking real claude-code.
+// =====================================================================
+
+/// Per-role payloads the mock claude-code emits via its envelope's
+/// `result` field. Matches the channel-payload contracts from
+/// v2-role-driver::required_payload_keys.
+fn mock_envelope_for(role: &str) -> serde_json::Value {
+    let result: serde_json::Value = match role {
+        "reconciler" => serde_json::json!({
+            "eva-responses": [],
+            "audit-posts": [],
+            "dispatch-returns": [],
+            "inbound-completeness-marker": "live-spawn-mock"
+        }),
+        "planner" => serde_json::json!({
+            "substantive-focal": "live-spawn-mock-cycle",
+            "per-role-tasks": {"executor": "noop"}
+        }),
+        "executor" => serde_json::json!({"artifacts-written": []}),
+        "curator" => serde_json::json!({"consolidated-insights": "live-spawn mock end-to-end"}),
+        other => panic!("unknown role for mock: {other}"),
+    };
+    serde_json::json!({
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "result": serde_json::to_string(&result).unwrap(),
+        "session_id": format!("mock-{role}"),
+        "duration_ms": 1,
+        "num_turns": 1
+    })
+}
+
+/// Write a mock-claude-code shell script that inspects its argv for
+/// the role marker placed in the `--append-system-prompt` and emits
+/// the matching envelope JSON to stdout. Returns the script path.
+fn write_mock_claude_code(repo_root: &Path) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let script_path = repo_root.join("mock-claude-code.sh");
+    // The mock writes a fixed envelope per role. We compose a here-doc
+    // matching the four shapes; the shell selects by grep on the prompt.
+    // We pass via argv specifically: the role appears inside the
+    // `--append-system-prompt` argument the cycle-runner constructs.
+    let reconciler = serde_json::to_string(&mock_envelope_for("reconciler")).unwrap();
+    let planner = serde_json::to_string(&mock_envelope_for("planner")).unwrap();
+    let executor = serde_json::to_string(&mock_envelope_for("executor")).unwrap();
+    let curator = serde_json::to_string(&mock_envelope_for("curator")).unwrap();
+    let body = format!(
+        r#"#!/bin/sh
+# Mock claude-code for hermetic end-to-end tests. Reads argv for the
+# role marker (placed by v2-role-driver in the --append-system-prompt
+# contents) and emits the matching envelope on stdout. Exits 0.
+ALL_ARGS="$*"
+case "$ALL_ARGS" in
+  *role-marker-reconciler*) printf '%s\n' '{reconciler}' ;;
+  *role-marker-planner*)    printf '%s\n' '{planner}' ;;
+  *role-marker-executor*)   printf '%s\n' '{executor}' ;;
+  *role-marker-curator*)    printf '%s\n' '{curator}' ;;
+  *)
+    printf 'mock-claude-code: no role marker in argv\n' >&2
+    exit 1
+    ;;
+esac
+"#
+    );
+    fs::write(&script_path, body).unwrap();
+    let mut perms = fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&script_path, perms).unwrap();
+    script_path
+}
+
+/// Place the four role-prompt files at prompts/v2/<role>-prompt.xml,
+/// each containing a unique `role-marker-<role>` token so the mock
+/// can identify the role from its argv.
+fn write_role_prompts(repo_root: &Path) {
+    let prompts_dir = repo_root.join("prompts").join("v2");
+    fs::create_dir_all(&prompts_dir).unwrap();
+    for role in ["reconciler", "planner", "executor", "curator"] {
+        let prompt = format!(
+            r#"<role-prompt>
+  <role-marker-{role}/>
+  <description>v2 {role} role prompt (test scaffold)</description>
+</role-prompt>
+"#
+        );
+        fs::write(prompts_dir.join(format!("{role}-prompt.xml")), prompt).unwrap();
+    }
+}
+
+#[test]
+fn live_spawn_with_mock_claude_code_drives_all_four_roles_end_to_end() {
+    build_primitives_once();
+
+    let temp = TempDir::new().expect("create temp dir");
+    let repo_root = temp.path();
+    init_state_in(repo_root);
+
+    let mock_claude = write_mock_claude_code(repo_root);
+    write_role_prompts(repo_root);
+
+    // Drive a full live-spawn cycle. Note: NO --*-output-file flags —
+    // those are SCAFFOLD-mode artifacts. The runner detects live-spawn
+    // via --claude-code-bin.
+    let mut args = primitive_bin_args(repo_root);
+    args.extend([
+        "run".into(),
+        "--cycle".into(), "1".into(),
+        "--issue".into(), "77777".into(),
+        "--claude-code-bin".into(),
+        mock_claude.to_string_lossy().into_owned(),
+        "--role-max-turns".into(), "10".into(),
+    ]);
+
+    let output = run_cycle_runner(&args);
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+        output.status.success(),
+        "live-spawn cycle failed: status={:?}\nstderr=\n{stderr}\nstdout=\n{stdout}",
+        output.status
+    );
+
+    // Cycle reached completion.
+    let runner_last = repo_root.join("state/v2-cycle-runner/last-cycle.json");
+    let last = read_json(&runner_last);
+    assert_eq!(last["status"], "completed");
+    assert_eq!(last["cycle"], 1);
+    assert_eq!(last["steps_attempted"], 10);
+
+    // All four channels were written via the mock-claude-code envelopes.
+    let channels_dir = repo_root.join("state/channels");
+    for (channel, marker_key, marker_val) in [
+        ("inbound-channel", "inbound-completeness-marker", "live-spawn-mock"),
+        ("plan-channel", "substantive-focal", "live-spawn-mock-cycle"),
+        ("work-channel", "artifacts-written", ""),
+        ("memory-channel", "consolidated-insights", "live-spawn mock end-to-end"),
+    ] {
+        let path = channels_dir.join(format!("{channel}.json"));
+        assert!(path.exists(), "channel-state missing: {}", path.display());
+        let body = read_json(&path);
+        assert_eq!(body["cycle"], 1);
+        assert!(body["payload"][marker_key].is_array() || body["payload"][marker_key].is_string()
+                || body["payload"][marker_key].is_object());
+        if !marker_val.is_empty() {
+            assert_eq!(body["payload"][marker_key], marker_val);
+        }
+    }
+
+    // Per-role history records Success for all four roles.
+    let roles_dir = repo_root.join("state/roles");
+    for role in ["reconciler", "planner", "executor", "curator"] {
+        let hist_path = roles_dir.join(format!("{role}-history.json"));
+        let h = read_json(&hist_path);
+        let runs = h["runs"].as_array().unwrap();
+        assert!(!runs.is_empty(), "{role}-history has no runs");
+        let last = &runs[runs.len() - 1];
+        assert_eq!(last["outcome"], "success", "{role} not Success: {last}");
+        assert_eq!(last["cycle"], 1);
+        // No timeout block on Success.
+        assert!(last.get("timeout").map(|v| v.is_null()).unwrap_or(true),
+                "{role} unexpectedly has timeout block: {last}");
+
+        // Each role's live-spawn debug record was persisted.
+        let dbg = roles_dir.join(format!("{role}-last-context-cycle-1.json"));
+        assert!(dbg.exists(), "live-spawn debug record missing: {}", dbg.display());
+    }
+}

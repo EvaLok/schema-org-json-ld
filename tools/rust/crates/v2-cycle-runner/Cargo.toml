@@ -8,9 +8,7 @@ description = "Conductor for the v2 multi-agent orchestrator: composes the 4 rol
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
+v2-primitive-invoker = { path = "../v2-primitive-invoker" }
 
 [dev-dependencies]
 tempfile = "3"

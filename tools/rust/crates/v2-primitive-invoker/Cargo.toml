@@ -1,0 +1,11 @@
+[package]
+name = "v2-primitive-invoker"
+version = "0.1.0"
+edition = "2021"
+description = "Timeout-aware subprocess invocation primitive for the v2 multi-agent orchestrator. Extracted from v2-cycle-runner (cycle 177 C13+X2 implementation) at cycle 179 to enable re-use by v2-role-driver (live-claude-code-spawn arc). Provides PrimitiveInvoker trait, InvocationResult enum, RealInvoker with SIGTERM->SIGKILL escalation, MockInvoker for testing."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

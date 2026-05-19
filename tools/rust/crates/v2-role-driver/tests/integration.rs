@@ -730,8 +730,15 @@ fn schema_json_well_formed() {
     let roles = v["roles"].as_array().unwrap();
     assert_eq!(roles.len(), 4);
     let outcomes = v["run_record"]["outcomes"].as_array().unwrap();
-    assert_eq!(outcomes.len(), 2);
+    // Cycle 179 live-spawn arc added the `timeout` outcome alongside
+    // `success` and `write-skipped` per design §4.3.
+    assert_eq!(outcomes.len(), 3);
+    let names: Vec<&str> = outcomes.iter().map(|o| o.as_str().unwrap()).collect();
+    assert!(names.contains(&"success"));
+    assert!(names.contains(&"write-skipped"));
+    assert!(names.contains(&"timeout"));
     assert!(v["paths"]["role_history"].is_string());
+    assert!(v["paths"]["live_spawn_debug_record"].is_string());
 }
 
 // =================================================================
